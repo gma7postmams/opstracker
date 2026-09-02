@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Status {
+  OPEN
+  CLOSE_PENDING
+  CLOSED
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+enum MasterKind {
+  LOCATION
+  SHIFT
+  SHOW_GROUP
+  CATEGORY
+  ACTIVITY_TYPE
+}
+
+model User {
+  id           Int          @id @default(autoincrement())
+  firstName    String       @map("first_name")
+  middleInitial String?     @map("middle_initial") @db.VarChar(1)
+  surname      String
+  email        String       @unique
+  username     String       @unique
+  passwordHash String       @map("password_hash")
+  role         Role         @default(USER)
+  avatarUrl    String?      @map("avatar_url")
+  active       Boolean      @default(true)
+  lastLogin    DateTime?    @map("last_login")
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  assistanceOwned Assistance[] @relation("AssistanceOwner")
+  assistanceLocked Assistance[] @relation("AssistanceLocker")
+  tasksOwned       Task[]       @relation("TaskOwner")
+  tasksLocked      Task[]       @relation("TaskLocker")
+
+  @@map("users")
+}
+
+model Assistance {
+  id          Int      @id @default(autoincrement())
+  refNo       String   @unique @map("ref_no")
+  date        DateTime @db.Date
+  shift       String
+  location    String
+  showGroup   String?  @map("show_group")
+  clientName  String   @map("client_name")
+  problem     String
+  category    String
+  resolution  String?
+  priority    Priority @default(NORMAL)
+  timeStarted String   @map("time_started") @db.VarChar(5)
+  timeEnded   String?  @map("time_ended") @db.VarChar(5)
+  status      Status   @default(OPEN)
+  assigned    String
+  accountable String
+  remarks     String?
+
+  ownerId     Int?     @map("owner_id")
+  owner       User?    @relation("AssistanceOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  locked      Boolean  @default(false)
+  lockedById  Int?     @map("locked_by_id")
+  lockedBy    User?    @relation("AssistanceLocker", fields: [lockedById], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@index([status])
+  @@index([assigned])
+  @@map("assistance")
+}
+
+model Task {
+  id           Int      @id @default(autoincrement())
+  refNo        String   @unique @map("ref_no")
+  date         DateTime @db.Date
+  shift        String
+  location     String
+  showGroup    String?  @map("show_group")
+  activityType String   @map("activity_type")
+  description  String
+  priority     Priority @default(NORMAL)
+  timeStarted  String   @map("time_started") @db.VarChar(5)
+  timeEnded    String?  @map("time_ended") @db.VarChar(5)
+  status       Status   @default(OPEN)
+  assigned     String
+  accountable  String
+  remarks      String?
+
+  ownerId      Int?     @map("owner_id")
+  owner        User?    @relation("TaskOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  locked       Boolean  @default(false)
+  lockedById   Int?     @map("locked_by_id")
+  lockedBy     User?    @relation("TaskLocker", fields: [lockedById], references: [id], onDelete: SetNull)
+
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@index([status])
+  @@index([assigned])
+  @@map("tasks")
+}
+
+model Branding {
+  id          Int     @id @default(1)
+  title       String  @default("OpsLog")
+  tagline     String  @default("Operations Platform")
+  logoUrl     String? @map("logo_url")
+  faviconUrl  String? @map("favicon_url")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("branding")
+}
+
+model MasterData {
+  id     Int        @id @default(autoincrement())
+  kind   MasterKind
+  value  String
+  active Boolean    @default(true)
+  sort   Int        @default(0)
+
+  @@unique([kind, value])
+  @@map("master_data")
+}
+
+model Counter {
+  key   String @id
+  value Int    @default(0)
+
+  @@map("counters")
+}
