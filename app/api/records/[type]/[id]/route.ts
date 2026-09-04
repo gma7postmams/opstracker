@@ -1,3 +1,4 @@
+import { logAudit } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { isRecordType } from "@/lib/recordTypes";
@@ -39,11 +40,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ty
     if (!isAdmin(user)) {
       return NextResponse.json({ error: "Only administrators can lock records" }, { status: 403 });
     }
-    const updated = await delegateFor(type).update({
-      where: { id: record.id },
-      data: { locked: body.locked, lockedById: body.locked ? user.id : null },
-    });
-    return NextResponse.json(updated);
+
+const updated = await delegateFor(type).update({
+  where: { id: record.id },
+  data: {
+    locked: body.locked,
+    lockedById: body.locked ? user.id : null,
+  },
+});
+
+await logAudit({
+  action: body.locked ? "LOCK" : "UNLOCK",
+  entityType: type,
+  entityId: updated.refNo,
+  userId: user.id,
+});
+
+return NextResponse.json(updated);
+
+
   }
 
   if (!canEdit(user, record)) {
@@ -62,9 +77,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ty
     return NextResponse.json({ error: "Validation failed", fields: flatten(parsed.error) }, { status: 400 });
   }
 
-  const data = normalizeTimes({ ...parsed.data, date: new Date(parsed.data.date) });
-  const updated = await delegateFor(type).update({ where: { id: record.id }, data });
-  return NextResponse.json(updated);
+const data = normalizeTimes({ ...parsed.data, date: new Date(parsed.data.date) });
+
+const updated = await delegateFor(type).update({
+  where: { id: record.id },
+  data,
+});
+
+await logAudit({
+  action: "UPDATE",
+  entityType: type,
+  entityId: updated.refNo,
+  userId: user.id,
+  details: {
+    recordId: record.id,
+  },
+});
+
+return NextResponse.json(updated);
+
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ type: string; id: string }> }) {
@@ -77,6 +108,19 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!canEdit(user, record)) {
     return NextResponse.json({ error: editBlockedReason(user, record) }, { status: 403 });
   }
-  await delegateFor(type).delete({ where: { id: record.id } });
-  return NextResponse.json({ ok: true });
+
+await delegateFor(type).delete({
+  where: { id: record.id },
+});
+
+await logAudit({
+  action: "DELETE",
+  entityType: type,
+  entityId: record.refNo,
+  userId: user.id,
+});
+
+return NextResponse.json({ ok: true });
+
+
 }

@@ -149,3 +149,22 @@ model Counter {
 
   @@map("counters")
 }
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+
+  userId     Int?     @map("user_id")
+
+  details    Json?
+
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([entityType])
+
+  @@map("audit_logs")
+}
