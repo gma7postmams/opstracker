@@ -24,6 +24,16 @@ export const authOptions: NextAuthOptions = {
         if (!user || !user.active) return null;
         if (!(await bcrypt.compare(creds.password, user.passwordHash))) return null;
 
+	await logAudit({
+	  action: "LOGIN_FAILED",
+	  entityType: "auth",
+	  entityId: "Invalid Username or Password",
+	  details: {
+	    username: creds.username,
+	  },
+	});
+
+
 await prisma.user.update({
   where: { id: user.id },
   data: { lastLogin: new Date() }
@@ -32,12 +42,14 @@ await prisma.user.update({
 await logAudit({
   action: "LOGIN",
   entityType: "auth",
+  entityId: "Successful Login",
   userId: user.id,
   details: {
     name: fullName(user),
     username: user.username,
   },
 });
+
 
 return {
   id: String(user.id),

@@ -111,6 +111,7 @@ const filteredLogs = logs.filter((log) => {
   <option value="UNLOCK">UNLOCK</option>
   <option value="LOGIN">LOGIN</option>
   <option value="LOGOUT">LOGOUT</option>
+  <option value="LOGIN_FAILED">LOGIN_FAILED</option>
   <option value="MASTERDATA_ADD">MASTERDATA_ADD</option>
   <option value="MASTERDATA_RETIRE">MASTERDATA_RETIRE</option>
   <option value="MASTERDATA_RESTORE">MASTERDATA_RESTORE</option>
@@ -191,10 +192,13 @@ const filteredLogs = logs.filter((log) => {
 
                 <span>{log.entityId}</span>
 
-                <span>
-                  {log.details?.name ??
-                    `User #${log.userId}`}
-                </span>
+		<span>
+		  {log.details?.name ??
+		    log.details?.username ??
+		    (log.userId ? `User #${log.userId}` : "Anonymous")}
+		</span>
+
+
               </div>
             ))}
           </>
