@@ -21,17 +21,32 @@ export const authOptions: NextAuthOptions = {
         const user = await prisma.user.findUnique({
           where: { username: creds.username.trim().toLowerCase() },
         });
-        if (!user || !user.active) return null;
-        if (!(await bcrypt.compare(creds.password, user.passwordHash))) return null;
 
-	await logAudit({
-	  action: "LOGIN_FAILED",
-	  entityType: "auth",
-	  entityId: "Invalid Username or Password",
-	  details: {
-	    username: creds.username,
-	  },
-	});
+if (!user || !user.active) {
+  await logAudit({
+    action: "LOGIN_FAILED",
+    entityType: "auth",
+    entityId: "Invalid Username or Password",
+    details: {
+      username: creds.username,
+    },
+  });
+
+  return null;
+}
+
+if (!(await bcrypt.compare(creds.password, user.passwordHash))) {
+  await logAudit({
+    action: "LOGIN_FAILED",
+    entityType: "auth",
+    entityId: "Invalid Username or Password",
+    details: {
+      username: creds.username,
+    },
+  });
+
+  return null;
+}
 
 
 await prisma.user.update({
