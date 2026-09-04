@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 import Modal from "./Modal";
 
+const nowHHMM = () => {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+};
+
 const PRIORITIES = ["LOW", "NORMAL", "HIGH", "CRITICAL"];
 const STATUSES = [
   ["OPEN", "Open"], ["CLOSE_PENDING", "Close Pending"], ["CLOSED", "Closed"],
@@ -28,7 +33,7 @@ export default function RecordForm({ type, singular, master, record, onClose, on
     location: record?.location ?? "",
     showGroup: record?.showGroup ?? "",
     priority: record?.priority ?? "NORMAL",
-    timeStarted: record?.timeStarted ?? "08:00",
+    timeStarted: record?.timeStarted ?? nowHHMM(),
     timeEnded: record?.timeEnded ?? "",
     status: record?.status ?? "OPEN",
     assigned: record?.assigned ?? "",

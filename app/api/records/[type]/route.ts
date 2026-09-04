@@ -53,7 +53,11 @@ await logAudit({
   entityType: type,
   entityId: record.refNo,
   userId: user.id,
+  details: {
+    name: user.name,
+  },
 });
+
 
 return NextResponse.json(record, { status: 201 });
 

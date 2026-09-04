@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 import { fullName } from "./format";
 import type { SessionUser } from "./permissions";
+import { logAudit } from "./audit";
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt", maxAge: 60 * 60 * 12 },
@@ -23,14 +24,29 @@ export const authOptions: NextAuthOptions = {
         if (!user || !user.active) return null;
         if (!(await bcrypt.compare(creds.password, user.passwordHash))) return null;
 
-        await prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } });
-        return {
-          id: String(user.id),
-          name: fullName(user),
-          username: user.username,
-          role: user.role,
-          avatarUrl: user.avatarUrl,
-        };
+await prisma.user.update({
+  where: { id: user.id },
+  data: { lastLogin: new Date() }
+});
+
+await logAudit({
+  action: "LOGIN",
+  entityType: "auth",
+  userId: user.id,
+  details: {
+    name: fullName(user),
+    username: user.username,
+  },
+});
+
+return {
+  id: String(user.id),
+  name: fullName(user),
+  username: user.username,
+  role: user.role,
+  avatarUrl: user.avatarUrl,
+};
+
       },
     }),
   ],

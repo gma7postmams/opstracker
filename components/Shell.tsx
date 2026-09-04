@@ -14,11 +14,12 @@ const NAV = [
   { href: "/reports", icon: "▤", label: "Reports" },
   { href: "/users", icon: "◍", label: "Users" },
   { href: "/admin", icon: "⚙", label: "Administration" },
+  { href: "/audit", icon: "▤", label: "Audit Logs" },
 ];
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Dashboard", "/assistance": "Technical Assistance", "/tasks": "Other Tasks",
-  "/reports": "Reports", "/users": "Users", "/admin": "Administration",
+  "/reports": "Reports", "/users": "Users", "/admin": "Administration","/audit": "Audit Logs",
 };
 
 interface Props {
@@ -55,9 +56,22 @@ export default function Shell({ branding, user, children }: Props) {
             <Avatar url={user.avatarUrl} name={user.name} size={32} />
             <div><b>{user.name}</b><small>{user.role}</small></div>
           </div>
-          <button className="logout" onClick={() => signOut({ callbackUrl: "/login" })}>
-            <span className="ic" aria-hidden>⏻</span><span>Sign out</span>
-          </button>
+
+<button
+  className="logout"
+  onClick={async () => {
+    await fetch("/api/audit/logout", {
+      method: "POST",
+    });
+
+    await signOut({
+      callbackUrl: "/login",
+    });
+  }}
+>
+  Log out
+</button>
+
         </div>
       </aside>
 

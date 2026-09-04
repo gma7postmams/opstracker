@@ -31,10 +31,11 @@ export default function Admin() {
     setRows(d.rows ?? []);
   }, []);
 
-  useEffect(() => {
-    fetch("/api/branding").then((r) => r.json()).then(setB);
-    loadMaster();
-  }, [loadMaster]);
+ useEffect(() => {
+   fetch("/api/branding").then((r) => r.json()).then(setB);
+   loadMaster();
+ }, [loadMaster]);
+
 
   async function saveBranding() {
     setSaving(true);

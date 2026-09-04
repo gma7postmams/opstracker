@@ -54,6 +54,9 @@ await logAudit({
   entityType: type,
   entityId: updated.refNo,
   userId: user.id,
+  details: {
+    name: user.name,
+  },
 });
 
 return NextResponse.json(updated);
@@ -91,6 +94,7 @@ await logAudit({
   userId: user.id,
   details: {
     recordId: record.id,
+    name: user.name,
   },
 });
 
@@ -118,6 +122,9 @@ await logAudit({
   entityType: type,
   entityId: record.refNo,
   userId: user.id,
+  details: {
+    name: user.name,
+  },
 });
 
 return NextResponse.json({ ok: true });
