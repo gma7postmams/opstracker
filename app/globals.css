@@ -101,10 +101,10 @@ header{min-height:84px;background:var(--panel);border-bottom:1px solid var(--lin
 .theme-opt .ic{width:17px;display:grid;place-items:center;flex:none}
 .theme-opt .check{margin-left:auto;font-size:11px}
 .login-theme{position:fixed;top:18px;right:18px}
-.page{padding:27px 32px;max-width:1240px}
+.page{padding:27px 32px; width:100%; max-width:none;}
 
 /* cards */
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:13px;margin-bottom:19px}
+.cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:13px; margin-bottom:19px;}
 .card,.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;
   box-shadow:var(--shadow)}
 .card{padding:15px;display:flex;gap:10px;align-items:center;border-left:4px solid var(--line2)}
@@ -122,7 +122,7 @@ header{min-height:84px;background:var(--panel);border-bottom:1px solid var(--lin
 .panel.spaced{margin-bottom:16px}
 .panelhead{display:flex;justify-content:space-between;align-items:center;gap:12px;
   margin-bottom:17px;flex-wrap:wrap}
-.grid{display:grid;grid-template-columns:1.35fr .9fr;gap:16px;margin-bottom:16px;align-items:start}
+.grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(500px,1fr)); gap:16px; margin-bottom:16px; align-items:start;}
 .grid.even,.detailgrid{grid-template-columns:1fr 1fr}
 
 /* charts */
