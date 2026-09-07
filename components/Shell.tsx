@@ -60,17 +60,22 @@ export default function Shell({ branding, user, children }: Props) {
 <button
   className="logout"
   onClick={async () => {
-    await fetch("/api/audit/logout", {
-      method: "POST",
-    });
+    try {
+      await fetch("/api/audit/logout", {
+        method: "POST",
+      });
+    } catch (err) {
+      console.error("Logout audit failed:", err);
+    }
 
     await signOut({
       callbackUrl: "/login",
     });
   }}
 >
-  Log out
+      Log out
 </button>
+
 
         </div>
       </aside>
