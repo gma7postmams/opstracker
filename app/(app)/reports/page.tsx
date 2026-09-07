@@ -28,25 +28,46 @@ function Tally({ title, note, rows, accent, days }: {
         {rows.length ? (
           <table>
             <thead><tr>
-              <th>User</th><th>Total</th><th>Completed</th><th>Open</th><th>Pending</th>
-              <th>Avg / day</th><th>Avg. handling</th>
+		<th>User</th>
+		<th>Total</th>
+		<th className="statuscol">Completed</th>
+		<th className="statuscol">Open</th>
+		<th className="statuscol">Pending</th>
+		<th>Avg / day</th>
+		<th>Avg. handling</th>
             </tr></thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.user}>
                   <td><b>{r.user}</b></td>
                   <td><b>{r.total}</b></td>
-                  <td><span className="status closed">{r.closed}</span></td>
-                  <td><span className="status open">{r.open}</span></td>
-                  <td><span className="status pending">{r.pending}</span></td>
+
+<td className="statuscol">
+  <span className="status closed">{r.closed}</span>
+</td>
+
+<td className="statuscol">
+  <span className="status open">{r.open}</span>
+</td>
+
+<td className="statuscol">
+  <span className="status pending">{r.pending}</span>
+</td>
+
+
                   <td><b>{r.avgPerDay}</b></td>
                   <td>{r.avgMinutes === null ? "—" : `${r.avgMinutes} min`}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot><tr>
-              <td><b>All users</b></td><td><b>{sum.total}</b></td><td><b>{sum.closed}</b></td>
-              <td><b>{sum.open}</b></td><td><b>{sum.pending}</b></td>
+		<td><b>All users</b></td>
+		<td><b>{sum.total}</b></td>
+
+		<td className="statuscol"><b>{sum.closed}</b></td>
+		<td className="statuscol"><b>{sum.open}</b></td>
+		<td className="statuscol"><b>{sum.pending}</b></td>
+
               <td><b>{(sum.closed / days).toFixed(2)}</b></td><td />
             </tr></tfoot>
           </table>

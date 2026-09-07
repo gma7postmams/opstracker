@@ -194,7 +194,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 
 /* tables */
 .table{padding:0;overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:12px;min-width:680px}
+table{width:100%; border-collapse:collapse; font-size:12px; min-width:680px; table-layout:fixed;}
 th{position:sticky;top:0;background:var(--thead-bg);text-align:left;font-size:10px;letter-spacing:.04em;
   color:var(--muted);padding:11px 14px;border-bottom:1px solid var(--line);z-index:1}
 th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
@@ -377,3 +377,4 @@ hr{border:0;border-top:1px solid var(--line);margin:19px 0}
 .minitable{min-width:0;margin-top:9px}
 .minitable th,.minitable td{padding:7px 10px}
 code{background:var(--code-bg);border-radius:4px;padding:1px 5px;font-size:11px}
+.statuscol{ text-align:center;}
