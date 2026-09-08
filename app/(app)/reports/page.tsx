@@ -6,10 +6,12 @@ import { useToast } from "@/components/Toast";
 const today = () => new Date().toISOString().slice(0, 10);
 const monthStart = () => today().slice(0, 8) + "01";
 
+
 interface Row {
   user: string; total: number; closed: number; open: number; pending: number;
   avgPerDay: string; avgMinutes: number | null;
 }
+
 
 function Tally({ title, note, rows, accent, days }: {
   title: string; note: string; rows: Row[]; accent: string; days: number;
@@ -92,36 +94,61 @@ export default function Reports() {
 
   useEffect(() => { load(applied); }, [load, applied]);
 
-  function apply() {
-    if (f.from > f.to) { toast("From date must be on or before To date"); return; }
-    setApplied({ ...f });
-  }
+const [emailResult, setEmailResult] = useState<{
+  success: boolean;
+  message: string;
+} | null>(null);
 
-  function exportCsv() {
-    if (!d) return;
-    const sections: string[] = [];
-    const block = (name: string, rows: Row[] | null) => {
-      if (!rows) return;
-      sections.push(name);
-      sections.push("User,Total,Completed,Open,Pending,Avg per day,Avg handling minutes");
-      rows.forEach((r) => sections.push(
-        [r.user, r.total, r.closed, r.open, r.pending, r.avgPerDay, r.avgMinutes ?? ""]
-          .map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")
-      ));
-      sections.push("");
-    };
-    sections.push(`Productivity tally,${d.range.from} to ${d.range.to},${d.range.days} days`, "");
-    block("Technical Assistance", d.tallies.assistance);
-    block("Other Tasks", d.tallies.tasks);
-    block("Combined", d.tallies.combined);
+const [sendingEmail, setSendingEmail] = useState(false);
 
-    const url = URL.createObjectURL(new Blob([sections.join("\n")], { type: "text/csv" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `productivity-${d.range.from}-to-${d.range.to}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+async function sendEmail() {
+  setSendingEmail(true);
+
+  try {
+    const res = await fetch("/api/reports/email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(applied),
+    });
+
+    const out = await res.json();
+
+    if (!res.ok) {
+      setEmailResult({
+        success: false,
+        message: out.error || "Failed to send email",
+      });
+      return;
+    }
+
+    setEmailResult({
+      success: true,
+      message: out.message || "Report emailed successfully",
+    });
+  } finally {
+    setSendingEmail(false);
   }
+}
+
+function apply() {
+  if (f.from > f.to) {
+    toast("From date must be on or before To date");
+    return;
+  }
+  setApplied({ ...f });
+}
+
+
+function exportExcel() {
+  const url =
+    `/api/reports/excel?${new URLSearchParams(applied)}`;
+
+  window.open(url, "_blank");
+}
+
+
 
   const s = d?.summary;
 
@@ -146,9 +173,20 @@ export default function Reports() {
           </select>
         </label>
         <button className="primary" onClick={apply}>Apply filters</button>
-        <div className="btngroup">
-          <button className="secondary" onClick={exportCsv} disabled={!d}>Export CSV</button>
-        </div>
+
+<div className="btngroup">
+
+<button className="secondary" onClick={exportExcel} disabled={!d}>
+  Export Excel
+</button>
+
+<button className="primary" onClick={sendEmail} disabled={!d || sendingEmail}>
+  {sendingEmail ? "Sending..." : "Send Email"}
+</button>
+
+</div>
+
+
       </div>
 
       {!d ? <div className="muted">Loading…</div> : (
@@ -180,6 +218,47 @@ export default function Reports() {
           )}
         </>
       )}
+
+{emailResult && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.5)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 9999,
+    }}
+  >
+    <div
+      style={{
+        background: "white",
+        padding: "24px",
+        borderRadius: "12px",
+        minWidth: "420px",
+        maxWidth: "600px",
+        boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+      }}
+    >
+      <h3>
+        {emailResult.success
+          ? "✅ Email Sent Successfully"
+          : "❌ Email Sending Failed"}
+      </h3>
+
+      <p>{emailResult.message}</p>
+
+      <button
+        className="primary"
+        onClick={() => setEmailResult(null)}
+      >
+        OK
+      </button>
+    </div>
+  </div>
+)}
+
 
     </div>
   );

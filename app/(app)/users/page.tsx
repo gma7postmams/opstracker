@@ -11,7 +11,7 @@ import { useToast } from "@/components/Toast";
 interface U {
   id: number; name: string; firstName: string; middleInitial: string | null; surname: string;
   email: string; username: string; role: "ADMIN" | "USER"; avatarUrl: string | null;
-  lastLogin: string | null; recordCount: number;
+  lastLogin: string | null; recordCount: number; smtpEmail?: string | null; smtpPassword?: string | null; smtpRecipients?: string | null; smtpEnabled?: boolean;
 }
 
 export default function Users() {
@@ -103,7 +103,7 @@ function UserForm({ user, selfId, onClose, onSaved, onDeleted }: {
   const [f, setF] = useState({
     firstName: user?.firstName ?? "", middleInitial: user?.middleInitial ?? "",
     surname: user?.surname ?? "", email: user?.email ?? "", username: user?.username ?? "",
-    role: user?.role ?? "USER", password: "", avatarUrl: user?.avatarUrl ?? null as string | null,
+    role: user?.role ?? "USER", password: "", avatarUrl: user?.avatarUrl ?? null as string | null, smtpEmail: user?.smtpEmail ?? "", smtpPassword: user?.smtpPassword ?? "", smtpRecipients: user?.smtpRecipients ?? "", smtpEnabled: user?.smtpEnabled ?? false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -189,6 +189,50 @@ function UserForm({ user, selfId, onClose, onSaved, onDeleted }: {
               required={!user} />
             {err("password")}
           </label>
+
+<div className="sectionlabel">Email Reports</div>
+
+<label>
+  <input
+    type="checkbox"
+    checked={f.smtpEnabled}
+    onChange={(e) => set("smtpEnabled", e.target.checked)}
+  />
+  Enable Email Reports
+</label>
+
+<label className="full">
+  Gmail Sender
+  <input
+    type="email"
+    value={f.smtpEmail}
+    onChange={(e) => set("smtpEmail", e.target.value)}
+    placeholder="gma7postmams@gmail.com"
+  />
+</label>
+
+<label className="full">
+  Gmail App Password
+  <input
+    type="password"
+    value={f.smtpPassword}
+    onChange={(e) => set("smtpPassword", e.target.value)}
+    placeholder="Google App Password"
+  />
+</label>
+
+<label className="full">
+  Recipients
+  <input
+    value={f.smtpRecipients}
+    onChange={(e) => set("smtpRecipients", e.target.value)}
+    placeholder="manager@gmail.com,noel@gmail.com"
+  />
+  <span className="muted">
+    Separate multiple email addresses with commas.
+  </span>
+</label>
+	
         </form>
       </Modal>
 

@@ -33,27 +33,36 @@ enum MasterKind {
   ACTIVITY_TYPE
 }
 
-model User {
-  id           Int          @id @default(autoincrement())
-  firstName    String       @map("first_name")
-  middleInitial String?     @map("middle_initial") @db.VarChar(1)
-  surname      String
-  email        String       @unique
-  username     String       @unique
-  passwordHash String       @map("password_hash")
-  role         Role         @default(USER)
-  avatarUrl    String?      @map("avatar_url")
-  active       Boolean      @default(true)
-  lastLogin    DateTime?    @map("last_login")
-  createdAt    DateTime     @default(now()) @map("created_at")
 
-  assistanceOwned Assistance[] @relation("AssistanceOwner")
+model User {
+  id            Int          @id @default(autoincrement())
+  firstName     String       @map("first_name")
+  middleInitial String?      @map("middle_initial") @db.VarChar(1)
+  surname       String
+  email         String       @unique
+  username      String       @unique
+  passwordHash  String       @map("password_hash")
+  role          Role         @default(USER)
+  avatarUrl     String?      @map("avatar_url")
+
+  smtpEmail      String?     @map("smtp_email")
+  smtpPassword   String?     @map("smtp_password")
+  smtpRecipients String?     @map("smtp_recipients")
+  smtpEnabled    Boolean     @default(false) @map("smtp_enabled")
+
+  active        Boolean      @default(true)
+  lastLogin     DateTime?    @map("last_login")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  assistanceOwned  Assistance[] @relation("AssistanceOwner")
   assistanceLocked Assistance[] @relation("AssistanceLocker")
   tasksOwned       Task[]       @relation("TaskOwner")
   tasksLocked      Task[]       @relation("TaskLocker")
 
   @@map("users")
 }
+
+
 
 model Assistance {
   id          Int      @id @default(autoincrement())

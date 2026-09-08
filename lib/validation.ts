@@ -70,6 +70,11 @@ export const userCreateSchema = z.object({
   role: z.enum(["ADMIN", "USER"]).default("USER"),
   password: z.string().min(8, "Password needs at least 8 characters"),
   avatarUrl: z.string().optional().nullable(),
+
+  smtpEmail: z.string().email().optional().or(z.literal("")),
+  smtpPassword: z.string().optional(),
+  smtpRecipients: z.string().optional(),
+  smtpEnabled: z.boolean().optional(),
 });
 
 export const userUpdateSchema = userCreateSchema.partial().extend({

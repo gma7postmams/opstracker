@@ -7,8 +7,20 @@ import { userUpdateSchema, flatten } from "@/lib/validation";
 import { fullName } from "@/lib/format";
 
 const PUBLIC = {
-  id: true, firstName: true, middleInitial: true, surname: true, email: true,
-  username: true, role: true, avatarUrl: true, active: true, lastLogin: true,
+  id: true,
+  firstName: true,
+  middleInitial: true,
+  surname: true,
+  email: true,
+  username: true,
+  role: true,
+  avatarUrl: true,
+  active: true,
+  lastLogin: true,
+
+  smtpEmail: true,
+  smtpRecipients: true,
+  smtpEnabled: true,
 };
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -53,7 +65,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const data: Record<string, unknown> = {};
-  const copyable = ["firstName", "surname", "email", "username", "avatarUrl", "active"] as const;
+
+const copyable = [
+  "firstName",
+  "surname",
+  "email",
+  "username",
+  "avatarUrl",
+  "active",
+
+  "smtpEmail",
+  "smtpPassword",
+  "smtpRecipients",
+  "smtpEnabled",
+] as const;
+
   for (const k of copyable) {
     if (d[k] !== undefined) data[k] = d[k];
   }

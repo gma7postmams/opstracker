@@ -7,8 +7,20 @@ import { userCreateSchema, flatten } from "@/lib/validation";
 import { fullName } from "@/lib/format";
 
 const PUBLIC = {
-  id: true, firstName: true, middleInitial: true, surname: true, email: true,
-  username: true, role: true, avatarUrl: true, active: true, lastLogin: true,
+  id: true,
+  firstName: true,
+  middleInitial: true,
+  surname: true,
+  email: true,
+  username: true,
+  role: true,
+  avatarUrl: true,
+  active: true,
+  lastLogin: true,
+
+  smtpEmail: true,
+  smtpRecipients: true,
+  smtpEnabled: true,
 };
 
 export async function GET() {
@@ -56,18 +68,25 @@ export async function POST(req: NextRequest) {
     }, { status: 400 });
   }
 
-  const created = await prisma.user.create({
-    data: {
-      firstName: d.firstName,
-      middleInitial: d.middleInitial?.toUpperCase() || null,
-      surname: d.surname,
-      email: d.email,
-      username: d.username,
-      role: d.role,
-      avatarUrl: d.avatarUrl || null,
-      passwordHash: await bcrypt.hash(d.password, 10),
-    },
-    select: PUBLIC,
-  });
+const created = await prisma.user.create({
+  data: {
+    firstName: d.firstName,
+    middleInitial: d.middleInitial?.toUpperCase() || null,
+    surname: d.surname,
+    email: d.email,
+    username: d.username,
+    role: d.role,
+    avatarUrl: d.avatarUrl || null,
+
+    smtpEmail: d.smtpEmail || null,
+    smtpPassword: d.smtpPassword || null,
+    smtpRecipients: d.smtpRecipients || null,
+    smtpEnabled: d.smtpEnabled ?? false,
+
+    passwordHash: await bcrypt.hash(d.password, 10),
+  },
+  select: PUBLIC,
+});
+
   return NextResponse.json({ ...created, name: fullName(created) }, { status: 201 });
 }

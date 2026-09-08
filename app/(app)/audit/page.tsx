@@ -31,13 +31,15 @@ const filterStyle = {
 const filteredLogs = logs.filter((log) => {
   const term = search.toLowerCase();
 
-  const matchesSearch =
-    !search ||
-    String(log.id).toLowerCase().includes(term) ||
-    (log.action ?? "").toLowerCase().includes(term) ||
-    (log.entityType ?? "").toLowerCase().includes(term) ||
-    (log.entityId ?? "").toLowerCase().includes(term) ||
-    (log.details?.name ?? "").toLowerCase().includes(term);
+const matchesSearch =
+  !search ||
+  String(log.id).toLowerCase().includes(term) ||
+  (log.action ?? "").toLowerCase().includes(term) ||
+  (log.entityType ?? "").toLowerCase().includes(term) ||
+  (log.entityId ?? "").toLowerCase().includes(term) ||
+  (log.details?.user ?? "").toLowerCase().includes(term) ||
+  (log.details?.name ?? "").toLowerCase().includes(term) ||
+  (log.details?.username ?? "").toLowerCase().includes(term);
 
   const matchesAction =
     actionFilter === "ALL" ||
@@ -112,6 +114,7 @@ const filteredLogs = logs.filter((log) => {
   <option value="LOGIN">LOGIN</option>
   <option value="LOGOUT">LOGOUT</option>
   <option value="LOGIN_FAILED">LOGIN_FAILED</option>
+  <option value="REPORT_EMAIL_SENT">REPORT_EMAIL_SENT</option>
   <option value="MASTERDATA_ADD">MASTERDATA_ADD</option>
   <option value="MASTERDATA_RETIRE">MASTERDATA_RETIRE</option>
   <option value="MASTERDATA_RESTORE">MASTERDATA_RESTORE</option>
@@ -193,7 +196,8 @@ const filteredLogs = logs.filter((log) => {
                 <span>{log.entityId}</span>
 
 		<span>
-		  {log.details?.name ??
+		  {log.details?.user ??
+		    log.details?.name ??
 		    log.details?.username ??
 		    (log.userId ? `User #${log.userId}` : "Anonymous")}
 		</span>
