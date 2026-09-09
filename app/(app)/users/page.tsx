@@ -180,26 +180,56 @@ function UserForm({ user, selfId, onClose, onSaved, onDeleted }: {
             <select value={f.role} disabled={isSelf} onChange={(e) => set("role", e.target.value)}>
               <option value="ADMIN">ADMIN</option><option value="USER">USER</option>
             </select>
-            {isSelf && <span className="muted">You cannot change your own role</span>}
+
+	<div className="muted" style={{minHeight: "20px", marginTop: "4px",}}>
+	{isSelf ? "You cannot change your own role" : ""}
+	</div>
+
+
             {err("role")}
           </label>
-          <label>Password
-            <input type="password" value={f.password} onChange={(e) => set("password", e.target.value)}
-              placeholder={user ? "Leave blank to keep current" : "At least 8 characters"}
-              required={!user} />
-            {err("password")}
-          </label>
+
+<label>
+  Password
+  <input type="password" value={f.password} onChange={(e) => set("password", e.target.value)}
+    placeholder={user ? "Leave blank to keep current" : "At least 8 characters"}
+    required={!user}
+  />
+
+  <div className="muted" style={{minHeight: "20px", marginTop: "4px",}}>
+    &nbsp;
+  </div>
+
+  {err("password")}
+</label>
+
+
 
 <div className="sectionlabel">Email Reports</div>
 
-<label>
+
+<label
+  className="full"
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+  }}
+>
   <input
     type="checkbox"
     checked={f.smtpEnabled}
     onChange={(e) => set("smtpEnabled", e.target.checked)}
+    style={{
+      width: "18px",
+      height: "18px",
+      margin: 0,
+    }}
   />
-  Enable Email Reports
+
+  <span>Enable Email Reports</span>
 </label>
+
 
 <label className="full">
   Gmail Sender
