@@ -7,6 +7,7 @@ import Avatar from "@/components/Avatar";
 import ImageUpload from "@/components/ImageUpload";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
+import { Eye, EyeOff } from "lucide-react";
 
 interface U {
   id: number; name: string; firstName: string; middleInitial: string | null; surname: string;
@@ -108,9 +109,14 @@ function UserForm({ user, selfId, onClose, onSaved, onDeleted }: {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [confirm, setConfirm] = useState(false);
+  const [showSmtpPassword, setShowSmtpPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const set = (k: string, v: any) => setF((s) => ({ ...s, [k]: v }));
   const err = (k: string) => errors[k] && <span className="fielderr">{errors[k]}</span>;
+  
+  
+
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -189,19 +195,32 @@ function UserForm({ user, selfId, onClose, onSaved, onDeleted }: {
             {err("role")}
           </label>
 
+
 <label>
-  Password
-  <input type="password" value={f.password} onChange={(e) => set("password", e.target.value)}
-    placeholder={user ? "Leave blank to keep current" : "At least 8 characters"}
-    required={!user}
-  />
+Password
 
-  <div className="muted" style={{minHeight: "20px", marginTop: "4px",}}>
-    &nbsp;
-  </div>
+<div style={{position: "relative", display: "flex", alignItems: "center",}}>
+<input type={showPassword ? "text" : "password"} value={f.password} onChange={(e) => set("password", e.target.value)}
+	placeholder={user 
+? "Leave blank to keep current"
+: "At least 8 characters"
+}
+required={!user}
+style={{ paddingRight: "40px" }}
+/>
 
-  {err("password")}
+<button type="button" onClick={() => setShowPassword(!showPassword)} style={{position: "absolute", right: "10px", background: "none", border: "none", cursor: "pointer",}}>
+{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+</button>
+</div>
+
+<div className="muted" style={{ minHeight: "20px", marginTop: "4px" }}>
+&nbsp;
+</div>
+
+{err("password")}
 </label>
+
 
 
 
@@ -241,15 +260,21 @@ function UserForm({ user, selfId, onClose, onSaved, onDeleted }: {
   />
 </label>
 
+
 <label className="full">
-  Gmail App Password
-  <input
-    type="password"
-    value={f.smtpPassword}
-    onChange={(e) => set("smtpPassword", e.target.value)}
-    placeholder="Google App Password"
-  />
+Gmail App Password
+
+<div style={{position: "relative", display: "flex", alignItems: "center",}}>
+<input type={showSmtpPassword ? "text" : "password"} value={f.smtpPassword} onChange={(e) => set("smtpPassword", e.target.value)}
+placeholder="Google App Password"
+style={{ paddingRight: "40px" }}/>
+
+<button type="button" onClick={() => setShowSmtpPassword(!showSmtpPassword)} style={{position: "absolute", right: "10px", background: "none", border: "none", cursor: "pointer",}}>
+{showSmtpPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+</button>
+</div>
 </label>
+
 
 <label className="full">
   Recipients

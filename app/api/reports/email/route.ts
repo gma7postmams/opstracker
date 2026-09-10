@@ -115,11 +115,11 @@ const taskRows = tasks
     (r) => `
       <tr>
 
-        <td style="padding:8px;border:1px solid #ddd">${r.refNo}</td>
-        <td style="padding:8px;border:1px solid #ddd">${r.activityType}</td>
+        <td style="padding:8px;border:1px solid #ddd;white-space:nowrap;">${r.refNo}</td>
+        <td style="padding:8px;border:1px solid #ddd;white-space:nowrap;">${r.activityType}</td>
         <td style="padding:8px;border:1px solid #ddd">${r.description}</td>   
-        <td style="padding:8px;border:1px solid #ddd">${r.status}</td>    
-        <td style="padding:8px;border:1px solid #ddd">${r.assigned}</td>  
+        <td style="padding:8px;border:1px solid #ddd;white-space:nowrap;">${r.status}</td>    
+        <td style="padding:8px;border:1px solid #ddd;white-space:nowrap;">${r.assigned}</td>  
 
       </tr>
     `
@@ -242,6 +242,7 @@ html: `
   style="
     border-collapse:collapse;
     width:100%;
+    table-layout:auto;
     margin-bottom:20px;
   "
 >
@@ -249,11 +250,11 @@ html: `
     background:#7f56d9;
     color:white;
   ">
-    <th style="padding:8px;border:1px solid #ddd">Ref No</th>
-    <th style="padding:8px;border:1px solid #ddd">Activity Type</th>
-    <th style="padding:8px;border:1px solid #ddd">Description</th>
-    <th style="padding:8px;border:1px solid #ddd">Status</th>
-    <th style="padding:8px;border:1px solid #ddd">Assigned</th>
+    <th style="padding:8px;border:1px solid #ddd;white-space:nowrap;">Ref No</th>
+    <th style="padding:8px;border:1px solid #ddd;white-space:nowrap;">Activity Type</th>
+    <th style="padding:8px;border:1px solid #ddd;white-space:nowrap;">Description</th>
+    <th style="padding:8px;border:1px solid #ddd;white-space:nowrap;">Status</th>
+    <th style="padding:8px;border:1px solid #ddd;white-space:nowrap;">Assigned</th>
   </tr>
 
   ${taskRows}
@@ -308,17 +309,34 @@ return NextResponse.json({
   message: `Report emailed successfully to ${sender.smtpRecipients}`,
 });
 
-} catch (error) {
+} catch (error: any) {
   console.error(error);
 
+  await logAudit({
+    userId: actor.id,
+    action: "REPORT_EMAIL_FAILED",
+    entityType: "REPORT",
+    entityId: `${from} to ${to}`,
+    details: {
+      user: actor.name,
+      sender: sender.smtpEmail,
+      recipients: sender.smtpRecipients,
+      filename,
+      activity,
+      status,
+      error: error?.message ?? "Unknown error",
+    },
+  });
+
   return NextResponse.json(
-	{
-	error: "Failed to send email.",
-	},
-	{
-	status: 500,
-	}
-     );
+    {
+      error: "Failed to send email.",
+    },
+    {
+      status: 500,
+    }
+  );
 }
+
 
 }
