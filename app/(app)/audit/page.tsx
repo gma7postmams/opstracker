@@ -115,6 +115,7 @@ const matchesSearch =
   <option value="LOGOUT">LOGOUT</option>
   <option value="LOGIN_FAILED">LOGIN_FAILED</option>
   <option value="REPORT_EMAIL_SENT">REPORT_EMAIL_SENT</option>
+  <option value="REPORT_EMAIL_FAILED">REPORT_EMAIL_FAILED</option>
   <option value="MASTERDATA_ADD">MASTERDATA_ADD</option>
   <option value="MASTERDATA_RETIRE">MASTERDATA_RETIRE</option>
   <option value="MASTERDATA_RESTORE">MASTERDATA_RESTORE</option>

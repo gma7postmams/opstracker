@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { isRecordType, TYPES } from "@/lib/recordTypes";
+import { TYPES } from "@/lib/recordTypes";
 import { nextRefNo, normalizeTimes } from "@/lib/records";
 import { schemaFor } from "@/lib/validation";
 import { parseCsv, normalizeStatus, normalizePriority, normalizeTime, normalizeDate } from "@/lib/csv";
 import { parseWorkbook, isExcelFile } from "@/lib/xlsx";
+import { logAudit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
@@ -50,17 +51,257 @@ export async function POST(req: NextRequest) {
       { error: "Only administrators can import records on behalf of other people" }, { status: 403 }
     );
   }
-  if (!isRecordType(type)) return NextResponse.json({ error: "Choose assistance or tasks" }, { status: 400 });
+	if (!["assistance", "tasks", "both"].includes(type)) {
+	  return NextResponse.json(
+	    { error: "Choose assistance, tasks, or both" },
+	    { status: 400 }
+	  );
+	}
   if (!(file instanceof File)) return NextResponse.json({ error: "No file received" }, { status: 400 });
   if (file.size > 10 * 1024 * 1024) {
     return NextResponse.json({ error: "That file is over 10 MB" }, { status: 400 });
   }
 
-  const excel = isExcelFile(file.name, file.type);
-  const csv = /\.csv$/i.test(file.name) || file.type === "text/csv";
-  if (!excel && !csv) {
-    return NextResponse.json({ error: "Upload an .xlsx, .xlsm or .csv file" }, { status: 400 });
+	const excel = isExcelFile(file.name, file.type);
+	const csv = /\.csv$/i.test(file.name) || file.type === "text/csv";
+
+	if (!excel && !csv) {
+	  return NextResponse.json(
+	    { error: "Upload an .xlsx, .xlsm or .csv file" },
+	    { status: 400 }
+	  );
+	}
+
+	if (type === "both" && !excel) {
+	  return NextResponse.json(
+	    { error: "Both import requires an Excel workbook with separate sheets" },
+	    { status: 400 }
+	  );
+	}
+
+if (type === "both") {
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  let assistanceSheet;
+  let tasksSheet;
+
+  try {
+    assistanceSheet = await parseWorkbook(
+      buffer,
+      "Technical Assistance"
+    );
+
+    tasksSheet = await parseWorkbook(
+      buffer,
+      "Other Tasks"
+    );
+  } catch (e: any) {
+    return NextResponse.json(
+      {
+        error:
+          'Workbook must contain sheets named "Technical Assistance" and "Other Tasks"',
+      },
+      { status: 400 }
+    );
   }
+
+  if (dryRun) {
+    return NextResponse.json({
+      preview: true,
+      detected:
+        assistanceSheet.rows.length +
+        tasksSheet.rows.length,
+      valid:
+        assistanceSheet.rows.length +
+        tasksSheet.rows.length,
+      assistanceRows: assistanceSheet.rows.length,
+      taskRows: tasksSheet.rows.length,
+      sheets: [
+        {
+          name: "Technical Assistance",
+          rowCount: assistanceSheet.rows.length,
+        },
+        {
+          name: "Other Tasks",
+          rowCount: tasksSheet.rows.length,
+        },
+      ],
+      format: "excel",
+      sheetUsed: "Both",
+      errors: [],
+    });
+  }
+
+  let assistanceImported = 0;
+  let taskImported = 0;
+
+  await prisma.$transaction(async (tx) => {
+
+    // Assistance
+    for (const cells of assistanceSheet.rows) {
+
+      const headers = assistanceSheet.headers;
+      const mapped = headers.map(
+        (h) =>
+          ALIASES[
+            h.toLowerCase().replace(/[^a-z0-9]/g, "")
+          ] ?? null
+      );
+
+      const raw: any = {};
+
+      mapped.forEach((field, i) => {
+        if (field)
+          raw[field] = (cells[i] ?? "").trim();
+      });
+
+      const candidate = {
+        ...raw,
+        date: normalizeDate(raw.date),
+        timeStarted: normalizeTime(raw.timeStarted),
+        timeEnded:
+          normalizeTime(raw.timeEnded) || "",
+        status: normalizeStatus(raw.status),
+        priority: normalizePriority(
+          raw.priority
+        ),
+        showGroup: raw.showGroup || null,
+        remarks: raw.remarks || null,
+        assigned:
+          scope === "self"
+            ? user.name
+            : raw.assigned || user.name,
+        accountable:
+          scope === "self"
+            ? user.name
+            : raw.accountable || user.name,
+        resolution: raw.resolution || null,
+      };
+
+      const parsed =
+        schemaFor("assistance").safeParse(
+          candidate
+        );
+
+      if (!parsed.success) continue;
+
+      const refNo = await nextRefNo(
+        "assistance",
+        tx
+      );
+
+      await tx.assistance.create({
+        data: {
+          ...normalizeTimes({
+            ...parsed.data,
+            date: new Date(parsed.data.date),
+          }),
+          refNo,
+          ownerId: user.id,
+        },
+      });
+
+      assistanceImported++;
+    }
+
+    // Tasks
+    for (const cells of tasksSheet.rows) {
+
+      const headers = tasksSheet.headers;
+
+      const mapped = headers.map(
+        (h) =>
+          ALIASES[
+            h.toLowerCase().replace(/[^a-z0-9]/g, "")
+          ] ?? null
+      );
+
+      const raw: any = {};
+
+      mapped.forEach((field, i) => {
+        if (field)
+          raw[field] = (cells[i] ?? "").trim();
+      });
+
+      const candidate = {
+        ...raw,
+        date: normalizeDate(raw.date),
+        timeStarted: normalizeTime(raw.timeStarted),
+        timeEnded:
+          normalizeTime(raw.timeEnded) || "",
+        status: normalizeStatus(raw.status),
+        priority: normalizePriority(
+          raw.priority
+        ),
+        showGroup: raw.showGroup || null,
+        remarks: raw.remarks || null,
+        assigned:
+          scope === "self"
+            ? user.name
+            : raw.assigned || user.name,
+        accountable:
+          scope === "self"
+            ? user.name
+            : raw.accountable || user.name,
+      };
+
+      const parsed =
+        schemaFor("tasks").safeParse(
+          candidate
+        );
+
+      if (!parsed.success) continue;
+
+      const refNo = await nextRefNo(
+        "tasks",
+        tx
+      );
+
+      await tx.task.create({
+        data: {
+          ...normalizeTimes({
+            ...parsed.data,
+            date: new Date(parsed.data.date),
+          }),
+          refNo,
+          ownerId: user.id,
+        },
+      });
+
+      taskImported++;
+    }
+  });
+
+await logAudit({
+  userId: user.id,
+  action: "IMPORT_BOTH",
+  entityType: "IMPORT",
+  entityId: `Successfully Imported ${
+    assistanceImported + taskImported
+  } Records`,
+  details: {
+    user: user.name,
+    filename: file.name,
+    assistanceImported,
+    taskImported,
+    totalImported:
+      assistanceImported + taskImported,
+    scope,
+    format: "excel",
+  },
+});
+
+
+  return NextResponse.json({
+    imported:
+      assistanceImported +
+      taskImported,
+    assistanceImported,
+    taskImported,
+  });
+}
+
+
 
   let headers: string[];
   let rows: string[][];
@@ -91,7 +332,11 @@ export async function POST(req: NextRequest) {
   const overridden = scope === "self"
     ? headers.filter((_, i) => mapped[i] !== null && PEOPLE.includes(mapped[i] as string))
     : [];
-  const schema = schemaFor(type);
+
+const schema =
+  type === "assistance"
+    ? schemaFor("assistance")
+    : schemaFor("tasks");
 
   const valid: any[] = [];
   const errors: { row: number; message: string }[] = [];
@@ -146,6 +391,22 @@ export async function POST(req: NextRequest) {
       imported++;
     }
   }, { timeout: 60_000 });
+
+await logAudit({
+  userId: user.id,
+  action: "IMPORT",
+  entityType: "IMPORT",
+  entityId: `Successfully Imported ${imported} Records`,
+  details: {
+    user: user.name,
+    filename: file.name,
+    imported,
+    failed: errors.length,
+    scope,
+    format: excel ? "excel" : "csv",
+    sheetUsed,
+  },
+});
 
   return NextResponse.json({
     imported, failed: errors.length, errors: errors.slice(0, 20), unknownColumns: unknown,

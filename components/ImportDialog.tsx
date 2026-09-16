@@ -94,8 +94,9 @@ export default function ImportDialog({ scope, fixedType, onClose, onDone }: Prop
           </>
         ) : (
           <>
-            • <b>Assigned To</b> and <b>Accountable Person</b> are read from the file.<br />
-            • Rows without those columns fall back to your name.<br />
+		• <b>Assigned To</b> and <b>Accountable Person</b> are optional.<br />
+		• If either value is blank, the currently logged-in user will be used automatically.<br />
+		• If the columns are not present in the file, the currently logged-in user will be used automatically.<br />
           </>
         )}
         • Records are owned by you either way, so you can correct them afterwards.<br />
@@ -109,6 +110,7 @@ export default function ImportDialog({ scope, fixedType, onClose, onDone }: Prop
             <select value={type} onChange={(e) => changeType(e.target.value)} disabled={busy}>
               <option value="assistance">Technical Assistance</option>
               <option value="tasks">Other Tasks</option>
+	      <option value="both">Both (Workbook)</option>
             </select>
           </label>
         )}

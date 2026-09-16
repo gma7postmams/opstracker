@@ -18,14 +18,16 @@ export default function AdminImportPanel({ onDone }: { onDone?: () => void }) {
           <div><h3>Import records</h3>
             <span className="muted">Load a log on behalf of the whole team</span></div>
         </div>
-        <div className="hint spacedbottom">
-          <b>How this differs from the record pages</b><br />
-          • Here, <b>Assigned To</b> and <b>Accountable Person</b> are read from the file, so
-          rows can be attributed to different people.<br />
-          • On the Technical Assistance and Other Tasks pages, anyone can import their own
-          work and every row is logged under them.<br />
-          • Either way the records are owned by you, so you can correct them afterwards.
-        </div>
+
+	<div className="hint spacedbottom">
+		<b>How this differs from the record pages</b><br />
+		• <b>Assigned To</b> and <b>Accountable Person</b> can be supplied in the file, allowing rows to be attributed to different people.<br />
+		• If either value is blank, the currently logged-in user will be used automatically.<br />
+		• If those columns are not present in the file, the currently logged-in user will be used automatically.<br />
+		• On the Technical Assistance and Other Tasks pages, anyone can import their own work and every row is logged under them.<br />
+		• Either way, the records are owned by you, so you can correct them afterwards.
+	</div>
+
         <button className="primary" onClick={() => setOpen(true)}>⇧ Import Excel / CSV</button>
       </section>
 
