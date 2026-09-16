@@ -120,11 +120,11 @@ export default function ImportDialog({ scope, fixedType, onClose, onDone }: Prop
             onChange={(e) => reset(e.target.files?.[0] ?? null)} />
         </label>
 
-        {preview?.sheets?.length > 1 && (
+	{preview?.sheets?.length > 1 && (
           <label className="full">Sheet
             <select value={preview.sheetUsed ?? ""} onChange={(e) => pickSheet(e.target.value)} disabled={busy}>
               {preview.sheets.map((s: any) => (
-                <option key={s.name} value={s.name}>{s.name} ({s.rowCount} rows)</option>
+                <option key={s.name} value={s.name}>{s.name} ({s.rowCount} {s.rowCount === 1 ? "row" : "rows"})</option>
               ))}
             </select>
             <span className="muted">This workbook has several tabs — pick the one holding the log.</span>

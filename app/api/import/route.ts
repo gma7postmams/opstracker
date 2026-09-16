@@ -275,7 +275,7 @@ if (type === "both") {
 await logAudit({
   userId: user.id,
   action: "IMPORT_BOTH",
-  entityType: "IMPORT",
+  entityType: "Workbook",
   entityId: `Successfully Imported ${
     assistanceImported + taskImported
   } Records`,
@@ -310,7 +310,15 @@ await logAudit({
 
   if (excel) {
     try {
-      const parsed = await parseWorkbook(Buffer.from(await file.arrayBuffer()), sheetName);
+
+	const selectedSheet =
+	  type === "assistance"
+	    ? "Technical Assistance"
+	    : type === "tasks"
+	    ? "Other Tasks"
+	    : sheetName;
+
+      const parsed = await parseWorkbook(Buffer.from(await file.arrayBuffer()), selectedSheet);
       ({ headers, rows, sheets, sheetUsed } = parsed);
     } catch (e: any) {
       return NextResponse.json(
@@ -395,7 +403,10 @@ const schema =
 await logAudit({
   userId: user.id,
   action: "IMPORT",
-  entityType: "IMPORT",
+  entityType:
+    type === "assistance"
+      ? "Technical Assistance"
+      : "Other Tasks",
   entityId: `Successfully Imported ${imported} Records`,
   details: {
     user: user.name,

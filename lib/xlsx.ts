@@ -62,7 +62,17 @@ export async function parseWorkbook(buffer: Buffer, sheetName?: string): Promise
   await wb.xlsx.load(buffer as any);
 
   const sheets: SheetInfo[] = [];
-  wb.eachSheet((ws) => sheets.push({ name: ws.name, rowCount: ws.actualRowCount ?? ws.rowCount }));
+
+wb.eachSheet((ws) =>
+  sheets.push({
+    name: ws.name,
+    rowCount: Math.max(
+      0,
+      (ws.actualRowCount ?? ws.rowCount) - 1
+    ),
+  })
+);
+
   if (!sheets.length) throw new Error("That workbook has no sheets");
 
   const ws = sheetName ? wb.getWorksheet(sheetName) : wb.worksheets[0];
