@@ -12,7 +12,6 @@ export default function Dashboard() {
 
   useEffect(() => { fetch("/api/dashboard").then((r) => r.json()).then(setD); }, []);
   if (!d) return <div className="page"><div className="muted">Loading…</div></div>;
-  console.log(d.trend);
 
   const open = d.assistance.OPEN + d.tasks.OPEN;
   const pending = d.assistance.CLOSE_PENDING + d.tasks.CLOSE_PENDING;
@@ -121,6 +120,38 @@ export default function Dashboard() {
           </div>
         </section>
       </div>
+
+	<section className="panel spaced">
+	  <div className="panelhead">
+	    <div>
+	      <h3>Recent Activity</h3>
+	      <span className="muted">
+	        Latest audit events
+	      </span>
+	    </div>
+	  </div>
+
+	  {d.recentActivity?.length ? (
+	    d.recentActivity.map((a: any) => (
+	      <div className="issue" key={a.id}>
+	        <b>{a.action}</b>
+
+	        <small>{a.entityId}</small>
+
+	        <small>
+	          {(a.details as any)?.user ?? "System"} •{" "}
+	          {new Date(a.createdAt).toLocaleString()}
+	        </small>
+	      </div>
+	    ))
+	  ) : (
+	    <div className="empty">
+	      <b>No Recent Activity</b>
+	      Nothing has been logged yet.
+	    </div>
+	  )}
+	</section>
+
     </div>
   );
 }

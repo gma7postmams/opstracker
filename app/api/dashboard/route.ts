@@ -21,7 +21,7 @@ export async function GET() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [aStatus, tStatus, aTotal, tTotal, cats, aRecent, tRecent, aTrend, tTrend, aOverdue, tOverdue,] = await Promise.all([
+  const [aStatus, tStatus, aTotal, tTotal, cats, aRecent, tRecent, aTrend, tTrend, aOverdue, tOverdue, auditLogs,] = await Promise.all([
     prisma.assistance.groupBy({ by: ["status"], _count: true }),
     prisma.task.groupBy({ by: ["status"], _count: true }),
     prisma.assistance.count(),
@@ -54,6 +54,11 @@ prisma.task.count({
     status: { not: "CLOSED" },
     date: { lt: today },
   },
+}),
+
+prisma.auditLog.findMany({
+  orderBy: { createdAt: "desc" },
+  take: 5,
 }),
 
   ]);
@@ -94,12 +99,25 @@ const trend = Array.from({ length: 7 }, (_, i) => {
     ...tRecent.map((r) => ({ ...r, type: "tasks", subject: r.activityType, body: r.description })),
   ].slice(0, 8);
 
-  return NextResponse.json({
-    assistance: { total: aTotal, ...toMap(aStatus as any) },
-    tasks: { total: tTotal, ...toMap(tStatus as any) },
-    overdue: aOverdue + tOverdue,
-    categories: cats.map((c: any) => ({ name: c.category, count: c._count })),
-    trend,
-    attention,
-  });
+console.log("Audit Logs Found:", auditLogs.length);
+
+return NextResponse.json({
+  assistance: { total: aTotal, ...toMap(aStatus as any) },
+  tasks: { total: tTotal, ...toMap(tStatus as any) },
+  overdue: aOverdue + tOverdue,
+  categories: cats.map((c: any) => ({ name: c.category, count: c._count })),
+  trend,
+  attention,
+
+  recentActivity: auditLogs.map((a: any) => ({
+    id: a.id,
+    action: a.action,
+    entityId: a.entityId,
+    createdAt: a.createdAt,
+    details: a.details,
+  })),
+
+
+});
+
 }
