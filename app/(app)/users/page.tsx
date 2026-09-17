@@ -266,7 +266,7 @@ Gmail App Password
 
 <div style={{position: "relative", display: "flex", alignItems: "center",}}>
 <input type={showSmtpPassword ? "text" : "password"} value={f.smtpPassword} onChange={(e) => set("smtpPassword", e.target.value)}
-placeholder="Google App Password"
+placeholder="Leave blank to keep current password"
 style={{ paddingRight: "40px" }}/>
 
 <button type="button" onClick={() => setShowSmtpPassword(!showSmtpPassword)} style={{position: "absolute", right: "10px", background: "none", border: "none", cursor: "pointer",}}>

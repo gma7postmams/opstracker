@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { isAdmin, canModifyUser } from "@/lib/permissions";
 import { userUpdateSchema, flatten } from "@/lib/validation";
 import { fullName } from "@/lib/format";
+import { logAudit } from "@/lib/audit";
 
 const PUBLIC = {
   id: true,
@@ -65,6 +66,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const data: Record<string, unknown> = {};
+  const changedFields: string[] = [];
 
 const copyable = [
   "firstName",
@@ -80,11 +82,33 @@ const copyable = [
   "smtpEnabled",
 ] as const;
 
-  for (const k of copyable) {
-    if (d[k] !== undefined) data[k] = d[k];
+for (const k of copyable) {
+  if (k === "smtpPassword") continue;
+
+  if (d[k] !== undefined) {
+    data[k] = d[k];
+    changedFields.push(k);
   }
-  if (d.middleInitial !== undefined) data.middleInitial = d.middleInitial?.toUpperCase() || null;
-  if (d.password) data.passwordHash = await bcrypt.hash(d.password, 10);
+}
+
+if (
+  d.smtpPassword !== undefined &&
+  d.smtpPassword.trim() !== ""
+) {
+  data.smtpPassword = d.smtpPassword;
+  changedFields.push("smtpPassword");
+}
+
+if (d.middleInitial !== undefined) {
+  data.middleInitial = d.middleInitial?.toUpperCase() || null;
+  changedFields.push("middleInitial");
+}
+
+if (d.password) {
+  data.passwordHash = await bcrypt.hash(d.password, 10);
+  changedFields.push("password");
+}
+
 
   // Guard: nobody demotes themselves out of the last admin seat by accident.
   const { canEditRole } = canModifyUser(actor, id);
@@ -99,9 +123,26 @@ const copyable = [
       }
     }
     data.role = d.role;
+    changedFields.push("role");
   }
 
   const updated = await prisma.user.update({ where: { id }, data, select: PUBLIC });
+
+if (changedFields.length > 0) {
+  await logAudit({
+    userId: actor.id,
+    action: actor.id === id ? "UPDATE_PROFILE" : "UPDATE_USER",
+    entityType: "User Profile",
+    entityId: `Updated ${updated.username}`,
+    details: {
+      user: fullName(updated),
+      changedFields,
+      passwordChanged: changedFields.includes("password"),
+      smtpPasswordChanged: changedFields.includes("smtpPassword"),
+    },
+  });
+}
+
   return NextResponse.json({ ...updated, name: fullName(updated) });
 }
 
