@@ -37,6 +37,7 @@ export default function Dashboard() {
         {card(open, "Open", "co", "!")}
         {card(pending, "Close Pending", "cy", "◑")}
         {card(closed, "Closed", "cg", "✓")}
+	{card(d.overdue, "Overdue", d.overdue > 0 ? "cr" : "cg", "⚠")}
       </div>
 
       <section className="panel spaced">

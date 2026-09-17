@@ -18,7 +18,10 @@ export async function GET() {
   since.setDate(since.getDate() - 6);
   since.setHours(0, 0, 0, 0);
 
-  const [aStatus, tStatus, aTotal, tTotal, cats, aRecent, tRecent, aTrend, tTrend] = await Promise.all([
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [aStatus, tStatus, aTotal, tTotal, cats, aRecent, tRecent, aTrend, tTrend, aOverdue, tOverdue,] = await Promise.all([
     prisma.assistance.groupBy({ by: ["status"], _count: true }),
     prisma.task.groupBy({ by: ["status"], _count: true }),
     prisma.assistance.count(),
@@ -38,6 +41,21 @@ export async function GET() {
     }),
     prisma.assistance.groupBy({ by: ["date"], _count: true, where: { date: { gte: since } } }),
     prisma.task.groupBy({ by: ["date"], _count: true, where: { date: { gte: since } } }),
+
+prisma.assistance.count({
+  where: {
+    status: { not: "CLOSED" },
+    date: { lt: today },
+  },
+}),
+
+prisma.task.count({
+  where: {
+    status: { not: "CLOSED" },
+    date: { lt: today },
+  },
+}),
+
   ]);
 
   // Build a dense 7-day series so days with no activity still render a slot.
@@ -76,10 +94,10 @@ const trend = Array.from({ length: 7 }, (_, i) => {
     ...tRecent.map((r) => ({ ...r, type: "tasks", subject: r.activityType, body: r.description })),
   ].slice(0, 8);
 
-
   return NextResponse.json({
     assistance: { total: aTotal, ...toMap(aStatus as any) },
     tasks: { total: tTotal, ...toMap(tStatus as any) },
+    overdue: aOverdue + tOverdue,
     categories: cats.map((c: any) => ({ name: c.category, count: c._count })),
     trend,
     attention,
