@@ -12,6 +12,7 @@ export default function Dashboard() {
 
   useEffect(() => { fetch("/api/dashboard").then((r) => r.json()).then(setD); }, []);
   if (!d) return <div className="page"><div className="muted">Loading…</div></div>;
+  console.log(d.trend);
 
   const open = d.assistance.OPEN + d.tasks.OPEN;
   const pending = d.assistance.CLOSE_PENDING + d.tasks.CLOSE_PENDING;
@@ -69,7 +70,13 @@ export default function Dashboard() {
                   height: `${Math.round((t.count / peak) * 100)}%`,
                   background: t.count === peak && t.count > 0 ? "#7f56d9" : "#3b82f6",
                 }} />
-                {t.label}
+
+		<div>
+		  <small>{t.date.slice(5)}</small>
+		  <br />
+		  <small>{t.label}</small>
+		</div>
+
               </div>
             ))}
           </div>

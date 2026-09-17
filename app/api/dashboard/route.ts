@@ -41,26 +41,41 @@ export async function GET() {
   ]);
 
   // Build a dense 7-day series so days with no activity still render a slot.
-  const counts = new Map<string, number>();
-  [...aTrend, ...tTrend].forEach((r: any) => {
-    const k = ymd(r.date);
-    counts.set(k, (counts.get(k) ?? 0) + r._count);
+const counts = new Map<string, number>();
+
+[...aTrend, ...tTrend].forEach((r: any) => {
+
+  const k = ymd(r.date);
+  counts.set(k, (counts.get(k) ?? 0) + r._count);
+});
+
+const trend = Array.from({ length: 7 }, (_, i) => {
+  const d = new Date(since);
+  d.setDate(d.getDate() + i);
+
+  const key = [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, "0"),
+    String(d.getDate()).padStart(2, "0"),
+  ].join("-");
+
+  const label = d.toLocaleDateString("en-US", {
+    weekday: "short",
   });
-  const trend = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(since);
-    d.setDate(since.getDate() + i);
-    const key = ymd(d);
-    return {
-      date: key,
-      label: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()],
-      count: counts.get(key) ?? 0,
-    };
-  });
+
+  return {
+    date: key,
+    label,
+    count: counts.get(key) ?? 0,
+  };
+});
+
 
   const attention = [
     ...aRecent.map((r) => ({ ...r, type: "assistance", subject: r.clientName, body: r.problem })),
     ...tRecent.map((r) => ({ ...r, type: "tasks", subject: r.activityType, body: r.description })),
   ].slice(0, 8);
+
 
   return NextResponse.json({
     assistance: { total: aTotal, ...toMap(aStatus as any) },
