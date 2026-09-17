@@ -123,11 +123,40 @@ function RestoreDialog({ onClose, onDone }: { onClose: () => void; onDone: () =>
             </p>
             <table className="minitable">
               <thead><tr><th /><th>In backup</th><th>In database now</th></tr></thead>
-              <tbody>
-                <tr><td>Users</td><td>{preview.incoming.users}</td><td>{preview.existing.users}</td></tr>
-                <tr><td>Assistance</td><td>{preview.incoming.assistance}</td><td>{preview.existing.assistance}</td></tr>
-                <tr><td>Tasks</td><td>{preview.incoming.tasks}</td><td>{preview.existing.tasks}</td></tr>
-              </tbody>
+
+	<tbody>
+	  <tr>
+	    <td>Users</td>
+	    <td>{preview.incoming.users}</td>
+	    <td>{preview.existing.users}</td>
+	  </tr>
+
+	  <tr>
+	    <td>Assistance</td>
+	    <td>{preview.incoming.assistance}</td>
+	    <td>{preview.existing.assistance}</td>
+	  </tr>
+
+	  <tr>
+	    <td>Tasks</td>
+	    <td>{preview.incoming.tasks}</td>
+	    <td>{preview.existing.tasks}</td>
+	  </tr>
+
+	  <tr>
+	    <td>Master Data</td>
+	    <td>{preview.incoming.masterData}</td>
+	    <td>-</td>
+	  </tr>
+
+	  <tr>
+	    <td>Audit Logs</td>
+	    <td>{preview.incoming.auditLogs}</td>
+	    <td>-</td>
+	  </tr>
+	</tbody>
+
+
             </table>
             {mode === "replace" && (
               <div className="err spacedtop">

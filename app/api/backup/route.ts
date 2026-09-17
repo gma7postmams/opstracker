@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/permissions";
+import { logAudit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
@@ -16,24 +17,58 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!isAdmin(user)) return NextResponse.json({ error: "Administrators only" }, { status: 403 });
 
-  const [users, assistance, tasks, branding, masterData, counters] = await Promise.all([
-    prisma.user.findMany({ orderBy: { id: "asc" } }),
-    prisma.assistance.findMany({ orderBy: { id: "asc" } }),
-    prisma.task.findMany({ orderBy: { id: "asc" } }),
-    prisma.branding.findUnique({ where: { id: 1 } }),
-    prisma.masterData.findMany({ orderBy: { id: "asc" } }),
-    prisma.counter.findMany(),
-  ]);
+const [
+  users,
+  assistance,
+  tasks,
+  branding,
+  masterData,
+  counters,
+  auditLogs,
+] = await Promise.all([
+  prisma.user.findMany({ orderBy: { id: "asc" } }),
+  prisma.assistance.findMany({ orderBy: { id: "asc" } }),
+  prisma.task.findMany({ orderBy: { id: "asc" } }),
+  prisma.branding.findUnique({ where: { id: 1 } }),
+  prisma.masterData.findMany({ orderBy: { id: "asc" } }),
+  prisma.counter.findMany(),
+  prisma.auditLog.findMany({ orderBy: { id: "asc" } }),
+]);
 
   const payload = {
     format: FORMAT_VERSION,
     exportedAt: new Date().toISOString(),
     exportedBy: user.name,
-    counts: { users: users.length, assistance: assistance.length, tasks: tasks.length },
-    data: { users, assistance, tasks, branding, masterData, counters },
+    counts: { users: users.length, assistance: assistance.length, tasks: tasks.length, auditLogs: auditLogs.length, },
+
+data: {
+  users,
+  assistance,
+  tasks,
+  branding,
+  masterData,
+  counters,
+  auditLogs,
+},
+
   };
 
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+
+await logAudit({
+  userId: user.id,
+  action: "BACKUP",
+  entityType: "System",
+  entityId: "Backup Downloaded",
+  details: {
+    user: user.name,
+    users: users.length,
+    assistance: assistance.length,
+    tasks: tasks.length,
+  },
+});
+
+
   return new NextResponse(JSON.stringify(payload, null, 2), {
     headers: {
       "Content-Type": "application/json",
@@ -74,12 +109,15 @@ export async function POST(req: NextRequest) {
   }
 
   const d = payload.data;
-  const incoming = {
-    users: d.users?.length ?? 0,
-    assistance: d.assistance?.length ?? 0,
-    tasks: d.tasks?.length ?? 0,
-    masterData: d.masterData?.length ?? 0,
-  };
+
+const incoming = {
+  users: d.users?.length ?? 0,
+  assistance: d.assistance?.length ?? 0,
+  tasks: d.tasks?.length ?? 0,
+  masterData: d.masterData?.length ?? 0,
+  auditLogs: d.auditLogs?.length ?? 0,
+};
+
 
   if (dryRun) {
     const [eu, ea, et] = await Promise.all([
@@ -110,9 +148,14 @@ export async function POST(req: NextRequest) {
       await tx.user.deleteMany();
       await tx.masterData.deleteMany();
       await tx.counter.deleteMany();
+      await tx.auditLog.deleteMany();
     }
 
-    let usersAdded = 0, assistanceAdded = 0, tasksAdded = 0, masterAdded = 0;
+let usersAdded = 0,
+    assistanceAdded = 0,
+    tasksAdded = 0,
+    masterAdded = 0,
+    auditAdded = 0;
 
     for (const u of d.users ?? []) {
       const exists = mode === "merge" && await tx.user.findFirst({
@@ -130,11 +173,13 @@ export async function POST(req: NextRequest) {
       await tx.assistance.create({ data: dates(r) });
       assistanceAdded++;
     }
+
     for (const r of d.tasks ?? []) {
       if (mode === "merge" && await tx.task.findUnique({ where: { refNo: r.refNo } })) continue;
       await tx.task.create({ data: dates(r) });
       tasksAdded++;
     }
+
     for (const m of d.masterData ?? []) {
       const exists = mode === "merge" && await tx.masterData.findUnique({
         where: { kind_value: { kind: m.kind, value: m.value } },
@@ -143,6 +188,25 @@ export async function POST(req: NextRequest) {
       await tx.masterData.create({ data: m });
       masterAdded++;
     }
+
+for (const a of d.auditLogs ?? []) {
+  const exists =
+    mode === "merge" &&
+    (await tx.auditLog.findUnique({
+      where: { id: a.id },
+    }));
+
+  if (exists) continue;
+
+  await tx.auditLog.create({
+    data: {
+      ...a,
+      createdAt: new Date(a.createdAt),
+    },
+  });
+
+  auditAdded++;
+}
 
     if (d.branding) {
       const { id, updatedAt, ...b } = d.branding;
@@ -164,8 +228,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return { usersAdded, assistanceAdded, tasksAdded, masterAdded };
+return {
+  usersAdded,
+  assistanceAdded,
+  tasksAdded,
+  masterAdded,
+  auditAdded,
+};
+
   }, { timeout: 120_000 });
+
+await logAudit({
+  userId: user.id,
+  action: "RESTORE",
+  entityType: "System",
+  entityId:
+    mode === "replace"
+      ? "Full Restore (Replace)"
+      : "Full Restore (Merge)",
+  details: {
+    user: user.name,
+    mode,
+    ...result,
+  },
+});
+
 
   return NextResponse.json({ ok: true, mode, ...result });
 }
