@@ -24,18 +24,83 @@ export default function Admin() {
   const [rows, setRows] = useState<any[]>([]);
   const [adding, setAdding] = useState<Record<string, string>>({});
   const [resetting, setResetting] = useState(false);
-  const [saving, setSaving] = useState(false);
+
+const [saving, setSaving] = useState(false);
+
+const [ai, setAi] = useState({
+  enabled: true,
+  url: "http://172.30.10.76:11434",
+  model: "gpt-oss:20b",
+  timeout: 30000,
+});
+
+const [models, setModels] = useState<string[]>([]);
+const [testingAI, setTestingAI] = useState(false);
+
 
   const loadMaster = useCallback(async () => {
     const d = await (await fetch("/api/masterdata")).json();
     setRows(d.rows ?? []);
   }, []);
 
- useEffect(() => {
-   fetch("/api/branding").then((r) => r.json()).then(setB);
-   loadMaster();
- }, [loadMaster]);
+useEffect(() => {
+  fetch("/api/admin/ai")
+    .then((r) => r.json())
+    .then(setAi);
 
+  fetch("/api/admin/ai/test")
+    .then((r) => r.json())
+    .then((data) => {
+      if (data.ok) {
+        setModels(data.models);
+      }
+    });
+}, [loadMaster]);
+
+async function saveAI() {
+  const res = await fetch("/api/admin/ai", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(ai),
+  });
+
+  if (res.ok) {
+    toast("AI settings saved");
+  } else {
+    toast("Unable to save AI settings");
+  }
+}
+
+async function testAI() {
+  try {
+    setTestingAI(true);
+
+    const res = await fetch("/api/admin/ai/test");
+    const data = await res.json();
+
+    if (data.ok) {
+      setModels(data.models);
+
+      if (
+        data.models.length &&
+        !data.models.includes(ai.model)
+      ) {
+        setAi({
+          ...ai,
+          model: data.models[0],
+        });
+      }
+
+      toast(`Connected. Found ${data.models.length} models.`);
+    } else {
+      toast("Connection failed");
+    }
+  } finally {
+    setTestingAI(false);
+  }
+}
 
   async function saveBranding() {
     setSaving(true);
@@ -119,6 +184,149 @@ export default function Admin() {
           </div>
         </section>
       )}
+
+
+<section className="panel spaced">
+  <div className="panelhead">
+    <div>
+      <h3>AI Settings</h3>
+
+      <span className="muted">
+        Configure Ollama integration for writing assistance
+      </span>
+    </div>
+  </div>
+
+<div className="ai-card">
+
+<div className="ai-status-card">
+  <label
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      fontWeight: 600,
+      marginBottom: 6,
+    }}
+  >
+    <input
+      type="checkbox"
+      checked={ai.enabled}
+      onChange={(e) =>
+        setAi({
+          ...ai,
+          enabled: e.target.checked,
+        })
+      }
+    />
+    Enable AI Assistance
+  </label>
+
+  <div className="muted">
+    {ai.enabled
+      ? "🟢 AI writing assistance is enabled"
+      : "🔴 AI writing assistance is disabled"}
+  </div>
+</div>
+
+<label>
+  Ollama URL
+  <input
+    value={ai.url}
+    onChange={(e) =>
+      setAi({
+        ...ai,
+        url: e.target.value,
+      })
+    }
+  />
+</label>
+
+<div className="ai-status-card">
+  <div>
+    <strong>
+      {models.length
+        ? "🟢 Ollama Connected"
+        : "🔴 Ollama Disconnected"}
+    </strong>
+  </div>
+
+  <div className="muted">
+    {models.length
+      ? `${models.length} model(s) available`
+      : "No models detected"}
+  </div>
+</div>
+
+<label>
+  Available Model
+  <select
+    value={ai.model}
+    onChange={(e) =>
+      setAi({
+        ...ai,
+        model: e.target.value,
+      })
+    }
+  >
+    {models.map((m) => (
+      <option key={m} value={m}>
+        {m}
+      </option>
+    ))}
+  </select>
+
+  <div
+    className="muted"
+    style={{ marginTop: 6 }}
+  >
+    {models.length
+      ? `🟢 Connected • ${models.length} model(s) available`
+      : "🔴 Not connected"}
+  </div>
+</label>
+
+<div>
+  <div className="flabel">Timeout (ms)</div>
+
+  <input
+    type="number"
+    value={ai.timeout}
+    onChange={(e) =>
+      setAi({
+        ...ai,
+        timeout: Number(e.target.value),
+      })
+    }
+  />
+</div>
+
+<div
+  style={{
+    display: "flex",
+    gap: 10,
+  }}
+>
+  <button
+    className="secondary"
+    onClick={testAI}
+    disabled={testingAI}
+  >
+    {testingAI ? "Testing..." : "Test Connection"}
+  </button>
+
+  <button
+    className="primary"
+    onClick={saveAI}
+  >
+    Save AI Settings
+  </button>
+</div>
+
+
+  </div>
+</section>
+
 
       <AdminImportPanel />
 

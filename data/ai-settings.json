@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "url": "http://172.30.10.76:11434",
+  "model": "gpt-oss:20b",
+  "timeout": 30000
+}

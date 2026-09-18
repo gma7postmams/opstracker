@@ -24,9 +24,15 @@ interface Props {
 
 export default function RecordForm({ type, singular, master, record, onClose, onSaved }: Props) {
   const isAssistance = type === "assistance";
-  const [people, setPeople] = useState<string[]>([]);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [saving, setSaving] = useState(false);
+
+const [people, setPeople] = useState<string[]>([]);
+const [errors, setErrors] = useState<Record<string, string>>({});
+const [saving, setSaving] = useState(false);
+
+const [aiLoading, setAiLoading] = useState(false);
+const [aiSuggestion, setAiSuggestion] = useState("");
+const [aiEnabled, setAiEnabled] = useState(true);
+
   const [form, setForm] = useState<any>(() => ({
     date: record?.date ? String(record.date).slice(0, 10) : new Date().toISOString().slice(0, 10),
     shift: record?.shift ?? "",
@@ -47,9 +53,56 @@ export default function RecordForm({ type, singular, master, record, onClose, on
     description: record?.description ?? "",
   }));
 
-  useEffect(() => {
-    fetch("/api/users").then((r) => r.json()).then((u) => setPeople(u.map((x: any) => x.name)));
-  }, []);
+
+const set = (k: string, v: any) =>
+  setForm((f: any) => ({ ...f, [k]: v }));
+
+async function improveProblem() {
+  if (!form.problem?.trim()) {
+    alert("Please enter a problem description first.");
+    return;
+  }
+
+  try {
+    setAiLoading(true);
+
+    const res = await fetch("/api/ai/improve", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        text: form.problem,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.suggestion) {
+      setAiSuggestion(data.suggestion);
+    } else {
+      alert(data.error ?? "No suggestion returned.");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("AI improvement failed.");
+  } finally {
+    setAiLoading(false);
+  }
+}
+
+
+useEffect(() => {
+  fetch("/api/users")
+    .then((r) => r.json())
+    .then((u) => setPeople(u.map((x: any) => x.name)));
+
+  fetch("/api/admin/ai")
+    .then((r) => r.json())
+    .then((cfg) => {
+      setAiEnabled(cfg.enabled);
+    });
+}, []);
 
   // Defaults come from master data once it loads, so a new record opens with
   // the first valid option selected rather than an empty required field.
@@ -63,7 +116,6 @@ export default function RecordForm({ type, singular, master, record, onClose, on
     }));
   }, [master]);
 
-  const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -129,10 +181,67 @@ export default function RecordForm({ type, singular, master, record, onClose, on
                 {(master.CATEGORY ?? []).map((v) => <option key={v}>{v}</option>)}
               </select>{err("category")}
             </label>
-            <label className="full">Problem
-              <textarea value={form.problem} onChange={(e) => set("problem", e.target.value)}
-                placeholder="Describe the issue or request…" required />{err("problem")}
-            </label>
+
+<label className="full">
+  Problem
+
+  <textarea
+    value={form.problem}
+    onChange={(e) => set("problem", e.target.value)}
+    placeholder="Describe the issue or request…"
+    required
+  />
+
+{aiEnabled && (
+  <div style={{ marginTop: 8 }}>
+    <button
+      type="button"
+      className="secondary"
+      onClick={improveProblem}
+      disabled={aiLoading}
+    >
+      {aiLoading ? "⏳ Improving..." : "✨ Improve with AI"}
+    </button>
+  </div>
+)}
+
+
+{aiEnabled && aiSuggestion && aiSuggestion !== form.problem && (
+
+  <div className="ai-ready">
+    <strong>✅ Suggested Improvement</strong>
+
+    <div className="ai-preview">
+      {aiSuggestion}
+    </div>
+
+    <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+      <button
+        type="button"
+        className="primary"
+        onClick={() => {
+          set("problem", aiSuggestion);
+          setAiSuggestion("");
+        }}
+      >
+        Apply
+      </button>
+
+      <button
+        type="button"
+        className="secondary"
+        onClick={() => setAiSuggestion("")}
+      >
+        Dismiss
+      </button>
+    </div>
+  </div>
+)}
+
+  {err("problem")}
+</label>
+
+
             <label className="full">Resolution
               <textarea value={form.resolution ?? ""} onChange={(e) => set("resolution", e.target.value)}
                 placeholder="Document the solution or action taken…" />
