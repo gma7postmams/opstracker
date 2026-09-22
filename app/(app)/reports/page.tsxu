@@ -158,7 +158,6 @@ async function sendEmail() {
       success: true,
       message: out.message || "Report emailed successfully",
     });
-
   } finally {
     setSendingEmail(false);
   }
@@ -268,22 +267,26 @@ function exportExcel() {
       zIndex: 9999,
     }}
   >
-    <div
-      style={{
-        background: "white",
-        width: "90%",
-        maxWidth: "1200px",
-        maxHeight: "90vh",
-        overflow: "auto",
-        borderRadius: "12px",
-        padding: "24px",
-      }}
-    >
+
+	<div
+	  style={{
+	    background: "var(--panel)",
+	    color: "var(--text)",
+	    width: "90%",
+	    maxWidth: "1200px",
+	    maxHeight: "90vh",
+	    overflow: "auto",
+	    borderRadius: "12px",
+	    padding: "24px",
+	  }}
+	>
+
       <h2>Email Preview</h2>
 
-	<div className="hint spacedbottom">
-	  <b>Recipients:</b> {preview.recipients}
-	</div>
+      <p>
+        <strong>Recipients:</strong>{" "}
+        {preview.recipients}
+      </p>
 
       <p>
         <strong>Subject:</strong>{" "}
@@ -317,31 +320,14 @@ function exportExcel() {
 	  className="primary"
 	  disabled={sendingEmail}
 	  onClick={async () => {
-	    await sendEmail();
-
 	    setPreview(null);
+	    await sendEmail();
 	  }}
 	>
-	  {sendingEmail
-	    ? "📧 Generating report and sending email..."
-	    : "Send Email"}
+	  {sendingEmail ? "Sending..." : "Send Email"}
 	</button>
 
       </div>
-
-        {sendingEmail && (
-          <div
-            style={{
-              marginTop: 10,
-              color: "var(--muted)",
-              fontSize: "14px",
-            }}
-          >
-            Preparing attachment and sending email...
-          </div>
-        )}
-
-
     </div>
   </div>
 )}

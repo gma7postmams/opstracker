@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
+  const preview = body.preview === true;
 
   const from = body.from;
   const to = body.to;
@@ -99,15 +100,57 @@ const assistanceRows = assistance
   .map(
     (r) => `
       <tr>
-        <td style="padding:8px;border:1px solid #ddd">${r.refNo}</td>
-        <td style="padding:8px;border:1px solid #ddd">${r.clientName}</td>
-        <td style="padding:8px;border:1px solid #ddd">${r.problem}</td>
-        <td style="padding:8px;border:1px solid #ddd">${r.status}</td>
-        <td style="padding:8px;border:1px solid #ddd">${r.assigned}</td>
+
+        <td style="
+          padding:8px;
+          border:1px solid #ddd;
+          white-space:nowrap;
+          text-align:left;
+        ">
+          ${r.refNo}
+        </td>
+
+        <td style="
+          padding:8px;
+          border:1px solid #ddd;
+          white-space:nowrap;
+          text-align:left;
+        ">
+          ${r.clientName}
+        </td>
+
+	<td style="
+	  padding:8px;
+	  border:1px solid #ddd;
+	  text-align:left;
+	  word-break:break-word;
+	  overflow-wrap:break-word;
+	">
+	  ${r.problem}
+	</td>
+
+        <td style="
+          padding:8px;
+          border:1px solid #ddd;
+          white-space:nowrap;
+          text-align:left;
+        ">
+          ${r.status}
+        </td>
+
+	<td style="
+	  padding:8px;
+	  border:1px solid #ddd;
+	  text-align:center;
+	">
+	  ${r.assigned}
+	</td>
+
       </tr>
     `
   )
   .join("");
+
 
 
 const taskRows = tasks
@@ -115,11 +158,49 @@ const taskRows = tasks
     (r) => `
       <tr>
 
-        <td style="padding:8px;border:1px solid #ddd;white-space:nowrap;">${r.refNo}</td>
-        <td style="padding:8px;border:1px solid #ddd;white-space:nowrap;">${r.activityType}</td>
-        <td style="padding:8px;border:1px solid #ddd">${r.description}</td>   
-        <td style="padding:8px;border:1px solid #ddd;white-space:nowrap;">${r.status}</td>    
-        <td style="padding:8px;border:1px solid #ddd;white-space:nowrap;">${r.assigned}</td>  
+        <td style="
+          padding:8px;
+          border:1px solid #ddd;
+          white-space:nowrap;
+          text-align:left;
+        ">
+          ${r.refNo}
+        </td>
+
+        <td style="
+          padding:8px;
+          border:1px solid #ddd;
+          white-space:nowrap;
+          text-align:left;
+        ">
+          ${r.activityType}
+        </td>
+
+        <td style="
+          padding:8px;
+          border:1px solid #ddd;
+          text-align:left;
+        ">
+          ${r.description}
+        </td>
+
+        <td style="
+          padding:8px;
+          border:1px solid #ddd;
+          white-space:nowrap;
+          text-align:left;
+        ">
+          ${r.status}
+        </td>
+
+        <td style="
+          padding:8px;
+          border:1px solid #ddd;
+          white-space:nowrap;
+          text-align:left;
+        ">
+          ${r.assigned}
+        </td>
 
       </tr>
     `
@@ -127,14 +208,7 @@ const taskRows = tasks
   .join("");
 
 
-try {
-
-  await transporter.sendMail({
-    from: `"OpsLog Reports" <${sender.smtpEmail}>`,
-    to: sender.smtpRecipients,
-    subject: `OpsLog Productivity Report (${from} to ${to})`,
-
-html: `
+const emailHtml = `
 <div style="
   font-family:Segoe UI,Arial,sans-serif;
   max-width:800px;
@@ -169,17 +243,11 @@ html: `
       margin-bottom:20px;
     "
   >
-    <tr style="
-      background:#2563eb;
-      color:white;
-    ">
-      <th style="padding:10px;border:1px solid #ddd">
-        Metric
-      </th>
-      <th style="padding:10px;border:1px solid #ddd">
-        Value
-      </th>
-    </tr>
+
+	<tr>
+	  <th style="padding:10px;border:1px solid #ddd;background:#2563eb;color:white">Metric</th>
+	  <th style="padding:10px;border:1px solid #ddd;background:#2563eb;color:white">Value</th>
+	</tr>
 
     <tr>
       <td style="padding:10px;border:1px solid #ddd">
@@ -217,19 +285,18 @@ html: `
   style="
     border-collapse:collapse;
     width:100%;
+    table-layout:fixed;
     margin-bottom:20px;
   "
 >
-  <tr style="
-    background:#2563eb;
-    color:white;
-  ">
-    <th style="padding:8px;border:1px solid #ddd">Ref No</th>
-    <th style="padding:8px;border:1px solid #ddd">Client</th>
-    <th style="padding:8px;border:1px solid #ddd">Problem</th>
-    <th style="padding:8px;border:1px solid #ddd">Status</th>
-    <th style="padding:8px;border:1px solid #ddd">Assigned</th>
-  </tr>
+
+<tr>
+  <th style="padding:8px;border:1px solid #ddd;background:#2563eb;color:white;width:120px;">Ref No</th>
+  <th style="padding:8px;border:1px solid #ddd;background:#2563eb;color:white;width:90px;">Client</th>
+  <th style="padding:8px;border:1px solid #ddd;background:#2563eb;color:white;">Problem</th>
+  <th style="padding:8px;border:1px solid #ddd;background:#2563eb;color:white;width:80px;">Status</th>
+  <th style="padding:8px;border:1px solid #ddd;background:#2563eb;color:white;width:180px;">Assigned</th>
+</tr>
 
   ${assistanceRows}
 </table>
@@ -246,15 +313,12 @@ html: `
     margin-bottom:20px;
   "
 >
-  <tr style="
-    background:#7f56d9;
-    color:white;
-  ">
-    <th style="padding:8px;border:1px solid #ddd;white-space:nowrap;">Ref No</th>
-    <th style="padding:8px;border:1px solid #ddd;white-space:nowrap;">Activity Type</th>
-    <th style="padding:8px;border:1px solid #ddd;white-space:nowrap;">Description</th>
-    <th style="padding:8px;border:1px solid #ddd;white-space:nowrap;">Status</th>
-    <th style="padding:8px;border:1px solid #ddd;white-space:nowrap;">Assigned</th>
+  <tr>
+	<th style="padding:8px;border:1px solid #ddd;background:#7f56d9;color:white;width:120px;">Ref No</th>
+	<th style="padding:8px;border:1px solid #ddd;background:#7f56d9;color:white;width:140px;white-space:nowrap;">Activity Type</th>
+	<th style="padding:8px;border:1px solid #ddd;background:#7f56d9;color:white;">Description</th>
+	<th style="padding:8px;border:1px solid #ddd;background:#7f56d9;color:white;width:80px;">Status</th>
+	<th style="padding:8px;border:1px solid #ddd;background:#7f56d9;color:white;width:140px;">Assigned</th>	
   </tr>
 
   ${taskRows}
@@ -278,9 +342,28 @@ html: `
   ">
     Generated automatically by OpsLog.
   </p>
-</div>
-`,
 
+</div>
+`;
+
+if (preview) {
+  return NextResponse.json({
+    ok: true,
+    subject: `OpsLog Productivity Report (${from} to ${to})`,
+    recipients: sender.smtpRecipients,
+    html: emailHtml,
+  });
+}
+
+
+try {
+
+  await transporter.sendMail({
+    from: `"OpsLog Reports" <${sender.smtpEmail}>`,
+    to: sender.smtpRecipients,
+    subject: `OpsLog Productivity Report (${from} to ${to})`,
+
+    html: emailHtml,
     attachments: [
       {
         filename,
