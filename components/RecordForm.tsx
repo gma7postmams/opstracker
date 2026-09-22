@@ -29,9 +29,18 @@ const [people, setPeople] = useState<string[]>([]);
 const [errors, setErrors] = useState<Record<string, string>>({});
 const [saving, setSaving] = useState(false);
 
-const [aiLoading, setAiLoading] = useState(false);
-const [aiSuggestion, setAiSuggestion] = useState("");
 const [aiEnabled, setAiEnabled] = useState(true);
+
+const [problemLoading, setProblemLoading] = useState(false);
+const [resolutionLoading, setResolutionLoading] = useState(false);
+const [remarksLoading, setRemarksLoading] = useState(false);
+const [descriptionLoading, setDescriptionLoading] = useState(false);
+
+const [aiSuggestion, setAiSuggestion] = useState("");
+const [resolutionSuggestion, setResolutionSuggestion] = useState("");
+const [remarksSuggestion, setRemarksSuggestion] = useState("");
+const [descriptionSuggestion, setDescriptionSuggestion] = useState("");
+
 
   const [form, setForm] = useState<any>(() => ({
     date: record?.date ? String(record.date).slice(0, 10) : new Date().toISOString().slice(0, 10),
@@ -53,43 +62,66 @@ const [aiEnabled, setAiEnabled] = useState(true);
     description: record?.description ?? "",
   }));
 
-
 const set = (k: string, v: any) =>
   setForm((f: any) => ({ ...f, [k]: v }));
 
-async function improveProblem() {
-  if (!form.problem?.trim()) {
-    alert("Please enter a problem description first.");
-    return;
-  }
-
+async function improveText(
+  value: string,
+  setter: (value: string) => void,
+  setLoading: (loading: boolean) => void
+) {
   try {
-    setAiLoading(true);
+    setLoading(true);
 
-    const res = await fetch("/api/ai/improve", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        text: form.problem,
-      }),
-    });
+const res = await fetch("/api/ai/improve", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    text: value,
+  }),
+});
 
-    const data = await res.json();
+const data = await res.json();
 
-    if (data.suggestion) {
-      setAiSuggestion(data.suggestion);
-    } else {
-      alert(data.error ?? "No suggestion returned.");
-    }
-  } catch (err) {
-    console.error(err);
-    alert("AI improvement failed.");
+if (data.suggestion) {
+  setter(data.suggestion);
+}
+
+
   } finally {
-    setAiLoading(false);
+    setLoading(false);
   }
 }
+
+const improveDescription = () =>
+  improveText(
+    form.description ?? "",
+    setDescriptionSuggestion,
+    setDescriptionLoading
+  );
+
+const improveProblem = () =>
+  improveText(
+    form.problem,
+    setAiSuggestion,
+    setProblemLoading
+  );
+
+const improveResolution = () =>
+  improveText(
+    form.resolution ?? "",
+    setResolutionSuggestion,
+    setResolutionLoading
+  );
+
+const improveRemarks = () =>
+  improveText(
+    form.remarks ?? "",
+    setRemarksSuggestion,
+    setRemarksLoading
+  );
 
 
 useEffect(() => {
@@ -198,9 +230,11 @@ useEffect(() => {
       type="button"
       className="secondary"
       onClick={improveProblem}
-      disabled={aiLoading}
+
+      disabled={problemLoading}
     >
-      {aiLoading ? "⏳ Improving..." : "✨ Improve with AI"}
+      {problemLoading ? "⏳ Improving..." : "✨ Improve with AI"}
+
     </button>
   </div>
 )}
@@ -241,11 +275,81 @@ useEffect(() => {
   {err("problem")}
 </label>
 
+<label className="full">
+  Resolution
 
-            <label className="full">Resolution
-              <textarea value={form.resolution ?? ""} onChange={(e) => set("resolution", e.target.value)}
-                placeholder="Document the solution or action taken…" />
-            </label>
+  <textarea
+    value={form.resolution ?? ""}
+    onChange={(e) =>
+      set("resolution", e.target.value)
+    }
+    placeholder="Document the solution or action taken…"
+  />
+
+  {aiEnabled && (
+    <div style={{ marginTop: 8 }}>
+      <button
+        type="button"
+        className="secondary"
+        onClick={improveResolution}
+
+        disabled={resolutionLoading}
+      >
+
+	{resolutionLoading
+	  ? "Improving..."
+	  : "✨ Improve Resolution"}
+
+      </button>
+    </div>
+  )}
+
+  {resolutionSuggestion &&
+    resolutionSuggestion !== form.resolution && (
+      <div className="ai-ready">
+        <strong>
+          ✅ Suggested Resolution
+        </strong>
+
+        <div className="ai-preview">
+          {resolutionSuggestion}
+        </div>
+
+        <div
+          style={{
+            marginTop: 8,
+            display: "flex",
+            gap: 8,
+          }}
+        >
+          <button
+            type="button"
+            className="primary"
+            onClick={() => {
+              set(
+                "resolution",
+                resolutionSuggestion
+              );
+              setResolutionSuggestion("");
+            }}
+          >
+            Apply
+          </button>
+
+          <button
+            type="button"
+            className="secondary"
+            onClick={() =>
+              setResolutionSuggestion("")
+            }
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
+    )}
+</label>
+
           </>
         ) : (
           <>
@@ -255,17 +359,144 @@ useEffect(() => {
               </select>{err("activityType")}
             </label>
             <div />
-            <label className="full">Description
-              <textarea value={form.description} onChange={(e) => set("description", e.target.value)}
-                placeholder="Describe the task performed…" required />{err("description")}
-            </label>
+
+<label className="full">
+  Description
+
+  <textarea
+    value={form.description}
+    onChange={(e) => set("description", e.target.value)}
+    placeholder="Describe the task performed…"
+    required
+  />
+
+  {aiEnabled && (
+    <div style={{ marginTop: 8 }}>
+      <button
+        type="button"
+        className="secondary"
+        onClick={improveDescription}
+        disabled={descriptionLoading}
+      >
+        {descriptionLoading
+          ? "Improving..."
+          : "✨ Improve Description"}
+      </button>
+    </div>
+  )}
+
+  {descriptionSuggestion &&
+    descriptionSuggestion !== form.description && (
+      <div className="ai-ready">
+        <strong>✅ Suggested Description</strong>
+
+        <div className="ai-preview">
+          {descriptionSuggestion}
+        </div>
+
+        <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+          <button
+            type="button"
+            className="primary"
+            onClick={() => {
+              set("description", descriptionSuggestion);
+              setDescriptionSuggestion("");
+            }}
+          >
+            Apply
+          </button>
+
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => setDescriptionSuggestion("")}
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
+    )}
+
+  {err("description")}
+</label>
+
           </>
         )}
 
-        <label className="full">Remarks
-          <textarea value={form.remarks ?? ""} onChange={(e) => set("remarks", e.target.value)}
-            placeholder="Additional notes, client confirmation, or follow-up…" />
-        </label>
+<label className="full">
+  Remarks
+
+  <textarea
+    value={form.remarks ?? ""}
+    onChange={(e) =>
+      set("remarks", e.target.value)
+    }
+    placeholder="Additional notes, client confirmation, or follow-up..."
+  />
+
+  {aiEnabled && (
+    <div style={{ marginTop: 8 }}>
+      <button
+        type="button"
+        className="secondary"
+        onClick={improveRemarks}
+
+	disabled={remarksLoading}
+      >
+
+	{remarksLoading
+	  ? "Improving..."
+	  : "✨ Improve Remarks"}
+
+      </button>
+    </div>
+  )}
+
+  {remarksSuggestion &&
+    remarksSuggestion !== form.remarks && (
+      <div className="ai-ready">
+        <strong>
+          ✅ Suggested Remarks
+        </strong>
+
+        <div className="ai-preview">
+          {remarksSuggestion}
+        </div>
+
+        <div
+          style={{
+            marginTop: 8,
+            display: "flex",
+            gap: 8,
+          }}
+        >
+          <button
+            type="button"
+            className="primary"
+            onClick={() => {
+              set(
+                "remarks",
+                remarksSuggestion
+              );
+              setRemarksSuggestion("");
+            }}
+          >
+            Apply
+          </button>
+
+          <button
+            type="button"
+            className="secondary"
+            onClick={() =>
+              setRemarksSuggestion("")
+            }
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
+    )}
+</label>
 
         <div className="sectionlabel">Time &amp; assignment</div>
         <label>Time started<input type="time" value={form.timeStarted} onChange={(e) => set("timeStarted", e.target.value)} required />{err("timeStarted")}</label>

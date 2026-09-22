@@ -44,6 +44,8 @@ const [testingAI, setTestingAI] = useState(false);
   }, []);
 
 useEffect(() => {
+  loadMaster();
+
   fetch("/api/admin/ai")
     .then((r) => r.json())
     .then(setAi);
