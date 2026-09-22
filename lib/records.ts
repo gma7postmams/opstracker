@@ -108,8 +108,6 @@ export async function getRecord(type: RecordType, id: number) {
 
 /** Closing a record implies an end time; reopening one clears it. */
 export function normalizeTimes(data: any) {
-  if (data.status === "CLOSED" && !data.timeEnded) data.timeEnded = data.timeStarted;
-  if (data.status === "OPEN") data.timeEnded = null;
   return data;
 }
 

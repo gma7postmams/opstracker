@@ -153,6 +153,9 @@ useEffect(() => {
     e.preventDefault();
     setSaving(true);
     setErrors({});
+
+	console.log("FORM BEFORE SAVE", form);
+
     const payload = { ...form, timeEnded: form.timeEnded || null, showGroup: form.showGroup || null };
     const url = record ? `/api/records/${type}/${record.id}` : `/api/records/${type}`;
     const res = await fetch(url, {
@@ -506,11 +509,25 @@ useEffect(() => {
             {PRIORITIES.map((p) => <option key={p} value={p}>{p[0] + p.slice(1).toLowerCase()}</option>)}
           </select>
         </label>
-        <label>Status
-          <select value={form.status} onChange={(e) => set("status", e.target.value)}>
-            {STATUSES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-          </select>{err("status")}
-        </label>
+
+	<label>Status
+	  <select
+	    value={form.status}
+
+		onChange={(e) => {
+		  set("status", e.target.value);
+		}}
+
+	  >
+	    {STATUSES.map(([v, l]) => (
+	      <option key={v} value={v}>
+	        {l}
+	      </option>
+	    ))}
+	  </select>
+	  {err("status")}
+	</label>
+
         <label>Assigned to
           <input list="people" value={form.assigned} onChange={(e) => set("assigned", e.target.value)} required />
           {err("assigned")}

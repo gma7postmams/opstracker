@@ -27,9 +27,19 @@ const timeRules = (v: any, ctx: z.RefinementCtx) => {
   if (v.timeEnded && v.timeEnded < v.timeStarted) {
     ctx.addIssue({ code: "custom", path: ["timeEnded"], message: "Time ended is before time started" });
   }
-  if (v.status === "CLOSED" && !v.timeEnded) {
-    ctx.addIssue({ code: "custom", path: ["timeEnded"], message: "A closed record needs a time ended" });
-  }
+	if (
+	  (v.status === "CLOSED" ||
+	   v.status === "CLOSE_PENDING") &&
+	  !v.timeEnded
+	) {
+	  ctx.addIssue({
+	    code: "custom",
+	    path: ["timeEnded"],
+	    message:
+	      "A closed or close pending record needs a time ended"
+	  });
+	}
+
 };
 
 export const assistanceSchema = z.object({

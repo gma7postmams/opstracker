@@ -171,11 +171,14 @@ header{min-height:84px;background:var(--panel);border-bottom:1px solid var(--lin
 button.primary{background:var(--accent);color:#fff;border:0;border-radius:9px;padding:10px 15px;font-weight:600}
 button.primary:hover{background:var(--accent-dark)}
 button.primary.destructive{background:var(--open)}
-button.secondary{background:var(--panel);color:var(--text);border:1px solid var(--line2);border-radius:9px;
-  padding:10px 15px;font-weight:600}
+button.secondary{background:var(--panel);color:var(--text);border:1px solid var(--line2);border-radius:9px;padding:10px 15px;font-weight:600}
 button.secondary:hover{background:var(--hint-bg)}
 button.secondary.small{padding:6px 11px;font-size:12px}
 button:disabled{opacity:.5;cursor:not-allowed}
+
+.action-control {height: 40px; border-radius: 999px; padding-left: 14px; padding-right: 14px;}
+select.action-control {height: 40px; border-radius: 999px; padding: 0 14px;}
+
 .destructive-text{color:var(--err-fg)}
 .pushleft{margin-right:auto}
 .alignend{align-self:end}
@@ -488,3 +491,11 @@ code{background:var(--code-bg);border-radius:4px;padding:1px 5px;font-size:11px}
   flex:none;
 }
 
+.warning-hint{
+  background:var(--hint-bg);
+  border-left:4px solid #f59e0b;
+  border-radius:9px;
+  padding:11px 13px;
+  color:#b54708;
+  line-height:1.6;
+}

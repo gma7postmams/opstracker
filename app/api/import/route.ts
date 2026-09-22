@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { TYPES } from "@/lib/recordTypes";
+import { TYPES, isRecordType } from "@/lib/recordTypes";
 import { nextRefNo, normalizeTimes } from "@/lib/records";
 import { schemaFor } from "@/lib/validation";
 import { parseCsv, normalizeStatus, normalizePriority, normalizeTime, normalizeDate } from "@/lib/csv";
@@ -37,6 +37,17 @@ export async function POST(req: NextRequest) {
   const form = await req.formData();
   const file = form.get("file");
   const type = String(form.get("type") ?? "");
+
+	if (
+	  type !== "both" &&
+	  !isRecordType(type)
+	) {
+	  return NextResponse.json(
+	    { error: "Unknown record type" },
+	    { status: 400 }
+	  );
+	}
+
   const dryRun = String(form.get("dryRun") ?? "") === "true";
   const sheetName = String(form.get("sheet") ?? "") || undefined;
   const scope = String(form.get("scope") ?? "self");
@@ -392,7 +403,7 @@ const schema =
   await prisma.$transaction(async (tx) => {
     const d = (type === "assistance" ? tx.assistance : tx.task) as any;
     for (const row of valid) {
-      const refNo = await nextRefNo(type, tx);
+      const refNo = await nextRefNo(type as "assistance" | "tasks", tx);
       await d.create({
         data: { ...normalizeTimes({ ...row, date: new Date(row.date) }), refNo, ownerId: user.id },
       });

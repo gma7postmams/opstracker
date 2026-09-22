@@ -56,6 +56,25 @@ export default function RecordDetail() {
     router.push(type === "assistance" ? "/assistance" : "/tasks");
   }
 
+const ownerName = r.owner
+  ? [r.owner.firstName, r.owner.middleInitial ? r.owner.middleInitial + "." : "", r.owner.surname]
+      .filter(Boolean)
+      .join(" ")
+  : "a deleted user";
+  
+const duration =   
+  r.timeEnded
+    ? (() => {
+        const [sh, sm] = r.timeStarted.split(":").map(Number);
+        const [eh, em] = r.timeEnded.split(":").map(Number);
+
+        const start = sh * 60 + sm;
+        const end = eh * 60 + em;
+  
+        return `${end - start} min`;
+      })()
+    : "Ongoing";
+
   const fields: [string, any][] = [
     ["Date", String(r.date).slice(0, 10)],
     ["Shift", r.shift],
@@ -67,11 +86,9 @@ export default function RecordDetail() {
     ["Assigned to", r.assigned],
     ["Accountable", r.accountable],
     ["Time", r.timeEnded ? `${r.timeStarted} – ${r.timeEnded}` : `${r.timeStarted} – ongoing`],
+    ["Duration", duration],
   ];
 
-  const ownerName = r.owner
-    ? [r.owner.firstName, r.owner.middleInitial ? r.owner.middleInitial + "." : "", r.owner.surname].filter(Boolean).join(" ")
-    : "a deleted user";
 
   return (
     <div className="page">
@@ -93,6 +110,12 @@ export default function RecordDetail() {
             ))}
           </div>
 
+	{r.status === "OPEN" && r.timeEnded && (
+	  <div className="warning-hint spacedtop">
+	    ⚠ This record was reopened after work had previously been completed at {r.timeEnded}.
+	  </div>
+	)}
+
           <hr />
           <div className="field">
             <label>{isAssistance ? "Problem" : "Description"}</label>
@@ -103,28 +126,113 @@ export default function RecordDetail() {
           )}
           <div className="field spacedtop"><label>Remarks</label><b>{r.remarks || "—"}</b></div>
 
-          <hr />
-          <div className="toolbar flat">
-            <label className="flabel">STATUS
-              <select value={r.status} disabled={!r.canEdit}
-                onChange={(e) => patch({ status: e.target.value }, `Status set to ${statusLabel(e.target.value)}`)}>
-                {STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
-              </select>
-            </label>
-            <button className="secondary alignend" disabled={!r.canEdit}
-              title={r.canEdit ? "" : r.locked ? "This record is locked by an administrator" : "Only the person who entered this record can edit it"}
-              onClick={() => setEditing(true)}>
-              {r.canEdit ? "Edit" : "🔒 Edit locked"}
-            </button>
-            {isAdmin && (
-              <button className="secondary alignend"
-                onClick={() => patch({ locked: !r.locked }, r.locked ? "Record unlocked" : "Record locked")}>
-                {r.locked ? "🔓 Unlock" : "🔒 Lock record"}
-              </button>
-            )}
-            <button className="secondary alignend destructive-text" disabled={!r.canEdit}
-              onClick={() => setConfirm(true)}>Delete</button>
-          </div>
+
+<hr />
+
+<div className="toolbar flat">
+
+  <div style={{ width: "100%" }}>
+    <h4
+      style={{
+        marginBottom: 12,
+        color: "var(--muted)",
+      }}
+    >
+      Quick Actions
+    </h4>
+
+{r.status === "OPEN" && !r.timeEnded && (
+  <div
+    className="warning-hint"
+    style={{ marginBottom: 10 }}
+  >
+    ⚠ Time Ended is required before setting this record to
+    Close Pending or Closed.
+  </div>
+)}
+
+  </div>
+
+
+  <label className="flabel">
+    STATUS
+
+    <select
+      value={r.status}
+      className="action-control"
+      disabled={!r.canEdit}
+      onChange={(e) => {
+        const status = e.target.value;
+
+        if (
+          (status === "CLOSED" ||
+            status === "CLOSE_PENDING") &&
+          !r.timeEnded
+        ) {
+          toast(
+            "Please click Edit and enter Time Ended before changing this record to Close Pending or Closed."
+          );
+          return;
+        }
+
+        patch(
+          { status },
+          `Status set to ${statusLabel(status)}`
+        );
+      }}
+    >
+      {STATUSES.map((s) => (
+        <option key={s} value={s}>
+          {statusLabel(s)}
+        </option>
+      ))}
+    </select>
+
+  </label>
+
+  <button
+    className="secondary alignend action-control"
+    disabled={!r.canEdit}
+    title={
+      r.canEdit
+        ? ""
+        : r.locked
+        ? "This record is locked by an administrator"
+        : "Only the person who entered this record can edit it"
+    }
+    onClick={() => setEditing(true)}
+  >
+    {r.canEdit ? "✏ Edit Record" : "🔒 Edit locked"}
+  </button>
+
+  {isAdmin && (
+    <button
+      className="secondary alignend action-control"
+      onClick={() =>
+        patch(
+          { locked: !r.locked },
+          r.locked
+            ? "Record unlocked"
+            : "Record locked"
+        )
+      }
+    >
+      {r.locked
+        ? "🔓 Unlock Record"
+        : "🔒 Lock Record"}
+    </button>
+  )}
+
+  <button
+    className="secondary alignend action-control"
+    disabled={!r.canEdit}
+    onClick={() => setConfirm(true)}
+  >
+    🗑 Delete Record
+  </button>
+
+</div>
+
         </section>
 
         <section className="panel">

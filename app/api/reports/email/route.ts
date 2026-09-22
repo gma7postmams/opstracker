@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
     tasks,
   });
 
-  const attachment = await workbook.xlsx.writeBuffer();
+  const attachment = Buffer.from(await workbook.xlsx.writeBuffer());
 
   const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
