@@ -47,6 +47,7 @@ export async function GET(req: NextRequest) {
   const to = s.get("to") || new Date().toISOString().slice(0, 10);
   const activity = s.get("activity") || "all";
   const status = s.get("status") || "all";
+  const userId = s.get("userId") || "all";
 
   if (from > to) {
     return NextResponse.json({ error: "From date must be on or before To date" }, { status: 400 });
@@ -62,9 +63,16 @@ export async function GET(req: NextRequest) {
   };
 
   if (user.role !== "ADMIN") {
-    where.ownerId = user.id;
-  }
 
+    where.ownerId = user.id;
+
+  } else {
+
+    if (userId !== "all") {
+      where.ownerId = Number(userId);
+    }
+
+  }
 
   if (status !== "all") where.status = status;
 

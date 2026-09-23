@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/components/Toast";
+import { useSession } from "next-auth/react";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const monthStart = () => today().slice(0, 8) + "01";
@@ -80,10 +81,25 @@ function Tally({ title, note, rows, accent, days }: {
 }
 
 export default function Reports() {
+
+  const { data: session } = useSession();
+  const isAdmin = session?.user.role === "ADMIN";
+
   const toast = useToast();
-  const [f, setF] = useState({ from: monthStart(), to: today(), activity: "all", status: "all" });
+  const [f, setF] = useState({ from: monthStart(), to: today(), activity: "all", status: "all", userId: "all" });
+
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    fetch("/api/users/report-filter")
+      .then((r) => r.json())
+      .then((d) => setUsers(Array.isArray(d) ? d : []));
+  }, [isAdmin]);
+
   const [applied, setApplied] = useState(f);
   const [d, setD] = useState<any>(null);
+
+  const [users, setUsers] = useState<any[]>([]);
 
   const load = useCallback(async (q: typeof f) => {
     const res = await fetch(`/api/reports?${new URLSearchParams(q)}`);
@@ -204,6 +220,33 @@ function exportExcel() {
             <option value="CLOSED">Closed</option>
           </select>
         </label>
+
+        {isAdmin && (
+          <label className="flabel">
+            USER
+
+            <select
+              value={f.userId}
+              onChange={(e) =>
+                setF({ ...f, userId: e.target.value })
+              }
+            >
+              <option value="all">
+                All Users
+              </option>
+
+              {users.map((u) => (
+                <option
+                  key={u.id}
+                  value={u.id}
+                >
+                  {u.firstName} {u.middleInitial ?? ""} {u.surname}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
         <button className="primary" onClick={apply}>Apply filters</button>
 
 <div className="btngroup">
