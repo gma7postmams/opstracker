@@ -37,10 +37,14 @@ export default function RecordsView(props: Props) {
   const [userFilter, setUserFilter] = useState(isAdmin ? "all" : String(session?.user?.id ?? ""));
 
   useEffect(() => {
-    fetch("/api/users/filter")
+    fetch(
+      isAdmin
+        ? "/api/users/report-filter"
+        : "/api/users/filter"
+    )
       .then((r) => r.json())
       .then((d) => setUsers(Array.isArray(d) ? d : []));
-  }, []);
+  }, [isAdmin]);
 
 
   const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" }>({ key: "date", dir: "desc" });

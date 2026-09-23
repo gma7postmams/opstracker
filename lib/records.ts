@@ -80,9 +80,17 @@ export async function listRecords(type: RecordType, query: ListQuery, user?: any
   const d = delegateFor(type);
   const where = buildWhere(type, query);
 
-  if (user?.role !== "ADMIN") {
+  if (user?.role === "ADMIN") {
 
-    // All Users selected
+    // Admin selected a specific user
+    if (query.userId && query.userId !== "all") {
+      where.ownerId = Number(query.userId);
+    }
+
+  } else {
+
+    // Non-admin users
+
     if ((query.userId as any) === "all") {
 
       where.owner = {
@@ -91,10 +99,7 @@ export async function listRecords(type: RecordType, query: ListQuery, user?: any
         },
       };
 
-    }
-
-    // Specific user selected
-    else if (query.userId) {
+    } else if (query.userId) {
 
       where.ownerId = Number(query.userId);
 
@@ -104,14 +109,12 @@ export async function listRecords(type: RecordType, query: ListQuery, user?: any
         },
       };
 
-    }
-
-    // Initial page load
-    else {
+    } else {
 
       where.ownerId = user.id;
 
     }
+
   }
 
 
