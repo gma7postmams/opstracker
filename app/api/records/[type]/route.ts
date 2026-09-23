@@ -23,9 +23,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
       shift: s.get("shift") ?? undefined,
       from: s.get("from") ?? undefined,
       to: s.get("to") ?? undefined,
-      userId: s.get("userId")
-        ? Number(s.get("userId"))
-        : undefined,
+
+      userId:
+        s.get("userId") === "all"
+          ? "all"
+          : s.get("userId")
+            ? Number(s.get("userId"))
+            : undefined,      
+
       sort: (s.get("sort") as SortKey) ?? "date",
       dir: s.get("dir") === "asc" ? "asc" : "desc",
       page: Number(s.get("page") ?? 1),

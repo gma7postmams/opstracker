@@ -18,7 +18,7 @@ export interface ListQuery {
   shift?: string;
   from?: string;
   to?: string;
-  userId?: number;
+  userId?: number | "all";
   sort?: SortKey;
   dir?: "asc" | "desc";
   page?: number;
@@ -81,19 +81,39 @@ export async function listRecords(type: RecordType, query: ListQuery, user?: any
   const where = buildWhere(type, query);
 
   if (user?.role !== "ADMIN") {
-    if (query.userId) {
-      where.ownerId = query.userId;
+
+    // All Users selected
+    if ((query.userId as any) === "all") {
 
       where.owner = {
         role: {
           not: "ADMIN",
         },
       };
-    } else {
-      // Default to the logged-in user's records
-      where.ownerId = user.id;
+
     }
-  }  
+
+    // Specific user selected
+    else if (query.userId) {
+
+      where.ownerId = Number(query.userId);
+
+      where.owner = {
+        role: {
+          not: "ADMIN",
+        },
+      };
+
+    }
+
+    // Initial page load
+    else {
+
+      where.ownerId = user.id;
+
+    }
+  }
+
 
   const perPage = Math.min(query.perPage ?? 50, 200);
   const page = Math.max(query.page ?? 1, 1);

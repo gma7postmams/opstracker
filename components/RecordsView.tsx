@@ -64,7 +64,7 @@ export default function RecordsView(props: Props) {
 
     const p = new URLSearchParams({ sort: sort.key, dir: sort.dir });
 
-    if (userFilter && userFilter !== "all") {p.set("userId", userFilter);}
+    if (userFilter) {p.set("userId", userFilter);}
  
     Object.entries(filters).forEach(([k, v]) => { if (v && v !== "all") p.set(k, v); });
     const res = await fetch(`/api/records/${type}?${p}`);
