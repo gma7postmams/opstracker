@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import Providers from "./providers";
 import { getBranding } from "@/lib/branding";
 import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
+import Script from "next/script";
 
 export async function generateMetadata() {
   const b = await getBranding().catch(() => ({ title: "MAMS Support Operations Tracker", tagline: "Technical assistance and task logging", faviconUrl: null as string | null }));
@@ -17,7 +18,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         {/* Runs before paint so the page never flashes the wrong theme. */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: THEME_INIT_SCRIPT,
+          }}
+        />
+
       </head>
       <body suppressHydrationWarning><Providers>{children}</Providers></body>
     </html>

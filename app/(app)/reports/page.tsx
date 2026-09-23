@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/components/Toast";
 import { useSession } from "next-auth/react";
 
+
 const today = () => new Date().toISOString().slice(0, 10);
 const monthStart = () => today().slice(0, 8) + "01";
 
@@ -322,7 +323,33 @@ function exportExcel() {
         padding: "24px",
       }}
     >
-      <h2>Email Preview</h2>
+
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: "12px",
+    }}
+  >
+    <h2>Email Preview</h2>
+
+  <button
+    onClick={() => setPreview(null)}
+    style={{
+      border: "none",
+      background: "transparent",
+      fontSize: "24px",
+      cursor: "pointer",
+      color: "#98a2b3",
+      padding: 0,
+    }}
+    title="Close"
+  >
+    ✖
+  </button>
+
+  </div>
 
 	<div className="hint spacedbottom">
 	  <b>Recipients:</b> {preview.recipients}

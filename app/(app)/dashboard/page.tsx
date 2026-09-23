@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import StatusBadge from "@/components/StatusBadge";
 import { priorityLabel } from "@/lib/recordTypes";
 import { useSession } from "next-auth/react";
 
@@ -28,8 +27,28 @@ export default function Dashboard() {
 
   const [d, setD] = useState<any>(null);
 
-  useEffect(() => { fetch("/api/dashboard").then((r) => r.json()).then(setD); }, []);
-  if (!d) return <div className="page"><div className="muted">Loading…</div></div>;
+  useEffect(() => {
+    fetch("/api/dashboard")
+      .then(async (r) => {
+        if (!r.ok) {
+          throw new Error(`Dashboard API failed: ${r.status}`);
+        }
+
+        return r.json();
+      })
+      .then(setD)
+      .catch((err) => {
+        console.error("Dashboard load failed:", err);
+      });
+  }, []);
+
+  if (!d) {
+    return (
+      <div className="page">
+        <div className="muted">Loading…</div>
+      </div>
+    );
+  }  
 
   const open = d.assistance.OPEN + d.tasks.OPEN;
   const pending = d.assistance.CLOSE_PENDING + d.tasks.CLOSE_PENDING;
