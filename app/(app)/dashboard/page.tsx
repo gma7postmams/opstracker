@@ -8,6 +8,20 @@ import { useSession } from "next-auth/react";
 
 const PALETTE = ["#3b82f6", "#7f56d9", "#06aed4", "#f79009", "#12b76a", "#f04438", "#ee46bc"];
 
+const QUOTES = [
+  "Small progress is still progress.",
+  "Focus on what you can control.",
+  "Done is better than perfect.",
+  "Consistency beats intensity.",
+  "Every accomplishment starts with the decision to try.",
+  "Productivity is never an accident.",
+  "The secret of getting ahead is getting started.",
+  "Success is the sum of small efforts repeated day after day.",
+  "Stay positive, work hard, make it happen.",
+  "Quality means doing it right when no one is looking.",
+];
+
+
 export default function Dashboard() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
@@ -24,6 +38,18 @@ export default function Dashboard() {
   const peak = Math.max(1, ...d.trend.map((t: any) => t.count));
   const catMax = Math.max(1, ...d.categories.map((c: any) => c.count));
 
+  const hour = new Date().getHours();
+
+  const greeting =
+    hour < 12
+      ? "Good Morning"
+      : hour < 18
+        ? "Good Afternoon"
+        : "Good Evening";
+
+const quote =
+  QUOTES[new Date().getDate() % QUOTES.length];
+
   const card = (n: number, label: string, tone: string, icon: string) => (
     <div className={`card ${tone}`} key={label}>
       <div className={`ico i-${tone}`}>{icon}</div>
@@ -33,6 +59,29 @@ export default function Dashboard() {
 
   return (
     <div className="page">
+
+      <div className="panel spaced">
+        <h2>
+          {greeting}, {session?.user?.name?.split(" ")[0]} 👋
+        </h2>
+
+        <p className="muted">
+          {isAdmin
+            ? "Here's your organization-wide operational overview."
+            : "Here's a summary of your current workload and activity."}
+        </p>
+
+        <p
+          style={{
+            marginTop: "12px",
+            fontStyle: "italic",
+            color: "var(--muted)",
+          }}
+        >
+          "{quote}"
+        </p>
+      </div>
+
       <div className="cards">
         {card(d.assistance.total, "Technical Assistance", "cb", "◉")}
         {card(d.tasks.total, "Other Tasks", "cp", "☷")}
