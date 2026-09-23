@@ -18,6 +18,7 @@ export interface ListQuery {
   shift?: string;
   from?: string;
   to?: string;
+  userId?: number;
   sort?: SortKey;
   dir?: "asc" | "desc";
   page?: number;
@@ -75,9 +76,25 @@ export function buildOrderBy(type: RecordType, sort: SortKey = "date", dir: "asc
   return [{ [sort]: dir }];
 }
 
-export async function listRecords(type: RecordType, query: ListQuery) {
+export async function listRecords(type: RecordType, query: ListQuery, user?: any) {
   const d = delegateFor(type);
   const where = buildWhere(type, query);
+
+  if (user?.role !== "ADMIN") {
+    if (query.userId) {
+      where.ownerId = query.userId;
+
+      where.owner = {
+        role: {
+          not: "ADMIN",
+        },
+      };
+    } else {
+      // Default to the logged-in user's records
+      where.ownerId = user.id;
+    }
+  }  
+
   const perPage = Math.min(query.perPage ?? 50, 200);
   const page = Math.max(query.page ?? 1, 1);
 

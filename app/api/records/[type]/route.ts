@@ -13,18 +13,28 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
   if (!isRecordType(p.type)) return NextResponse.json({ error: "Unknown record type" }, { status: 404 });
 
   const s = req.nextUrl.searchParams;
-  const data = await listRecords(p.type, {
-    q: s.get("q") ?? undefined,
-    status: s.get("status") ?? undefined,
-    location: s.get("location") ?? undefined,
-    shift: s.get("shift") ?? undefined,
-    from: s.get("from") ?? undefined,
-    to: s.get("to") ?? undefined,
-    sort: (s.get("sort") as SortKey) ?? "date",
-    dir: s.get("dir") === "asc" ? "asc" : "desc",
-    page: Number(s.get("page") ?? 1),
-    perPage: Number(s.get("perPage") ?? 50),
-  });
+
+  const data = await listRecords(
+    p.type,
+    {
+      q: s.get("q") ?? undefined,
+      status: s.get("status") ?? undefined,
+      location: s.get("location") ?? undefined,
+      shift: s.get("shift") ?? undefined,
+      from: s.get("from") ?? undefined,
+      to: s.get("to") ?? undefined,
+      userId: s.get("userId")
+        ? Number(s.get("userId"))
+        : undefined,
+      sort: (s.get("sort") as SortKey) ?? "date",
+      dir: s.get("dir") === "asc" ? "asc" : "desc",
+      page: Number(s.get("page") ?? 1),
+      perPage: Number(s.get("perPage") ?? 50),
+    },
+    user
+  );
+
+
   return NextResponse.json(data);
 }
 

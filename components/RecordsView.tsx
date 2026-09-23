@@ -32,6 +32,17 @@ export default function RecordsView(props: Props) {
   const toast = useToast();
 
   const [filters, setFilters] = useState(emptyFilters);
+
+  const [users, setUsers] = useState<any[]>([]);
+  const [userFilter, setUserFilter] = useState(isAdmin ? "all" : String(session?.user?.id ?? ""));
+
+  useEffect(() => {
+    fetch("/api/users/filter")
+      .then((r) => r.json())
+      .then((d) => setUsers(Array.isArray(d) ? d : []));
+  }, []);
+
+
   const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" }>({ key: "date", dir: "desc" });
   const [data, setData] = useState<any>({ rows: [], total: 0, unfiltered: 0 });
   const [loading, setLoading] = useState(true);
@@ -50,12 +61,16 @@ export default function RecordsView(props: Props) {
 
   const load = useCallback(async () => {
     setLoading(true);
+
     const p = new URLSearchParams({ sort: sort.key, dir: sort.dir });
+
+    if (userFilter && userFilter !== "all") {p.set("userId", userFilter);}
+ 
     Object.entries(filters).forEach(([k, v]) => { if (v && v !== "all") p.set(k, v); });
     const res = await fetch(`/api/records/${type}?${p}`);
     setData(await res.json());
     setLoading(false);
-  }, [type, filters, sort]);
+  }, [type, filters, sort, userFilter]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
@@ -141,6 +156,29 @@ export default function RecordsView(props: Props) {
       </div>
 
       <div className="filters">
+
+        <label className="flabel">
+          USER
+
+          <select
+            value={userFilter}
+            onChange={(e) => setUserFilter(e.target.value)}
+          >
+            <option value="all">
+              All Users
+            </option>
+
+            {users.map((u) => (
+              <option
+                key={u.id}
+                value={u.id}
+              >
+                {u.firstName} {u.middleInitial ?? ""} {u.surname}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <label className="flabel">STATUS
           <select value={filters.status} onChange={(e) => setFilter("status", e.target.value)}>
             <option value="all">All Status</option>
