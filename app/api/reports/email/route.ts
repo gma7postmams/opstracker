@@ -49,12 +49,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
+
   const where: any = {
     date: {
       gte: new Date(from),
       lte: new Date(to),
     },
   };
+
+  if (actor.role !== "ADMIN") {
+    where.ownerId = actor.id;
+  }
+
+
 
   if (status !== "all") {
     where.status = status;

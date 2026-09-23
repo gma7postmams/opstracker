@@ -51,9 +51,21 @@ export async function GET(req: NextRequest) {
   if (from > to) {
     return NextResponse.json({ error: "From date must be on or before To date" }, { status: 400 });
   }
-
+ 
   const days = Math.max(1, Math.round((+new Date(to) - +new Date(from)) / 864e5) + 1);
-  const where: any = { date: { gte: new Date(from), lte: new Date(to) } };
+
+  const where: any = {
+    date: {
+      gte: new Date(from),
+      lte: new Date(to),
+    },
+  };
+
+  if (user.role !== "ADMIN") {
+    where.ownerId = user.id;
+  }
+
+
   if (status !== "all") where.status = status;
 
   const select = {
