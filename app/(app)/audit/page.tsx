@@ -10,11 +10,19 @@ export default function AuditPage() {
   const [toDate, setToDate] = useState("");
 
 
-  useEffect(() => {
-    fetch("/api/audit")
-      .then((r) => r.json())
-      .then(setLogs);
-  }, []);
+useEffect(() => {
+  fetch("/api/audit")
+    .then(async (r) => {
+      const data = await r.json();
+
+      setLogs(
+        Array.isArray(data)
+          ? data
+          : []
+      );
+    })
+    .catch(() => setLogs([]));
+}, []);
 
 const cellStyle = {
   overflow: "hidden",
