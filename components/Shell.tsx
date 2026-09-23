@@ -19,7 +19,7 @@ const NAV = [
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Dashboard", "/assistance": "Technical Assistance", "/tasks": "Other Tasks",
-  "/reports": "Reports", "/users": "Users", "/admin": "Administration","/audit": "Audit Logs",
+  "/reports": "Reports", "/users": "Users", "/admin": "Administration","/audit": "Audit Logs", "/profile": "Account Settings",
 };
 
 interface Props {
@@ -44,7 +44,15 @@ export default function Shell({ branding, user, children }: Props) {
           <div><b>{branding.title}</b><small>{branding.tagline}</small></div>
         </div>
         <nav className="nav">
-          {NAV.map((n) => (
+
+          {NAV
+            .filter(
+              (n) =>
+                user.role === "ADMIN" ||
+                (n.href !== "/admin" && n.href !== "/users")
+            )
+            .map((n) => (
+
             <Link key={n.href} href={n.href} onClick={() => setOpen(false)}
               className={pathname.startsWith(n.href) ? "active" : ""}>
               <span className="ic" aria-hidden>{n.icon}</span><span>{n.label}</span>
@@ -56,6 +64,14 @@ export default function Shell({ branding, user, children }: Props) {
             <Avatar url={user.avatarUrl} name={user.name} size={32} />
             <div><b>{user.name}</b><small>{user.role}</small></div>
           </div>
+
+<Link
+  href="/profile"
+  className="logout"
+>
+  <span className="ic">⚙</span>
+  <span>Account Settings</span>
+</Link>
 
 <button
   className="logout"
@@ -73,7 +89,8 @@ export default function Shell({ branding, user, children }: Props) {
     });
   }}
 >
-      Log out
+  <span className="ic">⇦</span>
+  <span>Log out</span>
 </button>
 
 
