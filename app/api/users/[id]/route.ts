@@ -135,8 +135,12 @@ if (changedFields.length > 0) {
     entityType: "User Profile",
     entityId: `Updated ${updated.username}`,
     details: {
-      user: fullName(updated),
+      actor: actor.name,
+      targetUser: fullName(updated),
+      targetUsername: updated.username,
+
       changedFields,
+      
       passwordChanged: changedFields.includes("password"),
       smtpPasswordChanged: changedFields.includes("smtpPassword"),
     },

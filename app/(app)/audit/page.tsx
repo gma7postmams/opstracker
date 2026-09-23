@@ -209,7 +209,8 @@ const matchesSearch =
                 <span>{log.entityId}</span>
 
 		<span>
-		  {log.details?.user ??
+      {log.details?.actor ??
+		    log.details?.user ??
 		    log.details?.name ??
 		    log.details?.username ??
 		    (log.userId ? `User #${log.userId}` : "Anonymous")}
