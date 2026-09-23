@@ -21,36 +21,54 @@ export async function GET() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  const recordWhere =
+    user.role === "ADMIN"
+      ? {}
+      : {
+          ownerId: user.id,
+        };
+
   const [aStatus, tStatus, aTotal, tTotal, cats, aRecent, tRecent, aTrend, tTrend, aOverdue, tOverdue, auditLogs,] = await Promise.all([
-    prisma.assistance.groupBy({ by: ["status"], _count: true }),
-    prisma.task.groupBy({ by: ["status"], _count: true }),
-    prisma.assistance.count(),
-    prisma.task.count(),
-    prisma.assistance.groupBy({ by: ["category"], _count: true, orderBy: { _count: { category: "desc" } } }),
+
+    prisma.assistance.groupBy({by: ["status"], _count: true, where: recordWhere,}),
+    prisma.task.groupBy({by: ["status"], _count: true, where: recordWhere,}),
+    prisma.assistance.count({where: recordWhere,}),
+    prisma.task.count({where: recordWhere,}), 
+
+    prisma.assistance.groupBy({ by: ["category"], where: recordWhere, _count: true, orderBy: { _count: { category: "desc",},},}),
+
     prisma.assistance.findMany({
-      where: { status: { not: "CLOSED" } },
+      where: {
+        ...recordWhere,
+        status: { not: "CLOSED" },
+      },
       orderBy: [{ priority: "desc" }, { date: "desc" }],
       take: 6,
       select: { id: true, refNo: true, clientName: true, problem: true, priority: true, status: true },
     }),
     prisma.task.findMany({
-      where: { status: { not: "CLOSED" } },
+      where: {
+        ...recordWhere,
+        status: { not: "CLOSED" },
+      },
       orderBy: [{ priority: "desc" }, { date: "desc" }],
       take: 6,
       select: { id: true, refNo: true, activityType: true, description: true, priority: true, status: true },
     }),
-    prisma.assistance.groupBy({ by: ["date"], _count: true, where: { date: { gte: since } } }),
-    prisma.task.groupBy({ by: ["date"], _count: true, where: { date: { gte: since } } }),
+    prisma.assistance.groupBy({ by: ["date"], _count: true, where: { ...recordWhere, date: { gte: since } } }),
+    prisma.task.groupBy({ by: ["date"], _count: true, where: { ...recordWhere, date: { gte: since } } }),
 
-prisma.assistance.count({
-  where: {
-    status: { not: "CLOSED" },
-    date: { lt: today },
-  },
-}),
+  prisma.assistance.count({
+    where: {
+      ...recordWhere,
+      status: { not: "CLOSED" },
+      date: { lt: today },
+    },
+  }),
 
 prisma.task.count({
   where: {
+    ...recordWhere,
     status: { not: "CLOSED" },
     date: { lt: today },
   },

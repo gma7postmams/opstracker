@@ -4,10 +4,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import StatusBadge from "@/components/StatusBadge";
 import { priorityLabel } from "@/lib/recordTypes";
+import { useSession } from "next-auth/react";
 
 const PALETTE = ["#3b82f6", "#7f56d9", "#06aed4", "#f79009", "#12b76a", "#f04438", "#ee46bc"];
 
 export default function Dashboard() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
+
   const [d, setD] = useState<any>(null);
 
   useEffect(() => { fetch("/api/dashboard").then((r) => r.json()).then(setD); }, []);
@@ -116,7 +120,7 @@ export default function Dashboard() {
             <Link href="/assistance">◉ Record technical assistance</Link>
             <Link href="/tasks">☷ Record other task</Link>
             <Link href="/reports">▤ View reports</Link>
-            <Link href="/admin">⚙ Manage master data</Link>
+            {isAdmin && <Link href="/admin">⚙ Manage master data</Link>}
           </div>
         </section>
       </div>
