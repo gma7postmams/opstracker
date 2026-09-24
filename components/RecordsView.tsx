@@ -57,10 +57,15 @@ export default function RecordsView(props: Props) {
   const [importing, setImporting] = useState(false);
   const [confirm, setConfirm] = useState<null | { title: string; body: string; onYes: () => void }>(null);
 
+  const defaultUserFilter =
+    isAdmin ? "all" : String(session?.user?.id ?? "");
+
   const activeCount = useMemo(
-    () => (Object.keys(emptyFilters) as (keyof typeof emptyFilters)[])
-      .filter((k) => filters[k] && filters[k] !== "all").length,
-    [filters]
+    () =>
+      (Object.keys(emptyFilters) as (keyof typeof emptyFilters)[])
+        .filter((k) => filters[k] && filters[k] !== "all").length +
+      (userFilter !== defaultUserFilter ? 1 : 0),
+    [filters, userFilter, defaultUserFilter]
   );
 
   const load = useCallback(async () => {
@@ -87,7 +92,12 @@ export default function RecordsView(props: Props) {
     setSelected(new Set());
     setFilters((f) => ({ ...f, [k]: v }));
   };
-  const clearFilters = () => { setSelected(new Set()); setFilters(emptyFilters); };
+
+  const clearFilters = () => {
+    setSelected(new Set());
+    setFilters(emptyFilters);
+    setUserFilter(defaultUserFilter);
+  };
 
   const toggleSort = (key: string) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: key === "date" ? "desc" : "asc" }));

@@ -261,7 +261,7 @@ const activeFilters =
 
         {activeFilters > 0 && (
           <button
-            className="secondary"
+            className="chip"
             onClick={clearFilters}
           >
             ✕ Clear {activeFilters} filter{activeFilters > 1 ? "s" : ""}
