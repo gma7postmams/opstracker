@@ -36,9 +36,12 @@ export default function MACOPage() {
         headers: {
           "Content-Type": "application/json",
         },
+
         body: JSON.stringify({
           message: userQuestion,
+          history: messages.slice(-10),
         }),
+
       });
 
       const data = await res.json();

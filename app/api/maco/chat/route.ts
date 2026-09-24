@@ -14,7 +14,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     const question = body.message?.trim();
-    
+
+    const history = body.history ?? [];    
 
     if (!question) {
       return NextResponse.json(
@@ -28,7 +29,194 @@ export async function POST(req: NextRequest) {
     }
 
     const q = question.toLowerCase();
+
     let liveContext = "";
+
+    if (
+      q.includes("user") ||
+      q.includes("admin")
+    ) {
+      const users =
+        await prisma.user.findMany({
+          select: {
+            firstName: true,
+            surname: true,
+            role: true,
+            active: true,
+          },
+          orderBy: {
+            surname: "asc",
+          },
+        });
+
+      liveContext += `
+    USER INFORMATION
+
+    ${users
+      .map(
+        (u) =>
+          `- ${u.firstName} ${u.surname}
+    Role: ${u.role}
+    Active: ${u.active}`
+      )
+      .join("\n")}
+
+    `;
+    }
+
+    if (
+      q.includes("incident") ||
+      q.includes("assistance") ||
+      q.includes("ticket")
+    ) {
+      const latestAssistance =
+        await prisma.assistance.findMany({
+          take: 10,
+          orderBy: {
+            createdAt: "desc",
+          },
+          select: {
+            refNo: true,
+            problem: true,
+            status: true,
+          },
+        });
+
+      liveContext += `
+    LATEST ASSISTANCE
+
+    ${latestAssistance
+      .map(
+        (a) =>
+          `- ${a.refNo}
+    ${a.problem}
+    Status: ${a.status}`
+      )
+      .join("\n")}
+
+    `;
+    }
+
+    if (
+      q.includes("task") ||
+      q.includes("activity")
+    ) {
+      const latestTasks =
+        await prisma.task.findMany({
+          take: 10,
+          orderBy: {
+            createdAt: "desc",
+          },
+          select: {
+            refNo: true,
+            activityType: true,
+            description: true,
+            status: true,
+          },
+        });
+
+      liveContext += `
+    LATEST TASKS
+
+    ${latestTasks
+      .map(
+        (t) =>
+          `- ${t.refNo}
+    ${t.activityType}
+    ${t.description}
+    Status: ${t.status}`
+      )
+      .join("\n")}
+
+    `;
+    }
+
+    const totalUsers =
+      await prisma.user.count();
+
+    const totalTasks =
+      await prisma.task.count();
+
+    const totalAssistance =
+      await prisma.assistance.count();
+
+    const openTasks =
+      await prisma.task.count({
+        where: {
+          status: "OPEN",
+        },
+      });
+
+    const openTaskRecords =
+      await prisma.task.findMany({
+        where: {
+          status: "OPEN",
+        },
+        take: 10,
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+
+    const openAssistance =
+      await prisma.assistance.count({
+        where: {
+          status: "OPEN",
+        },
+      });
+
+    const openAssistanceRecords =
+      await prisma.assistance.findMany({
+        where: {
+          status: "OPEN",
+        },
+        take: 10,
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+
+
+    liveContext += `
+    SYSTEM STATISTICS
+
+    Total Users: ${totalUsers}
+    Total Tasks: ${totalTasks}
+    Open Tasks: ${openTasks}
+
+    Total Assistance Records: ${totalAssistance}
+    Open Assistance Records: ${openAssistance}
+
+    OPEN TASK RECORDS
+
+    ${openTaskRecords
+      .map(
+        (t) => `
+    Ref No: ${t.refNo}
+    Activity: ${t.activityType}
+    Description: ${t.description}
+    Remarks: ${t.remarks ?? "N/A"}
+    Status: ${t.status}
+    `
+      )
+      .join("\n")}
+
+    OPEN ASSISTANCE RECORDS
+
+    ${openAssistanceRecords
+      .map(
+        (a) => `
+    Ref No: ${a.refNo}
+    Problem: ${a.problem}
+    Resolution: ${a.resolution ?? "N/A"}
+    Status: ${a.status}
+    `
+      )
+      .join("\n")}
+    `;
+
 
     const settings = JSON.parse(
       await fs.readFile(
@@ -49,109 +237,70 @@ export async function POST(req: NextRequest) {
       ollamaUrl
     );
 
-    if (q.includes("user")) {
-      const totalUsers = await prisma.user.count();
+    let assistance: any[] = [];
+    let tasks: any[] = [];
 
-      const users = await prisma.user.findMany({
-        select: {
-          firstName: true,
-          surname: true,
-          role: true,
-          active: true,
-        },
+    if (settings.maco?.searchRecords !== false) {
+      assistance =
+        await prisma.assistance.findMany({
+          take: 5,
+          orderBy: {
+            createdAt: "desc",
+          },
+          where: {
+            OR: [
+              {
+                problem: {
+                  contains: question,
+                  mode: "insensitive",
+                },
+              },
+              {
+                resolution: {
+                  contains: question,
+                  mode: "insensitive",
+                },
+              },
+              {
+                remarks: {
+                  contains: question,
+                  mode: "insensitive",
+                },
+              },
+            ],
+          },
+        });
+
+      tasks = await prisma.task.findMany({
+        take: 5,
         orderBy: {
-          surname: "asc",
+          createdAt: "desc",
         },
-      });
-
-      liveContext += `
-    USER INFORMATION
-
-    Total Users: ${totalUsers}
-
-    Users:
-    ${users
-      .map(
-        (u) =>
-          `${u.firstName} ${u.surname} (${u.role}) Active: ${u.active}`
-      )
-      .join("\n")}
-    `;
-    }
-
-    const assistance = await prisma.assistance.findMany({
-      take: 5,
-      orderBy: {
-        createdAt: "desc",
-      },
-      where: {
-        OR: [
-          {
-            problem: {
-              contains: question,
-              mode: "insensitive",
-            },
-          },
-          {
-            resolution: {
-              contains: question,
-              mode: "insensitive",
-            },
-          },
-          {
-            remarks: {
-              contains: question,
-              mode: "insensitive",
-            },
-          },
-        ],
-      },
-    });
-
-    const tasks = await prisma.task.findMany({
-      take: 5,
-      orderBy: {
-        createdAt: "desc",
-      },
-      where: {
-        OR: [
-          {
-            description: {
-              contains: question,
-              mode: "insensitive",
-            },
-          },
-          {
-            remarks: {
-              contains: question,
-              mode: "insensitive",
-            },
-          },
-          {
-            activityType: {
-              contains: question,
-              mode: "insensitive",
-            },
-          },
-        ],
-      },
-    });
-
-    const totalUsers = await prisma.user.count();
-
-    const totalAssistance =
-      await prisma.assistance.count();
-
-    const totalTasks =
-      await prisma.task.count();
-
-    const openAssistance =
-      await prisma.assistance.count({
         where: {
-          status: "OPEN",
+          OR: [
+            {
+              description: {
+                contains: question,
+                mode: "insensitive",
+              },
+            },
+            {
+              remarks: {
+                contains: question,
+                mode: "insensitive",
+              },
+            },
+            {
+              activityType: {
+                contains: question,
+                mode: "insensitive",
+              },
+            },
+          ],
         },
       });
-
+    }
+   
     const context = `
     Current OpsTracker Statistics
 
@@ -233,6 +382,11 @@ Response Formatting Rules:
 - Never return long walls of plain text.
 - Present answers similar to Microsoft Copilot.
 
+Live System Data Rules:
+ - Use Live System Data whenever available.
+- Never claim you lack access to system data when Live System Data exists.
+- Prefer actual statistics over assumptions.
+
 For statistics and counts:
 - Start with a summary.
 - Then provide details in bullets.
@@ -248,6 +402,15 @@ ${liveContext}
 Relevant OpsTracker Records:
 
 ${context}
+
+Conversation History:
+
+${history
+  .map(
+    (m: any) =>
+      `${m.role}: ${m.content}`
+  )
+  .join("\n")}
 
 User Question:
 ${question}
