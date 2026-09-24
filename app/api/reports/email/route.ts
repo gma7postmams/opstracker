@@ -246,46 +246,80 @@ const emailHtml = `
       : ""}  
   </p>
 
+  <h3 style="color:#2563eb;margin-top:20px;margin-bottom:10px;">
+    Activity Summary
+  </h3>
+
   <table
     style="
       border-collapse:collapse;
       width:450px;
-      margin-top:20px;
       margin-bottom:20px;
     "
   >
 
-	<tr>
-	  <th style="padding:10px;border:1px solid #ddd;background:#2563eb;color:white">Metric</th>
-	  <th style="padding:10px;border:1px solid #ddd;background:#2563eb;color:white">Value</th>
-	</tr>
+
+    <tr>
+      <th style="
+        padding:10px;
+        border:1px solid #ddd;
+        background:#2563eb;
+        color:white;
+        text-align:left;
+      ">
+        Metric
+      </th>
+
+      <th style="
+        padding:10px;
+        border:1px solid #ddd;
+        background:#2563eb;
+        color:white;
+        text-align:right;
+      ">
+        Value
+      </th>
+    </tr>
 
     <tr>
       <td style="padding:10px;border:1px solid #ddd">
         Technical Assistance
       </td>
-      <td style="padding:10px;border:1px solid #ddd">
+
+      <td style="padding:10px;border:1px solid #ddd;text-align:right">
         ${assistance.length}
       </td>
+      
     </tr>
 
     <tr>
       <td style="padding:10px;border:1px solid #ddd">
         Other Tasks
       </td>
-      <td style="padding:10px;border:1px solid #ddd">
+
+      <td style="padding:10px;border:1px solid #ddd;text-align:right">
         ${tasks.length}
       </td>
+
     </tr>
 
     <tr>
-      <td style="padding:10px;border:1px solid #ddd">
-        Total Records
-      </td>
-      <td style="padding:10px;border:1px solid #ddd">
-        ${assistance.length + tasks.length}
-      </td>
+
+    <td style="padding:10px;border:1px solid #ddd;font-weight:bold">
+      Total Records
+    </td>
+
+    <td style="
+      padding:10px;
+      border:1px solid #ddd;
+      text-align:right;
+      font-weight:bold;
+    ">
+      ${assistance.length + tasks.length}
+    </td>
+
     </tr>
+
   </table>
 
 <h3 style="color:#2563eb">
@@ -370,7 +404,7 @@ if (preview) {
 try {
 
   await transporter.sendMail({
-    from: `"OpsLog Reports" <${sender.smtpEmail}>`,
+    from: `"MAMS Support Reports" <${sender.smtpEmail}>`,
     to: sender.smtpRecipients,
     subject: `MAMS Support Activity Report (${from} to ${to})`,
 
