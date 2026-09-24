@@ -32,6 +32,14 @@ const [ai, setAi] = useState({
   url: "http://172.30.10.76:11434",
   model: "gpt-oss:20b",
   timeout: 30000,
+
+  maco: {
+    enabled: true,
+    model: "qwen3:8b",
+    temperature: 0.2,
+    searchRecords: true,
+    showRelatedRecords: true,
+  },
 });
 
 const [models, setModels] = useState<string[]>([]);
@@ -48,7 +56,23 @@ useEffect(() => {
 
   fetch("/api/admin/ai")
     .then((r) => r.json())
-    .then(setAi);
+    .then((data) => {
+      setAi({
+        enabled: data.enabled ?? true,
+        url: data.url ?? "http://172.30.10.76:11434",
+        model: data.model ?? "gpt-oss:20b",
+        timeout: data.timeout ?? 30000,
+
+        maco: {
+          enabled: data.maco?.enabled ?? true,
+          model: data.maco?.model ?? "qwen3:8b",
+          temperature: data.maco?.temperature ?? 0.2,
+          searchRecords: data.maco?.searchRecords ?? true,
+          showRelatedRecords:
+            data.maco?.showRelatedRecords ?? true,
+        },
+      });
+    });
 
   fetch("/api/admin/ai/test")
     .then((r) => r.json())
@@ -187,152 +211,278 @@ async function testAI() {
         </section>
       )}
 
+  <div className="grid even">
 
-<section className="panel spaced">
-  <div className="panelhead">
-    <div>
-      <h3>AI Settings</h3>
+    <section className="panel spaced">
+      <div className="panelhead">
+        <div>
+          <h3>AI Settings</h3>
 
-      <span className="muted">
-        Configure Ollama integration for writing assistance
-      </span>
+          <span className="muted">
+            Configure Ollama integration for writing assistance
+          </span>
+        </div>
+      </div>
+
+    <div className="ai-card">
+
+    <div className="ai-status-card">
+      <label
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          fontWeight: 600,
+          marginBottom: 6,
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={ai.enabled}
+          onChange={(e) =>
+            setAi({
+              ...ai,
+              enabled: e.target.checked,
+            })
+          }
+        />
+        Enable AI Assistance
+      </label>
+
+      <div className="muted">
+        {ai.enabled
+          ? "🟢 AI writing assistance is enabled"
+          : "🔴 AI writing assistance is disabled"}
+      </div>
     </div>
+
+    <label>
+      Ollama URL
+      <input
+        value={ai.url}
+        onChange={(e) =>
+          setAi({
+            ...ai,
+            url: e.target.value,
+          })
+        }
+      />
+    </label>
+
+    <div className="ai-status-card">
+      <div>
+        <strong>
+          {models.length
+            ? "🟢 Ollama Connected"
+            : "🔴 Ollama Disconnected"}
+        </strong>
+      </div>
+
+      <div className="muted">
+        {models.length
+          ? `${models.length} model(s) available`
+          : "No models detected"}
+      </div>
+    </div>
+
+    <label>
+      Available Model
+      <select
+        value={ai.model}
+        onChange={(e) =>
+          setAi({
+            ...ai,
+            model: e.target.value,
+          })
+        }
+      >
+        {models.map((m) => (
+          <option key={m} value={m}>
+            {m}
+          </option>
+        ))}
+      </select>
+
+      <div
+        className="muted"
+        style={{ marginTop: 6 }}
+      >
+        {models.length
+          ? `🟢 Connected • ${models.length} model(s) available`
+          : "🔴 Not connected"}
+      </div>
+    </label>
+
+    <div>
+      <div className="flabel">Timeout (ms)</div>
+
+      <input
+        type="number"
+        value={ai.timeout}
+        onChange={(e) =>
+          setAi({
+            ...ai,
+            timeout: Number(e.target.value),
+          })
+        }
+      />
+    </div>
+
+    <div
+      style={{
+        display: "flex",
+        gap: 10,
+      }}
+    >
+      <button
+        className="secondary"
+        onClick={testAI}
+        disabled={testingAI}
+      >
+        {testingAI ? "Testing..." : "Test Connection"}
+      </button>
+
+      <button
+        className="primary"
+        onClick={saveAI}
+      >
+        Save AI Settings
+      </button>
+    </div>
+
+
+      </div>
+    </section>
+
+    <section className="panel spaced">
+      <div className="panelhead">
+        <div>
+          <h3>🤖 MACO Configuration</h3>
+
+          <span className="muted">
+            MAMS Support Operations Tracker Copilot
+          </span>
+        </div>
+      </div>
+
+      <div className="ai-card">
+
+        <div className="ai-status-card">
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              fontWeight: 600,
+              marginBottom: 6,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={ai.maco.enabled}
+              onChange={(e) =>
+                setAi({
+                  ...ai,
+                  maco: {
+                    ...ai.maco,
+                    enabled: e.target.checked,
+                  },
+                })
+              }
+            />
+
+            Enable MACO
+          </label>
+
+          <div className="muted">
+            {ai.maco.enabled
+              ? "🟢 MACO is enabled"
+              : "🔴 MACO is disabled"}
+          </div>
+        </div>
+
+        <label>
+          Preferred Model
+
+          <select
+            value={ai.maco.model}
+            onChange={(e) =>
+              setAi({
+                ...ai,
+                maco: {
+                  ...ai.maco,
+                  model: e.target.value,
+                },
+              })
+            }
+          >
+            {models.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div>
+          <div className="flabel">
+            Temperature
+          </div>
+
+          <input
+            type="number"
+            min="0"
+            max="1"
+            step="0.1"
+            value={ai.maco.temperature}
+            onChange={(e) =>
+              setAi({
+                ...ai,
+                maco: {
+                  ...ai.maco,
+                  temperature: Number(e.target.value),
+                },
+              })
+            }
+          />
+        </div>
+
+        <div className="ai-status-card">
+          <div className="muted">
+            🤖 MACO can search Technical Assistance
+            and Other Tasks records, find similar
+            incidents, answer workflow questions,
+            and provide troubleshooting guidance.
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-start",
+            marginTop: 12,
+          }}
+        >
+          <button
+            className="primary"
+            onClick={saveAI}
+          >
+            Save MACO Settings
+          </button>
+        </div>
+
+      </div>
+    </section>
+
   </div>
 
-<div className="ai-card">
 
-<div className="ai-status-card">
-  <label
-    style={{
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      fontWeight: 600,
-      marginBottom: 6,
-    }}
-  >
-    <input
-      type="checkbox"
-      checked={ai.enabled}
-      onChange={(e) =>
-        setAi({
-          ...ai,
-          enabled: e.target.checked,
-        })
-      }
-    />
-    Enable AI Assistance
-  </label>
-
-  <div className="muted">
-    {ai.enabled
-      ? "🟢 AI writing assistance is enabled"
-      : "🔴 AI writing assistance is disabled"}
-  </div>
-</div>
-
-<label>
-  Ollama URL
-  <input
-    value={ai.url}
-    onChange={(e) =>
-      setAi({
-        ...ai,
-        url: e.target.value,
-      })
-    }
-  />
-</label>
-
-<div className="ai-status-card">
-  <div>
-    <strong>
-      {models.length
-        ? "🟢 Ollama Connected"
-        : "🔴 Ollama Disconnected"}
-    </strong>
-  </div>
-
-  <div className="muted">
-    {models.length
-      ? `${models.length} model(s) available`
-      : "No models detected"}
-  </div>
-</div>
-
-<label>
-  Available Model
-  <select
-    value={ai.model}
-    onChange={(e) =>
-      setAi({
-        ...ai,
-        model: e.target.value,
-      })
-    }
-  >
-    {models.map((m) => (
-      <option key={m} value={m}>
-        {m}
-      </option>
-    ))}
-  </select>
-
-  <div
-    className="muted"
-    style={{ marginTop: 6 }}
-  >
-    {models.length
-      ? `🟢 Connected • ${models.length} model(s) available`
-      : "🔴 Not connected"}
-  </div>
-</label>
-
-<div>
-  <div className="flabel">Timeout (ms)</div>
-
-  <input
-    type="number"
-    value={ai.timeout}
-    onChange={(e) =>
-      setAi({
-        ...ai,
-        timeout: Number(e.target.value),
-      })
-    }
-  />
-</div>
-
-<div
-  style={{
-    display: "flex",
-    gap: 10,
-  }}
->
-  <button
-    className="secondary"
-    onClick={testAI}
-    disabled={testingAI}
-  >
-    {testingAI ? "Testing..." : "Test Connection"}
-  </button>
-
-  <button
-    className="primary"
-    onClick={saveAI}
-  >
-    Save AI Settings
-  </button>
-</div>
-
-
-  </div>
-</section>
 
 
       <AdminImportPanel />
 
       <BackupPanel />
+
 
       <div className="grid even">
         {KINDS.map(([kind, label]) => {
@@ -357,6 +507,7 @@ async function testAI() {
                 <button className="secondary" onClick={() => addValue(kind)}>Add</button>
               </div>
             </section>
+
           );
         })}
       </div>

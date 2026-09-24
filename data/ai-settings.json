@@ -2,5 +2,12 @@
   "enabled": true,
   "url": "http://172.30.10.76:11434",
   "model": "gpt-oss:20b",
-  "timeout": 30000
+  "timeout": 30000,
+  "maco": {
+    "enabled": true,
+    "model": "qwen3:8b",
+    "temperature": 0.2,
+    "searchRecords": true,
+    "showRelatedRecords": true
+  }
 }
