@@ -14,6 +14,16 @@ export default function MACOPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const hour = new Date().getHours();
+
+  const greeting =
+    hour < 12
+      ? "Good morning"
+      : hour < 18
+      ? "Good afternoon"
+      : "Good evening";
+
+
   async function askMACO() {
     if (!question.trim() || loading) return;
 
@@ -106,32 +116,33 @@ export default function MACOPage() {
                   textAlign: "center",
                 }}
               >
-                <div
-                  style={{
-                    width: 90,
-                    height: 90,
-                    borderRadius: "50%",
-                    background:
-                      "linear-gradient(135deg,#2563eb,#7c3aed)",
-                    color: "#fff",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 36,
-                    fontWeight: 700,
-                    marginBottom: 20,
-                    boxShadow:
-                      "0 10px 30px rgba(99,102,241,.35)",
-                  }}
-                >
-                  M
-                </div>
+              <div
+                style={{
+                  width: 100,
+                  height: 100,
+                  borderRadius: 28,
+                  background:
+                    "linear-gradient(135deg,#2563eb,#7c3aed)",
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 42,
+                  fontWeight: 700,
+                  marginBottom: 24,
+                  boxShadow:
+                    "0 12px 32px rgba(99,102,241,.35)",
+                }}
+              >
+                ✦
+              </div>
 
                 <h1
                   style={{
                     margin: 0,
-                    fontSize: 42,
-                    fontWeight: 700,
+                    fontSize: 64,
+                    fontWeight: 300,
+                    letterSpacing: "-0.06em",
                   }}
                 >
                   MACO
@@ -148,13 +159,33 @@ export default function MACOPage() {
                   MAMS Support Operations Tracker Copilot
                 </p>
 
-                <h3
+                <h2
                   style={{
-                    marginBottom: 24,
+                    margin: 0,
+                    marginBottom: 12,
+                    fontSize: 42,
+                    fontFamily: "var(--font-caveat)",
+                    fontWeight: 600,
+                    color: "#4f46e5",
                   }}
                 >
-                  What can I help you with today?
-                </h3>
+                  {greeting}, Eugene 👋
+                </h2>
+
+                <p
+                  className="muted"
+                  style={{
+                    maxWidth: 680,
+                    marginBottom: 32,
+                    fontSize: 18,
+                    lineHeight: 1.8,
+                  }}
+                >
+                  Welcome back. I can help you investigate incidents,
+                  search historical records, analyze operational data,
+                  answer workflow questions, and provide insights from
+                  OpsTracker.
+                </p>
 
                 <div
                   style={{
@@ -165,49 +196,83 @@ export default function MACOPage() {
                     maxWidth: 700,
                   }}
                 >
-                  <button
-                    className="secondary"
-                    onClick={() =>
-                      setQuestion(
-                        "Did we encounter slow publishing before?"
-                      )
-                    }
-                  >
-                    📚 Historical Incidents
-                  </button>
 
-                  <button
-                    className="secondary"
-                    onClick={() =>
-                      setQuestion(
-                        "Show Adobe-related incidents."
-                      )
-                    }
-                  >
-                    🎬 Adobe Issues
-                  </button>
+                <button
+                  className="secondary"
+                  style={{
+                    width: 240,
+                    textAlign: "left",
+                    padding: 16,
+                    borderRadius: 16,
+                  }}
+                  onClick={() =>
+                    setQuestion(
+                      "Did we encounter slow publishing before?"
+                    )
+                  }
+                >
+                  <strong>📚 Historical Incidents</strong>
+                  <br />
+                  Search previous support issues
+                </button>
 
-                  <button
-                    className="secondary"
-                    onClick={() =>
-                      setQuestion(
-                        "Summarize support activity this month."
-                      )
-                    }
-                  >
-                    📈 Monthly Summary
-                  </button>
+                <button
+                  className="secondary"
+                  style={{
+                    width: 240,
+                    textAlign: "left",
+                    padding: 16,
+                    borderRadius: 16,
+                  }}
+                  onClick={() =>
+                    setQuestion(
+                      "Show Adobe-related incidents."
+                    )
+                  }
+                >
+                  <strong>🎬 Adobe Issues</strong>
+                  <br />
+                  Find Adobe, Premiere, and Media Encoder issues
+                </button>
 
-                  <button
-                    className="secondary"
-                    onClick={() =>
-                      setQuestion(
-                        "How do I use Administrative Import?"
-                      )
-                    }
-                  >
-                    ⚙️ MAMS Workflow
-                  </button>
+                <button
+                  className="secondary"
+                  style={{
+                    width: 240,
+                    textAlign: "left",
+                    padding: 16,
+                    borderRadius: 16,
+                  }}
+                  onClick={() =>
+                    setQuestion(
+                      "Summarize support activity this month."
+                    )
+                  }
+                >
+                  <strong>📈 Monthly Summary</strong>
+                  <br />
+                  Review incidents, tasks, and activities
+                </button>
+
+                <button
+                  className="secondary"
+                  style={{
+                    width: 240,
+                    textAlign: "left",
+                    padding: 16,
+                    borderRadius: 16,
+                  }}
+                  onClick={() =>
+                    setQuestion(
+                      "How do I use Administrative Import?"
+                    )
+                  }
+                >
+                  <strong>⚙️ MAMS Workflow</strong>
+                  <br />
+                  Learn workflows and troubleshooting steps
+                </button>
+
                 </div>
               </div>
             ) : (
