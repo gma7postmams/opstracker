@@ -452,15 +452,28 @@ export default function MACOPage() {
         }
 
         .maco-markdown p {
-          line-height: 1.8;
+          line-height: 1.9;
+          margin-bottom: 14px;
         }
 
         .maco-markdown ul {
-          padding-left: 24px;
+          margin-top: 12px;
+          margin-bottom: 18px;
+          padding-left: 28px;
         }
 
         .maco-markdown li {
-          margin: 6px 0;
+          margin-bottom: 10px;
+          line-height: 1.8;
+        }
+
+        .maco-markdown h1 {
+          margin-bottom: 16px;
+        }
+
+        .maco-markdown h2 {
+          margin-top: 24px;
+          margin-bottom: 12px;
         }
 
         .maco-markdown code {

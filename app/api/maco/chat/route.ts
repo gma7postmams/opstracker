@@ -32,6 +32,40 @@ export async function POST(req: NextRequest) {
 
     let liveContext = "";
 
+    const similarityQuestion =
+      q.includes("similar") ||
+      q.includes("related") ||
+      q.includes("before") ||
+      q.includes("encountered") ||
+      q.includes("history") ||
+      q.includes("past issue") ||
+      q.includes("previous");   
+
+    if (similarityQuestion) {
+      const relatedRecords =
+        await prisma.assistance.findMany({
+          take: 10,
+          orderBy: {
+            createdAt: "desc",
+          },
+        });
+
+      liveContext += `
+    RELATED ASSISTANCE RECORDS
+
+    ${relatedRecords
+      .map(
+        (r) => `
+    Ref No: ${r.refNo}
+    Problem: ${r.problem}
+    Resolution: ${r.resolution ?? "N/A"}
+    Status: ${r.status}
+    `
+      )
+      .join("\n")}
+    `;
+    }
+
     if (
       q.includes("user") ||
       q.includes("admin")
@@ -49,19 +83,41 @@ export async function POST(req: NextRequest) {
           },
         });
 
+      const admins = users.filter(
+        (u) => u.role === "ADMIN"
+      );
+
+      const normalUsers = users.filter(
+        (u) => u.role === "USER"
+      );
+
+      const activeUsers = users.filter(
+        (u) => u.active
+      ).length;
+
       liveContext += `
-    USER INFORMATION
+      USER STATISTICS
 
-    ${users
-      .map(
-        (u) =>
-          `- ${u.firstName} ${u.surname}
-    Role: ${u.role}
-    Active: ${u.active}`
-      )
-      .join("\n")}
+      Total Users: ${users.length}
+      Active Users: ${activeUsers}
+      Inactive Users: ${users.length - activeUsers}
 
-    `;
+      Administrators:
+      ${admins
+        .map(
+          (u) =>
+            `- ${u.firstName} ${u.surname}`
+        )
+        .join("\n")}
+
+      Standard Users:
+      ${normalUsers
+        .map(
+          (u) =>
+            `- ${u.firstName} ${u.surname}`
+        )
+        .join("\n")}
+      `;
     }
 
     if (
@@ -152,6 +208,9 @@ export async function POST(req: NextRequest) {
         where: {
           status: "OPEN",
         },
+        include: {
+          owner: true,
+        },
         take: 10,
         orderBy: {
           createdAt: "desc",
@@ -196,11 +255,26 @@ export async function POST(req: NextRequest) {
         (t) => `
     Ref No: ${t.refNo}
     Activity: ${t.activityType}
+
+    Created:
+    ${t.createdAt}
+
+    Updated:
+    ${t.updatedAt}    
+
     Description: ${t.description}
-    Remarks: ${t.remarks ?? "N/A"}
+    Assigned: ${t.assigned}
+    Accountable: ${t.accountable}
+
+    Owner:
+    ${t.owner
+      ? `${t.owner.firstName} ${t.owner.surname}`
+      : "Unassigned"}
+
     Status: ${t.status}
     `
       )
+
       .join("\n")}
 
     OPEN ASSISTANCE RECORDS
@@ -381,6 +455,10 @@ Response Formatting Rules:
 - Use bold text for important information.
 - Never return long walls of plain text.
 - Present answers similar to Microsoft Copilot.
+- Insert a blank line between sections.
+- Group information into logical sections with headings.
+- For records and reports, use subsections instead of one large bullet list.
+- End with a short summary or recommended next action.
 
 Live System Data Rules:
  - Use Live System Data whenever available.
@@ -421,8 +499,7 @@ ${question}
             settings.maco.temperature ?? 0.2,
         },
       }),
-      }
-    );
+    });
 
   // ADD THIS
   console.log("Status:", response.status);
