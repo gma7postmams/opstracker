@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const filename = `OpsLog_Report_${from}_to_${to}.xlsx`;
+  const filename = `MAMS_Support_Activity_Report_${from}_to_${to}.xlsx`;
 
 const assistanceRows = assistance
   .map(
@@ -224,7 +224,7 @@ const emailHtml = `
     color:#2563eb;
     margin-bottom:10px;
   ">
-    OpsLog Productivity Report
+    MAMS Support Activity Report
   </h2>
 
   <p>
@@ -233,13 +233,17 @@ const emailHtml = `
   </p>
 
   <p>
-    <strong>Reporting Period:</strong><br>
-    ${from} to ${to}
+    <strong>Reporting Period:</strong> ${from} to ${to}
   </p>
 
   <p>
-    <strong>Activity Filter:</strong> ${activity}<br>
-    <strong>Status Filter:</strong> ${status}
+    ${activity !== "all"
+      ? `<strong>Activity Filter:</strong> ${activity}<br>`
+      : ""}
+
+    ${status !== "all"
+      ? `<strong>Status Filter:</strong> ${status}<br>`
+      : ""}  
   </p>
 
   <table
@@ -347,7 +351,7 @@ const emailHtml = `
     color:#666;
     font-size:12px;
   ">
-    Generated automatically by OpsLog.
+    Generated automatically by MAMS Support Operations Tracker.
   </p>
 
 </div>
@@ -356,7 +360,7 @@ const emailHtml = `
 if (preview) {
   return NextResponse.json({
     ok: true,
-    subject: `OpsLog Productivity Report (${from} to ${to})`,
+    subject: `MAMS Support Activity Report (${from} to ${to})`,
     recipients: sender.smtpRecipients,
     html: emailHtml,
   });
@@ -368,7 +372,7 @@ try {
   await transporter.sendMail({
     from: `"OpsLog Reports" <${sender.smtpEmail}>`,
     to: sender.smtpRecipients,
-    subject: `OpsLog Productivity Report (${from} to ${to})`,
+    subject: `MAMS Support Activity Report (${from} to ${to})`,
 
     html: emailHtml,
     attachments: [

@@ -457,20 +457,42 @@ const activeFilters =
         boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
       }}
     >
-      <h3>
-        {emailResult.success
-          ? "✅ Email Sent Successfully"
-          : "❌ Email Sending Failed"}
-      </h3>
 
-      <p>{emailResult.message}</p>
+    <h3>
+      {emailResult.success
+        ? "✅ Email Delivered"
+        : "❌ Email Delivery Failed"}
+    </h3>
 
-      <button
-        className="primary"
-        onClick={() => setEmailResult(null)}
+    <p>
+      {emailResult.success
+        ? "Your MAMS Support Activity Report has been sent successfully."
+        : emailResult.message}
+    </p>
+
+    {emailResult.success && (
+
+      <p
+        style={{
+          marginTop: "10px",
+          marginBottom: "24px",
+          padding: "8px 12px",
+          background: "var(--hint-bg)",
+          borderRadius: "8px",
+        }}
       >
-        OK
-      </button>
+        📧 {emailResult.message.replace("Report emailed successfully to ", "")}
+      </p>
+
+    )}
+
+    <button
+      className="primary"
+      onClick={() => setEmailResult(null)}
+    >
+      Close
+    </button>
+      
     </div>
   </div>
 )}

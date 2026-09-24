@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
 
   const buffer = await workbook.xlsx.writeBuffer();
 
-  const filename = `OpsLog_Report_${from}_to_${to}.xlsx`;
+  const filename = `MAMS_Support_Activity_Report_${from}_to_${to}.xlsx`;
 
   return new NextResponse(buffer as ArrayBuffer, {
     headers: {

@@ -108,7 +108,7 @@ export async function buildReportWorkbook(data: {
   const summary = wb.addWorksheet("Summary");
 
   summary.mergeCells("A1:D1");
-  summary.getCell("A1").value = "OpsLog Productivity Report";
+  summary.getCell("A1").value = "MAMS Support Activity Report";
   summary.getCell("A1").font = {
     size: 18,
     bold: true,
