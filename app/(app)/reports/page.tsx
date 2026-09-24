@@ -8,6 +8,13 @@ import { useSession } from "next-auth/react";
 const today = () => new Date().toISOString().slice(0, 10);
 const monthStart = () => today().slice(0, 8) + "01";
 
+const defaultFilters = {
+  from: monthStart(),
+  to: today(),
+  activity: "all",
+  status: "all",
+  userId: "all",
+};
 
 interface Row {
   user: string; total: number; closed: number; open: number; pending: number;
@@ -87,7 +94,8 @@ export default function Reports() {
   const isAdmin = session?.user.role === "ADMIN";
 
   const toast = useToast();
-  const [f, setF] = useState({ from: monthStart(), to: today(), activity: "all", status: "all", userId: "all" });
+
+  const [f, setF] = useState(defaultFilters);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -97,7 +105,6 @@ export default function Reports() {
       .then((d) => setUsers(Array.isArray(d) ? d : []));
   }, [isAdmin]);
 
-  const [applied, setApplied] = useState(f);
   const [d, setD] = useState<any>(null);
 
   const [users, setUsers] = useState<any[]>([]);
@@ -109,7 +116,11 @@ export default function Reports() {
     setD(out);
   }, [toast]);
 
-  useEffect(() => { load(applied); }, [load, applied]);
+  useEffect(() => {
+    if (f.from > f.to) return;
+    load(f);
+  }, [load, f]);  
+
 
 const [emailResult, setEmailResult] = useState<{
   success: boolean;
@@ -130,7 +141,7 @@ async function previewEmail() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        ...applied,
+        ...f,
         preview: true,
       }),
     });
@@ -158,7 +169,7 @@ async function sendEmail() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(applied),
+      body: JSON.stringify(f),
     });
 
     const out = await res.json();
@@ -181,23 +192,23 @@ async function sendEmail() {
   }
 }
 
-function apply() {
-  if (f.from > f.to) {
-    toast("From date must be on or before To date");
-    return;
-  }
-  setApplied({ ...f });
+function clearFilters() {
+  setF(defaultFilters);
 }
-
 
 function exportExcel() {
   const url =
-    `/api/reports/excel?${new URLSearchParams(applied)}`;
+    `/api/reports/excel?${new URLSearchParams(f)}`;
 
   window.open(url, "_blank");
 }
 
-
+const activeFilters =
+  (f.from !== defaultFilters.from ? 1 : 0) +
+  (f.to !== defaultFilters.to ? 1 : 0) +
+  (f.activity !== "all" ? 1 : 0) +
+  (f.status !== "all" ? 1 : 0) +
+  (isAdmin && f.userId !== "all" ? 1 : 0);
 
   const s = d?.summary;
 
@@ -248,7 +259,14 @@ function exportExcel() {
           </label>
         )}
 
-        <button className="primary" onClick={apply}>Apply filters</button>
+        {activeFilters > 0 && (
+          <button
+            className="secondary"
+            onClick={clearFilters}
+          >
+            ✕ Clear {activeFilters} filter{activeFilters > 1 ? "s" : ""}
+          </button>
+        )}
 
 <div className="btngroup">
 
