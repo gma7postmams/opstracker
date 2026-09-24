@@ -5,7 +5,7 @@
   "timeout": 30000,
   "maco": {
     "enabled": true,
-    "model": "qwen3:8b",
+    "model": "qwen3.6:27B",
     "temperature": 0.2,
     "searchRecords": true,
     "showRelatedRecords": true

@@ -12,6 +12,9 @@ const NAV = [
   { href: "/assistance", icon: "◉", label: "Technical Assistance" },
   { href: "/tasks", icon: "☷", label: "Other Tasks" },
   { href: "/reports", icon: "▤", label: "Reports" },
+
+  { href: "/maco", icon: "🤖", label: "MACO" },
+  
   { href: "/users", icon: "◍", label: "Users" },
   { href: "/admin", icon: "⚙", label: "Administration" },
   { href: "/audit", icon: "▤", label: "Audit Logs" },
@@ -19,7 +22,7 @@ const NAV = [
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Dashboard", "/assistance": "Technical Assistance", "/tasks": "Other Tasks",
-  "/reports": "Reports", "/users": "Users", "/admin": "Administration","/audit": "Audit Logs", "/profile": "Account Settings",
+  "/reports": "Reports", "/maco": "MACO", "/users": "Users", "/admin": "Administration","/audit": "Audit Logs", "/profile": "Account Settings",
 };
 
 interface Props {
