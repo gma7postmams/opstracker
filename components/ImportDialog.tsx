@@ -65,10 +65,10 @@ export default function ImportDialog({ scope, fixedType, onClose, onDone }: Prop
 
   return (
     <Modal
-      title={scope === "self" ? `Import my ${label.toLowerCase()}` : "Import records"}
+      title={scope === "self" ? `Import my ${label.toLowerCase()}` : "Import Records (All Users)"}
       subtitle={scope === "self"
         ? "Excel or CSV — every row is logged under your name"
-        : "Excel or CSV — the Assigned To and Accountable columns are honoured"}
+        : "Excel or CSV — imports may be assigned to any user"}
       onClose={onClose} width={640}
       footer={<>
         <button className="secondary" onClick={onClose}>Cancel</button>
@@ -85,6 +85,10 @@ export default function ImportDialog({ scope, fixedType, onClose, onDone }: Prop
 
       <div className="hint spacedbottom">
         <b>Import rules</b><br />
+        <a href="/templates/OpsTracker_Import_Template.xlsx" download className="button">
+          ⬇ Download Workbook Template
+        </a>
+        <br />
         • Accepts <code>.xlsx</code>, <code>.xlsm</code> and <code>.csv</code>, up to 10 MB.<br />
         {scope === "self" ? (
           <>
