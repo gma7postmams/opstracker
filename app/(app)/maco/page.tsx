@@ -96,7 +96,7 @@ export default function MACOPage() {
 
         body: JSON.stringify({
           message: userQuestion,
-          history: [],
+          history: messages.slice(-10),
         }),
 
       });
