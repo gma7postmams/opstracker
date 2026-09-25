@@ -9,6 +9,12 @@ const SETTINGS_FILE = path.join(
   "ai-settings.json"
 );
 
+const formatDate = (d: Date | string) =>
+  new Intl.DateTimeFormat("en-PH", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(d));
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -278,10 +284,10 @@ export async function POST(req: NextRequest) {
     ${t.remarks ?? "N/A"}
 
     Created:
-    ${t.createdAt}
+    ${formatDate(t.createdAt)}
 
     Updated:
-    ${t.updatedAt}
+    ${formatDate(t.updatedAt)}
     `
       )
       .join("\n")}
@@ -314,10 +320,10 @@ export async function POST(req: NextRequest) {
     ${a.remarks ?? "N/A"}
 
     Created:
-    ${a.createdAt}
+    ${formatDate(a.createdAt)}
 
     Updated:
-    ${a.updatedAt}
+    ${formatDate(a.updatedAt)}
     `
       )
       .join("\n")}
