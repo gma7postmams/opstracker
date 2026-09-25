@@ -254,15 +254,18 @@ export async function POST(req: NextRequest) {
       .map(
         (t) => `
     Ref No: ${t.refNo}
-    Activity: ${t.activityType}
 
-    Created:
-    ${t.createdAt}
+    Date: ${t.date}
+    Shift: ${t.shift}
+    Location: ${t.location}
+    Show Group: ${t.showGroup ?? "N/A"}
 
-    Updated:
-    ${t.updatedAt}    
-
+    Activity Type: ${t.activityType}
     Description: ${t.description}
+
+    Priority: ${t.priority}
+    Status: ${t.status}
+
     Assigned: ${t.assigned}
     Accountable: ${t.accountable}
 
@@ -271,10 +274,16 @@ export async function POST(req: NextRequest) {
       ? `${t.owner.firstName} ${t.owner.surname}`
       : "Unassigned"}
 
-    Status: ${t.status}
+    Remarks:
+    ${t.remarks ?? "N/A"}
+
+    Created:
+    ${t.createdAt}
+
+    Updated:
+    ${t.updatedAt}
     `
       )
-
       .join("\n")}
 
     OPEN ASSISTANCE RECORDS
@@ -283,9 +292,32 @@ export async function POST(req: NextRequest) {
       .map(
         (a) => `
     Ref No: ${a.refNo}
+
+    Date: ${a.date}
+    Shift: ${a.shift}
+    Location: ${a.location}
+    Show Group: ${a.showGroup ?? "N/A"}
+
+    Client: ${a.clientName ?? "N/A"}
+    Category: ${a.category}
+
     Problem: ${a.problem}
     Resolution: ${a.resolution ?? "N/A"}
+
+    Priority: ${a.priority}
     Status: ${a.status}
+
+    Assigned: ${a.assigned}
+    Accountable: ${a.accountable}
+
+    Remarks:
+    ${a.remarks ?? "N/A"}
+
+    Created:
+    ${a.createdAt}
+
+    Updated:
+    ${a.updatedAt}
     `
       )
       .join("\n")}
@@ -388,9 +420,24 @@ export async function POST(req: NextRequest) {
     ${assistance
       .map(
         (r) => `
-    Ref: ${r.refNo}
+    Ref No: ${r.refNo}
+    Date: ${r.date}
+    Shift: ${r.shift}
+    Location: ${r.location}
+    Show Group: ${r.showGroup ?? "N/A"}
+
+    Client: ${r.clientName ?? "N/A"}
+    Category: ${r.category}
+
     Problem: ${r.problem}
     Resolution: ${r.resolution ?? "N/A"}
+
+    Priority: ${r.priority}
+    Status: ${r.status}
+
+    Assigned: ${r.assigned}
+    Accountable: ${r.accountable}
+
     Remarks: ${r.remarks ?? "N/A"}
     `
       )
@@ -401,9 +448,21 @@ export async function POST(req: NextRequest) {
     ${tasks
       .map(
         (r) => `
-    Ref: ${r.refNo}
-    Activity: ${r.activityType}
+    Ref No: ${r.refNo}
+    Date: ${r.date}
+    Shift: ${r.shift}
+    Location: ${r.location}
+    Show Group: ${r.showGroup ?? "N/A"}
+
+    Activity Type: ${r.activityType}
     Description: ${r.description}
+
+    Priority: ${r.priority}
+    Status: ${r.status}
+
+    Assigned: ${r.assigned}
+    Accountable: ${r.accountable}
+
     Remarks: ${r.remarks ?? "N/A"}
     `
       )
@@ -469,6 +528,14 @@ For statistics and counts:
 - Start with a summary.
 - Then provide details in bullets.
 - Highlight important numbers using bold text.
+
+When a user asks for a specific task or assistance record:
+
+- Display all available fields.
+- Do not omit information.
+- Present the record as a detailed report.
+- Include date, shift, location, priority, assignment, ownership, remarks, and status.
+- Only summarize after displaying the complete details.
 
 Do not claim that you do not have access
 to system data if statistics are provided.
