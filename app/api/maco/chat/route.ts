@@ -16,6 +16,9 @@ const formatDate = (d: Date | string) =>
   }).format(new Date(d));
 
 export async function POST(req: NextRequest) {
+
+  console.time("MACO Total");
+  
   try {
     const body = await req.json();
 
@@ -35,6 +38,15 @@ export async function POST(req: NextRequest) {
     }
 
     const q = question.toLowerCase();
+
+    const simpleQuestion =
+      q === "hi" ||
+      q === "hello" ||
+      q === "hey" ||
+      q === "thanks" ||
+      q === "thank you" ||
+      q.includes("who are you");    
+
 
     let liveContext = "";
 
@@ -193,56 +205,70 @@ export async function POST(req: NextRequest) {
     `;
     }
 
-    const totalUsers =
-      await prisma.user.count();
+    let totalUsers = 0;
+    let totalTasks = 0;
+    let totalAssistance = 0;
+    let openTasks = 0;
+    let openAssistance = 0;
 
-    const totalTasks =
-      await prisma.task.count();
+    let openTaskRecords: any[] = [];
+    let openAssistanceRecords: any[] = [];
 
-    const totalAssistance =
-      await prisma.assistance.count();
+    if (!simpleQuestion) {
+      console.time("Database");
 
-    const openTasks =
-      await prisma.task.count({
-        where: {
-          status: "OPEN",
-        },
-      });
+      totalUsers =
+        await prisma.user.count();
 
-    const openTaskRecords =
-      await prisma.task.findMany({
-        where: {
-          status: "OPEN",
-        },
-        include: {
-          owner: true,
-        },
-        take: 10,
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
+      totalTasks =
+        await prisma.task.count();
 
+      totalAssistance =
+        await prisma.assistance.count();
 
-    const openAssistance =
-      await prisma.assistance.count({
-        where: {
-          status: "OPEN",
-        },
-      });
+      openTasks =
+        await prisma.task.count({
+          where: {
+            status: "OPEN",
+          },
+        });
 
-    const openAssistanceRecords =
-      await prisma.assistance.findMany({
-        where: {
-          status: "OPEN",
-        },
-        take: 10,
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
+      openTaskRecords =
+        await prisma.task.findMany({
+          where: {
+            status: "OPEN",
+          },
+          include: {
+            owner: true,
+          },
+          take: 10,
+          orderBy: {
+            createdAt: "desc",
+          },
+        });
 
+      openAssistance =
+        await prisma.assistance.count({
+          where: {
+            status: "OPEN",
+          },
+        });
 
+      openAssistanceRecords =
+        await prisma.assistance.findMany({
+          where: {
+            status: "OPEN",
+          },
+          take: 10,
+          orderBy: {
+            createdAt: "desc",
+          },
+        });
+
+      console.timeEnd("Database");
+    }
+
+  if (!simpleQuestion) {  
 
     liveContext += `
     SYSTEM STATISTICS
@@ -329,6 +355,7 @@ export async function POST(req: NextRequest) {
       .join("\n")}
     `;
 
+  }
 
     const settings = JSON.parse(
       await fs.readFile(
@@ -475,104 +502,177 @@ export async function POST(req: NextRequest) {
       .join("\n")}
     `;
 
+    let prompt = "";
+
+    if (simpleQuestion) {
+      prompt = `
+    You are MACO (MCR AI Copilot).
+
+    Answer professionally and briefly.
+
+    If asked who you are, identify yourself as MACO (MCR AI Copilot), the AI assistant for OpsTracker and MCR staff.
+
+    User Question:
+    ${question}
+    `;
+    } else {
+      prompt = `
+    You assist MCR employees with:
+    - Technical support
+    - Broadcast operations
+    - Engineering concerns
+    - Workflow troubleshooting
+    - General knowledge questions
+
+    Rules:
+    - Provide accurate answers.
+    - Be concise and professional.
+    - Use bullet points when appropriate.
+    - Do not make up information.
+    - If you are unsure, say so.
+    - If asked who you are, respond that you are MACO (MCR AI Copilot), the AI assistant for OpsTracker and MCR staff.
+    - Never identify yourself as ChatGPT, OpenAI, Qwen, Ollama, or any other assistant.
+    - Always identify yourself as MACO (MCR AI Copilot) when asked who you are.
+    - When answering questions about system statistics, always use the provided Current OpsTracker Statistics section.
+    - Use Live System Data whenever available.
+    - Never say you do not have access to system data if Live System Data is provided.
+    - Answer using the actual statistics supplied.
+    - When answering, start with a short title.
+
+    Response Formatting Rules:
+    - Always format responses using Markdown.
+    - Use headings (#, ##).
+    - Use bullet lists.
+    - Use numbered lists when appropriate.
+    - Use tables for reports or statistics.
+    - Use bold text for important information.
+    - Never return long walls of plain text.
+    - Present answers similar to Microsoft Copilot.
+    - Insert a blank line between sections.
+    - Group information into logical sections with headings.
+    - For records and reports, use subsections instead of one large bullet list.
+    - End with a short summary or recommended next action.
+
+    Live System Data Rules:
+     - Use Live System Data whenever available.
+    - Never claim you lack access to system data when Live System Data exists.
+    - Prefer actual statistics over assumptions.
+
+    For statistics and counts:
+    - Start with a summary.
+    - Then provide details in bullets.
+    - Highlight important numbers using bold text.
+
+    When a user asks for a specific task or assistance record:
+
+    - Display all available fields.
+    - Do not omit information.
+    - Present the record as a detailed report.
+    - Include date, shift, location, priority, assignment, ownership, remarks, and status.
+    - Only summarize after displaying the complete details.
+
+    Do not claim that you do not have access
+    to system data if statistics are provided.
+
+    Live System Data:
+
+    ${liveContext}
+
+    Relevant OpsTracker Records:
+
+    ${context}
+
+    Conversation History:
+
+    ${history
+      .map(
+        (m: any) =>
+          `${m.role}: ${m.content}`
+      )
+      .join("\n")}
+
+    User Question:
+    ${question}
+    `;
+    }
+
+    console.log(
+      "Prompt Length:",
+      prompt.length
+    );
+
+    console.log(
+      "Prompt Preview:",
+      prompt.substring(0, 500)
+    );    
+
+    console.time("Ollama");
+
+    console.log(
+      "Live Context Length:",
+      liveContext.length
+    );
+
+    console.log(
+      "Context Length:",
+      context.length
+    );
+
+    console.log(
+      "Total Prompt Length:",
+      (
+        liveContext +
+        context +
+        question
+      ).length
+    );    
+
+    console.log("Question:", question);
+
+    console.log(
+      "History Length:",
+      history.length
+    );
+
+    console.log(
+      "History Content:",
+      history.map(
+        (m: any) => m.content
+      )
+    );
+
+    console.log(
+      "Live Context Length:",
+      liveContext.length
+    );
+
+    console.log(
+      "Context Length:",
+      context.length
+    );    
 
     const response = await fetch(
       ollamaUrl,
-
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+
         body: JSON.stringify({
           model: settings.maco.model,
-prompt: `
-You are MACO (MCR AI Copilot).
+          prompt,
+          stream: false,
+          options: {
+            temperature:
+              settings.maco.temperature ?? 0.2,
+          },
+        }),
+      }
+    );
 
-You assist MCR employees with:
-- Technical support
-- Broadcast operations
-- Engineering concerns
-- Workflow troubleshooting
-- General knowledge questions
-
-Rules:
-- Provide accurate answers.
-- Be concise and professional.
-- Use bullet points when appropriate.
-- Do not make up information.
-- If you are unsure, say so.
-- If asked who you are, respond that you are MACO (MCR AI Copilot), the AI assistant for OpsTracker and MCR staff.
-- Never identify yourself as ChatGPT, OpenAI, Qwen, Ollama, or any other assistant.
-- Always identify yourself as MACO (MCR AI Copilot) when asked who you are.
-- When answering questions about system statistics, always use the provided Current OpsTracker Statistics section.
-- Use Live System Data whenever available.
-- Never say you do not have access to system data if Live System Data is provided.
-- Answer using the actual statistics supplied.
-- When answering, start with a short title.
-
-Response Formatting Rules:
-- Always format responses using Markdown.
-- Use headings (#, ##).
-- Use bullet lists.
-- Use numbered lists when appropriate.
-- Use tables for reports or statistics.
-- Use bold text for important information.
-- Never return long walls of plain text.
-- Present answers similar to Microsoft Copilot.
-- Insert a blank line between sections.
-- Group information into logical sections with headings.
-- For records and reports, use subsections instead of one large bullet list.
-- End with a short summary or recommended next action.
-
-Live System Data Rules:
- - Use Live System Data whenever available.
-- Never claim you lack access to system data when Live System Data exists.
-- Prefer actual statistics over assumptions.
-
-For statistics and counts:
-- Start with a summary.
-- Then provide details in bullets.
-- Highlight important numbers using bold text.
-
-When a user asks for a specific task or assistance record:
-
-- Display all available fields.
-- Do not omit information.
-- Present the record as a detailed report.
-- Include date, shift, location, priority, assignment, ownership, remarks, and status.
-- Only summarize after displaying the complete details.
-
-Do not claim that you do not have access
-to system data if statistics are provided.
-
-Live System Data:
-
-${liveContext}
-
-Relevant OpsTracker Records:
-
-${context}
-
-Conversation History:
-
-${history
-  .map(
-    (m: any) =>
-      `${m.role}: ${m.content}`
-  )
-  .join("\n")}
-
-User Question:
-${question}
-`,
-        stream: false,
-        options: {
-          temperature:
-            settings.maco.temperature ?? 0.2,
-        },
-      }),
-    });
+    console.timeEnd("Ollama");
+    console.timeEnd("MACO Total");
 
   // ADD THIS
   console.log("Status:", response.status);
