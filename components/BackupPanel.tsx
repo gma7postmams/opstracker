@@ -57,7 +57,13 @@ export default function BackupPanel() {
       {restoring && (
         <RestoreDialog
           onClose={() => setRestoring(false)}
-          onDone={() => { setRestoring(false); router.refresh(); }}
+
+          onDone={() => {
+            setRestoring(false);
+            router.refresh();
+            window.location.reload();
+          }}
+
         />
       )}
     </>
@@ -143,17 +149,18 @@ function RestoreDialog({ onClose, onDone }: { onClose: () => void; onDone: () =>
 	    <td>{preview.existing.tasks}</td>
 	  </tr>
 
-	  <tr>
-	    <td>Master Data</td>
-	    <td>{preview.incoming.masterData}</td>
-	    <td>-</td>
-	  </tr>
+    <tr>
+      <td>Master Data</td>
+      <td>{preview.incoming.masterData}</td>
+      <td>{preview.existing.masterData}</td>
+    </tr>
 
-	  <tr>
-	    <td>Audit Logs</td>
-	    <td>{preview.incoming.auditLogs}</td>
-	    <td>-</td>
-	  </tr>
+    <tr>
+      <td>Audit Logs</td>
+      <td>{preview.incoming.auditLogs}</td>
+      <td>{preview.existing.auditLogs}</td>
+    </tr>
+
 	</tbody>
 
 

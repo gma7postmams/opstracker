@@ -119,19 +119,30 @@ const incoming = {
 };
 
 
-  if (dryRun) {
-    const [eu, ea, et] = await Promise.all([
-      prisma.user.count(), prisma.assistance.count(), prisma.task.count(),
-    ]);
-    return NextResponse.json({
-      preview: true,
-      exportedAt: payload.exportedAt,
-      exportedBy: payload.exportedBy,
-      incoming,
-      existing: { users: eu, assistance: ea, tasks: et },
-      mode,
-    });
-  }
+if (dryRun) {
+  const [eu, ea, et, em, el] = await Promise.all([
+    prisma.user.count(),
+    prisma.assistance.count(),
+    prisma.task.count(),
+    prisma.masterData.count(),
+    prisma.auditLog.count(),
+  ]);
+
+  return NextResponse.json({
+    preview: true,
+    exportedAt: payload.exportedAt,
+    exportedBy: payload.exportedBy,
+    incoming,
+    existing: {
+      users: eu,
+      assistance: ea,
+      tasks: et,
+      masterData: em,
+      auditLogs: el,
+    },
+    mode,
+  });
+}
 
   const dates = (r: any) => ({
     ...r,
@@ -181,11 +192,37 @@ let usersAdded = 0,
     }
 
     for (const m of d.masterData ?? []) {
-      const exists = mode === "merge" && await tx.masterData.findUnique({
-        where: { kind_value: { kind: m.kind, value: m.value } },
+      const exists =
+        mode === "merge"
+          ? await tx.masterData.findUnique({
+              where: {
+                kind_value: {
+                  kind: m.kind,
+                  value: m.value,
+                },
+              },
+            })
+          : null;
+
+      if (exists) {
+
+        if (exists.active === false) {
+          await tx.masterData.update({
+            where: { id: exists.id },
+            data: {
+              active: true,
+            },
+          });
+
+          masterAdded++;
+        }
+        continue;
+      }
+
+      await tx.masterData.create({
+        data: m,
       });
-      if (exists) continue;
-      await tx.masterData.create({ data: m });
+
       masterAdded++;
     }
 
