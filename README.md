@@ -1,131 +1,361 @@
 # MAMS Support Operations Tracker
 
-Daily report system for Technical Assistance and Other Task logging.
-See **FEATURES.md** for the full feature and rules specification.
+A centralized operations management and technical assistance tracking system designed for the MAMS Support Unit.
 
-Next.js 16 · PostgreSQL · Prisma · NextAuth
+The system provides ITIL-inspired incident logging, operational task tracking, audit monitoring, reporting, backup and restore capabilities, and master data administration.
+
+**Technology Stack**
+
+- Next.js 16
+- PostgreSQL
+- Prisma ORM
+- NextAuth Authentication
+- TypeScript
+
+---
+
+## Features
+
+### Technical Assistance Management
+
+- Technical Assistance record creation and management
+- Client information tracking
+- Issue categorization
+- Resolution documentation
+- Priority management
+- Open, Close Pending, and Closed workflows
+- Activity history tracking
+
+### Operations Task Management
+
+- Other Task recording and monitoring
+- Activity type categorization
+- Priority tracking
+- Personnel assignment and accountability
+- Ongoing task monitoring
+- Duration calculation
+
+### Duration Tracking
+
+- Automatic duration calculation
+- Ongoing duration tracking for open records
+- Overnight activity support
+- Multi-day activity support
+
+### User Management
+
+- Role-based access control
+- Administrator and User roles
+- Record ownership validation
+- Login activity tracking
+
+### Audit Trail
+
+- User activity logging
+- System audit records
+- Record modification history
+- Backup and restore audit tracking
+
+### Master Data Administration
+
+Manage:
+
+- Locations
+- Shifts
+- Categories
+- Activity Types
+- Show Groups
+
+Features include:
+
+- Active / inactive status
+- Administrative management
+- Recovery through backup restore
+
+### Backup and Restore
+
+- Full JSON backup export
+- Backup preview before restore
+- Merge restore mode
+- Replace restore mode
+- Master Data recovery
+- Audit Log restoration
+
+### Reporting
+
+- Dashboard monitoring
+- Operational summaries
+- Technical Assistance reporting
+- Task reporting
+- Detailed export-ready reports
+
+---
+
+## Screenshots
+
+### Dashboard
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+l-time overview of Technical Assistance requests, Tasks, recent activities, operational statistics, and system activity.
+
+### Technical Assistance
+
+![Technicalshots/technical-assistance.png
+
+ITIL-inspired Technical Assistance management module for incident logging, client tracking, categorization, priority management, and resolution documentation.
+
+### Other Tasks
+
+docs/screenshots/other-tasks.png
+
+Operational activity tracking module for monitoring daily tasks, assignments, accountability, and work duration.
+
+### Reports
+
+docs/screenshots/reports.png
+
+Comprehensive reporting tools for Technical Assistance and Operational Tasks with filtering and export capabilities.
+
+### User Management
+
+docs/screenshots/users.png
+
+Administrative user management including account creation, role assignment, status management, and access control.
+
+### Administration
+
+docs/screenshots/administration.png
+
+Centralized administration panel for managing Locations, Categories, Activity Types, Shifts, Show Groups, Branding, Backup, and Restore operations.
+
+### Audit Logs
+
+![Auditreenshots/audit-logs.png
+
+Complete audit trail showing user activities, system changes, administrative actions, backup operations, and record updates.
+
+### Account Settings
+
+![cs/screenshots/account-settings.png
+
+User profile management including account information, password updates, and personal settings.
+
+---
 
 ## Setup
 
+Install dependencies:
+
 ```bash
 npm install
+```
+
+Copy environment configuration:
+
+```bash
 cp .env.example .env
 ```
 
-Edit `.env`:
+Configure:
 
-```
+```env
 DATABASE_URL="postgresql://opslog:yourpassword@localhost:5432/opslog?schema=public"
-NEXTAUTH_URL="http://your-lan-server:3000"
-NEXTAUTH_SECRET="<openssl rand -base64 32>"
+
+NEXTAUTH_URL="http://your-server:3000"
+
+NEXTAUTH_SECRET="your-secret-key"
 ```
 
-Create the database and seed it:
+---
+
+## Database Setup
+
+Create the database:
 
 ```bash
-createdb opslog                 # or via psql
-npx prisma migrate dev --name init
+createdb opslog
+```
+
+Run migrations:
+
+```bash
+npx prisma migrate dev
+```
+
+Seed the database:
+
+```bash
 npm run db:seed
 ```
 
-The seed creates:
-- One bootstrap admin: `admin` / `admin123` (override with `SEED_ADMIN_PASSWORD=...`)
-- Ten named team accounts, one per person, each with a default password of
-  `<username>123` — e.g. `renan` / `renan123`, `janice` / `janice123`
-- The default master data (locations, shifts, categories, activity types)
+The seed process creates:
 
-**Change every default password before going live.** The named team accounts
-exist so each person's work is attributed to them from day one, rather than
-importing everything under a shared login.
+- Administrator account
+- Team user accounts
+- Default locations
+- Default shifts
+- Default categories
+- Default activity types
+- Default show groups
 
-### Demo accounts
+---
 
-The sign-in screen deliberately shows no demo credentials — advertising a
-working login on a reachable page is not something a production system should
-do. A generic `user` / `user123` account is available for demos and training
-but is **not** seeded by default:
+## Development
 
-```bash
-SEED_DEMO_USER=true npm run db:seed
-```
-
-Do not enable it on the live instance. The standalone `preview.html` mockup
-still has the quick-fill buttons, since it exists purely to be clicked through.
+Start development server:
 
 ```bash
-npm run dev        # http://localhost:3000
+npm run dev
 ```
 
-## Deployment (LAN)
+Access:
+
+```text
+http://localhost:3000
+```
+
+---
+
+## Production Deployment
+
+Build:
 
 ```bash
 npm run build
+```
+
+Start with PM2:
+
+```bash
 pm2 start npm --name opslog -- start
 pm2 save
 ```
 
-Apache reverse proxy:
-
-```apache
-ProxyPreserveHost On
-ProxyPass        / http://127.0.0.1:3000/
-ProxyPassReverse / http://127.0.0.1:3000/
-```
-
-Set `NEXTAUTH_URL` to the URL users actually visit — auth cookies depend on it.
+---
 
 ## Backup
 
-Administration → Backup & restore downloads a full JSON export.
+Navigate to:
 
-**The JSON does not include uploaded images.** For a complete backup take both:
-
-```bash
-# database + settings
-curl -o backup.json http://localhost:3000/api/backup   # or use the UI
-
-# uploaded avatars, logo, favicon
-tar czf uploads.tgz public/uploads
+```text
+Administration → Backup & Restore
 ```
 
-A `pg_dump` is still worth scheduling as the primary backup; the JSON export is
-for portability and selective restore.
+Functions:
 
-## Importing legacy data
+- Download full system backup
+- Preview backup contents
+- Restore using Merge mode
+- Restore using Replace mode
 
-Two entry points:
+### Important
 
-- **Import mine** on the Technical Assistance / Other Tasks pages — any user, and
-  every row is logged under them regardless of what the file says.
-- **Administration → Import records** — admin only, and the Assigned To /
-  Accountable Person columns are read from the file, so a whole shift log can be
-  loaded in one pass.
+JSON backups include:
 
-Upload the `.xlsx` directly — no CSV export step needed. Choose the record type, pick the sheet if the workbook has several tabs,
-and use the preview to check the mapping and row errors before committing.
+- Users
+- Technical Assistance records
+- Task records
+- Master Data
+- Branding configuration
+- Audit Logs
 
-Uploading the workbook is preferable to exporting CSV first: Excel date and time
-cells arrive typed, so they don't have to be guessed from ambiguous text.
+JSON backups do not include uploaded files stored in:
 
-Recognised column headers and normalization rules are in FEATURES.md.
-
-## Project layout
-
-```
-app/(app)/        authenticated pages
-app/api/          route handlers
-lib/records.ts    shared service over both record tables
-lib/recordTypes.ts  type config — client-safe, no Prisma import
-lib/permissions.ts  ownership, locking, admin rules
-lib/validation.ts   Zod schemas incl. cross-field time rules
-lib/csv.ts        quote-aware CSV parser + shared normalizers
-lib/xlsx.ts       Excel reader — same { headers, rows } shape as the CSV parser
+```text
+public/uploads
 ```
 
-### Why one service layer over two tables
+Back up that folder separately.
 
-Assistance and Task are separate tables with their own columns, but they share
-all filtering, sorting, batch and reporting behaviour. `lib/records.ts` drives
-either table through a single generic delegate, so that logic exists once.
-`lib/recordTypes.ts` holds the per-type configuration and deliberately imports
-nothing server-only, because client components import its label helpers.
+---
+
+## Importing Legacy Data
+
+Supported formats:
+
+- Microsoft Excel (.xlsx)
+
+Import options:
+
+### User Import
+
+Import records owned by the currently logged-in user.
+
+### Administrative Import
+
+Import records with Assigned To and Accountable Person values from the source file.
+
+Features:
+
+- Preview before import
+- Validation checks
+- Duplicate protection
+- Data normalization
+
+---
+
+## Security Features
+
+- Authentication via NextAuth
+- Role-based permissions
+- Record ownership controls
+- Administrative locking of records
+- Audit logging of sensitive actions
+
+---
+
+## Project Structure
+
+```text
+app/
+├── (app)/
+├── api/
+
+components/
+├── RecordForm
+├── BackupPanel
+├── ConfirmDialog
+
+lib/
+├── audit.ts
+├── permissions.ts
+├── recordTypes.ts
+├── records.ts
+├── validation.ts
+
+prisma/
+├── schema.prisma
+```
+
+---
+
+## Current Status
+
+**Version Status:** Complete
+
+Completed Development Areas:
+
+- PostgreSQL Integration
+- Technical Assistance Module
+- Other Tasks Module
+- Dashboard and Reporting
+- Audit Logging
+- Master Data Management
+- Backup and Restore
+- Import and Migration
+- Role-Based Security
+- Duration Tracking
+- Administrative Controls
+- Usability Enhancements
+
+---
+
+## Project Information
+
+**Project Name:** MAMS Support Operations Tracker  
+**Developed By:** Eugene B. Horfilla  
+**Project Period:** September 2, 2026 – Present  
+**Status:** Complete ✅
+
+Developed for the MAMS Support Unit to improve Technical Assistance tracking, operational task monitoring, reporting, accountability, and records management.
