@@ -24,9 +24,7 @@ const shared = {
  * the form get identical treatment.
  */
 const timeRules = (v: any, ctx: z.RefinementCtx) => {
-  if (v.timeEnded && v.timeEnded < v.timeStarted) {
-    ctx.addIssue({ code: "custom", path: ["timeEnded"], message: "Time ended is before time started" });
-  }
+  
 	if (
 	  (v.status === "CLOSED" ||
 	   v.status === "CLOSE_PENDING") &&

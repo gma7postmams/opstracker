@@ -23,6 +23,9 @@ export default function RecordDetail() {
   const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState(false);
 
+  const [closeConfirm, setCloseConfirm] =
+    useState<{ status: string } | null>(null);
+
   const load = useCallback(async () => {
     const res = await fetch(`/api/records/${type}/${id}`);
     if (!res.ok) return router.push(`/${type === "assistance" ? "assistance" : "tasks"}`);
@@ -57,23 +60,61 @@ export default function RecordDetail() {
   }
 
 const ownerName = r.owner
-  ? [r.owner.firstName, r.owner.middleInitial ? r.owner.middleInitial + "." : "", r.owner.surname]
+  ? [
+      r.owner.firstName,
+      r.owner.middleInitial
+        ? r.owner.middleInitial + "."
+        : "",
+      r.owner.surname,
+    ]
       .filter(Boolean)
       .join(" ")
-  : "a deleted user";
-  
-const duration =   
-  r.timeEnded
-    ? (() => {
-        const [sh, sm] = r.timeStarted.split(":").map(Number);
-        const [eh, em] = r.timeEnded.split(":").map(Number);
+  : "a deleted user";  
 
-        const start = sh * 60 + sm;
-        const end = eh * 60 + em;
-  
-        return `${end - start} min`;
-      })()
-    : "Ongoing";
+const duration = (() => {
+  if (!r.timeStarted) return "—";
+
+  const start = new Date(
+    `${String(r.date).slice(0, 10)}T${r.timeStarted}`
+  );
+
+  const end =
+    r.status === "OPEN"
+      ? new Date()
+      : new Date(
+          `${String(r.date).slice(0, 10)}T${r.timeEnded}`
+        );
+
+  let diff = end.getTime() - start.getTime();
+
+  if (diff < 0) {
+    diff += 24 * 60 * 60 * 1000;
+  }
+
+  const days = Math.floor(
+    diff / (1000 * 60 * 60 * 24)
+  );
+
+  const hours = Math.floor(
+    (diff % (1000 * 60 * 60 * 24)) /
+      (1000 * 60 * 60)
+  );
+
+  const minutes = Math.floor(
+    (diff % (1000 * 60 * 60)) /
+      (1000 * 60)
+  );
+
+  if (days > 0) {
+    return `${days}d ${hours}h ${minutes}m`;
+  }
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+
+  return `${minutes}m`;
+})();
 
   const fields: [string, any][] = [
     ["Date", String(r.date).slice(0, 10)],
@@ -86,7 +127,12 @@ const duration =
     ["Assigned to", r.assigned],
     ["Accountable", r.accountable],
     ["Time", r.timeEnded ? `${r.timeStarted} – ${r.timeEnded}` : `${r.timeStarted} – ongoing`],
-    ["Duration", duration],
+    [
+      "Duration",
+      r.status === "OPEN"
+        ? `🟢 ${duration} (ongoing)`
+        : duration,
+    ],
   ];
 
 
@@ -164,16 +210,14 @@ const duration =
       onChange={(e) => {
         const status = e.target.value;
 
-        if (
-          (status === "CLOSED" ||
-            status === "CLOSE_PENDING") &&
-          !r.timeEnded
-        ) {
-          toast(
-            "Please click Edit and enter Time Ended before changing this record to Close Pending or Closed."
-          );
-          return;
-        }
+      if (
+        (status === "CLOSED" ||
+          status === "CLOSE_PENDING") &&
+        !r.timeEnded
+      ) {
+        setCloseConfirm({ status });
+        return;
+      }
 
         patch(
           { status },
@@ -267,6 +311,41 @@ const duration =
         <ConfirmDialog title={`Delete ${r.refNo}?`} body="This cannot be undone."
           onCancel={() => setConfirm(false)} onYes={() => { setConfirm(false); remove(); }} />
       )}
+
+      {closeConfirm && (
+        <ConfirmDialog
+          title="⏱ Complete Record"
+          body={`No Time Ended has been entered.
+
+      The current time (${new Date()
+            .toTimeString()
+            .slice(0, 5)}) will be saved as the completion time and the status will be changed to:
+
+      ${statusLabel(closeConfirm.status)}`}
+          yesText="Apply Changes"
+          noText="Cancel"
+          onCancel={() => setCloseConfirm(null)}
+          onYes={() => {
+            const currentTime = new Date()
+              .toTimeString()
+              .slice(0, 5);
+
+            patch(
+              {
+                status: closeConfirm.status,
+                timeEnded: currentTime,
+              },
+              `Status set to ${statusLabel(
+                closeConfirm.status
+              )}`
+            );
+
+            setCloseConfirm(null);
+          }}
+        />
+      )}
+
+
     </div>
   );
 }
