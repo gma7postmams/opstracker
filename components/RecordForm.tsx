@@ -29,18 +29,6 @@ const [people, setPeople] = useState<string[]>([]);
 const [errors, setErrors] = useState<Record<string, string>>({});
 const [saving, setSaving] = useState(false);
 
-const [aiEnabled, setAiEnabled] = useState(true);
-
-const [problemLoading, setProblemLoading] = useState(false);
-const [resolutionLoading, setResolutionLoading] = useState(false);
-const [remarksLoading, setRemarksLoading] = useState(false);
-const [descriptionLoading, setDescriptionLoading] = useState(false);
-
-const [aiSuggestion, setAiSuggestion] = useState("");
-const [resolutionSuggestion, setResolutionSuggestion] = useState("");
-const [remarksSuggestion, setRemarksSuggestion] = useState("");
-const [descriptionSuggestion, setDescriptionSuggestion] = useState("");
-
 
   const [form, setForm] = useState<any>(() => ({
     date: record?.date ? String(record.date).slice(0, 10) : new Date().toISOString().slice(0, 10),
@@ -129,11 +117,7 @@ useEffect(() => {
     .then((r) => r.json())
     .then((u) => setPeople(u.map((x: any) => x.name)));
 
-  fetch("/api/admin/ai")
-    .then((r) => r.json())
-    .then((cfg) => {
-      setAiEnabled(cfg.enabled);
-    });
+
 }, []);
 
   // Defaults come from master data once it loads, so a new record opens with
@@ -227,55 +211,6 @@ useEffect(() => {
     required
   />
 
-{aiEnabled && (
-  <div style={{ marginTop: 8 }}>
-    <button
-      type="button"
-      className="secondary"
-      onClick={improveProblem}
-
-      disabled={problemLoading}
-    >
-      {problemLoading ? "⏳ Improving..." : "✨ Improve with AI"}
-
-    </button>
-  </div>
-)}
-
-
-{aiEnabled && aiSuggestion && aiSuggestion !== form.problem && (
-
-  <div className="ai-ready">
-    <strong>✅ Suggested Improvement</strong>
-
-    <div className="ai-preview">
-      {aiSuggestion}
-    </div>
-
-    <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-      <button
-        type="button"
-        className="primary"
-        onClick={() => {
-          set("problem", aiSuggestion);
-          setAiSuggestion("");
-        }}
-      >
-        Apply
-      </button>
-
-      <button
-        type="button"
-        className="secondary"
-        onClick={() => setAiSuggestion("")}
-      >
-        Dismiss
-      </button>
-    </div>
-  </div>
-)}
-
-  {err("problem")}
 </label>
 
 <label className="full">
@@ -288,69 +223,7 @@ useEffect(() => {
     }
     placeholder="Document the solution or action taken…"
   />
-
-  {aiEnabled && (
-    <div style={{ marginTop: 8 }}>
-      <button
-        type="button"
-        className="secondary"
-        onClick={improveResolution}
-
-        disabled={resolutionLoading}
-      >
-
-	{resolutionLoading
-	  ? "Improving..."
-	  : "✨ Improve Resolution"}
-
-      </button>
-    </div>
-  )}
-
-  {resolutionSuggestion &&
-    resolutionSuggestion !== form.resolution && (
-      <div className="ai-ready">
-        <strong>
-          ✅ Suggested Resolution
-        </strong>
-
-        <div className="ai-preview">
-          {resolutionSuggestion}
-        </div>
-
-        <div
-          style={{
-            marginTop: 8,
-            display: "flex",
-            gap: 8,
-          }}
-        >
-          <button
-            type="button"
-            className="primary"
-            onClick={() => {
-              set(
-                "resolution",
-                resolutionSuggestion
-              );
-              setResolutionSuggestion("");
-            }}
-          >
-            Apply
-          </button>
-
-          <button
-            type="button"
-            className="secondary"
-            onClick={() =>
-              setResolutionSuggestion("")
-            }
-          >
-            Dismiss
-          </button>
-        </div>
-      </div>
-    )}
+    
 </label>
 
           </>
@@ -373,54 +246,6 @@ useEffect(() => {
     required
   />
 
-  {aiEnabled && (
-    <div style={{ marginTop: 8 }}>
-      <button
-        type="button"
-        className="secondary"
-        onClick={improveDescription}
-        disabled={descriptionLoading}
-      >
-        {descriptionLoading
-          ? "Improving..."
-          : "✨ Improve Description"}
-      </button>
-    </div>
-  )}
-
-  {descriptionSuggestion &&
-    descriptionSuggestion !== form.description && (
-      <div className="ai-ready">
-        <strong>✅ Suggested Description</strong>
-
-        <div className="ai-preview">
-          {descriptionSuggestion}
-        </div>
-
-        <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-          <button
-            type="button"
-            className="primary"
-            onClick={() => {
-              set("description", descriptionSuggestion);
-              setDescriptionSuggestion("");
-            }}
-          >
-            Apply
-          </button>
-
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => setDescriptionSuggestion("")}
-          >
-            Dismiss
-          </button>
-        </div>
-      </div>
-    )}
-
-  {err("description")}
 </label>
 
           </>
@@ -436,69 +261,7 @@ useEffect(() => {
     }
     placeholder="Additional notes, client confirmation, or follow-up..."
   />
-
-  {aiEnabled && (
-    <div style={{ marginTop: 8 }}>
-      <button
-        type="button"
-        className="secondary"
-        onClick={improveRemarks}
-
-	disabled={remarksLoading}
-      >
-
-	{remarksLoading
-	  ? "Improving..."
-	  : "✨ Improve Remarks"}
-
-      </button>
-    </div>
-  )}
-
-  {remarksSuggestion &&
-    remarksSuggestion !== form.remarks && (
-      <div className="ai-ready">
-        <strong>
-          ✅ Suggested Remarks
-        </strong>
-
-        <div className="ai-preview">
-          {remarksSuggestion}
-        </div>
-
-        <div
-          style={{
-            marginTop: 8,
-            display: "flex",
-            gap: 8,
-          }}
-        >
-          <button
-            type="button"
-            className="primary"
-            onClick={() => {
-              set(
-                "remarks",
-                remarksSuggestion
-              );
-              setRemarksSuggestion("");
-            }}
-          >
-            Apply
-          </button>
-
-          <button
-            type="button"
-            className="secondary"
-            onClick={() =>
-              setRemarksSuggestion("")
-            }
-          >
-            Dismiss
-          </button>
-        </div>
-      </div>
-    )}
+  
 </label>
 
         <div className="sectionlabel">Time &amp; assignment</div>
