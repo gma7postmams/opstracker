@@ -1,5 +1,6 @@
 "use client";
 
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import Modal from "./Modal";
 
@@ -24,6 +25,11 @@ interface Props {
 
 export default function RecordForm({ type, singular, master, record, onClose, onSaved }: Props) {
   const isAssistance = type === "assistance";
+
+  const { data: session } = useSession();
+
+  const currentUserName =
+    session?.user?.name ?? "";  
 
 const [people, setPeople] = useState<string[]>([]);
 const [errors, setErrors] = useState<Record<string, string>>({});
@@ -116,9 +122,18 @@ useEffect(() => {
   fetch("/api/users")
     .then((r) => r.json())
     .then((u) => setPeople(u.map((x: any) => x.name)));
-
-
+    
 }, []);
+
+useEffect(() => {
+  if (!record && currentUserName) {
+    setForm((f: any) => ({
+      ...f,
+      assigned: f.assigned || currentUserName,
+      accountable: f.accountable || currentUserName,
+    }));
+  }
+}, [currentUserName, record]);
 
   // Defaults come from master data once it loads, so a new record opens with
   // the first valid option selected rather than an empty required field.
@@ -291,15 +306,38 @@ useEffect(() => {
 	  {err("status")}
 	</label>
 
-        <label>Assigned to
-          <input list="people" value={form.assigned} onChange={(e) => set("assigned", e.target.value)} required />
-          {err("assigned")}
-        </label>
-        <label>Accountable person
-          <input list="people" value={form.accountable} onChange={(e) => set("accountable", e.target.value)} required />
-          {err("accountable")}
-        </label>
-        <datalist id="people">{people.map((p) => <option key={p} value={p} />)}</datalist>
+  <label>
+    Assigned to
+    <select
+      value={form.assigned}
+      onChange={(e) => set("assigned", e.target.value)}
+      required
+    >
+      {people.map((p) => (
+        <option key={p} value={p}>
+          {p}
+        </option>
+      ))}
+    </select>
+    {err("assigned")}
+  </label>
+
+  <label>
+    Accountable person
+    <select
+      value={form.accountable}
+      onChange={(e) => set("accountable", e.target.value)}
+      required
+    >
+      {people.map((p) => (
+        <option key={p} value={p}>
+          {p}
+        </option>
+      ))}
+    </select>
+    {err("accountable")}
+  </label>
+
       </form>
     </Modal>
   );
