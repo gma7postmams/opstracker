@@ -95,13 +95,11 @@ Features include:
 
 ### Dashboard
 
-![Dashboard](docs/screenshots/dashboard.png)
-
-l-time overview of Technical Assistance requests, Tasks, recent activities, operational statistics, and system activity.
+![Dashboard](docs/screenshots/dashboard.pngreal-time overview of Technical Assistance requests, Tasks, recent activities, operational statistics, and system activity.
 
 ### Technical Assistance
 
-![Technicalshots/technical-assistance.png
+docs/screenshots/technical-assistance.png
 
 ITIL-inspired Technical Assistance management module for incident logging, client tracking, categorization, priority management, and resolution documentation.
 
@@ -131,13 +129,13 @@ Centralized administration panel for managing Locations, Categories, Activity Ty
 
 ### Audit Logs
 
-![Auditreenshots/audit-logs.png
+docs/screenshots/audit-logs.png
 
 Complete audit trail showing user activities, system changes, administrative actions, backup operations, and record updates.
 
 ### Account Settings
 
-![cs/screenshots/account-settings.png
+docs/screenshots/account-settings.png
 
 User profile management including account information, password updates, and personal settings.
 
@@ -162,7 +160,9 @@ Configure:
 ```env
 DATABASE_URL="postgresql://opslog:yourpassword@localhost:5432/opslog?schema=public"
 
+DATABASE_URL="postgresql://opslog:yourpassword@localhost:5432/opslog?schema=public"
 NEXTAUTH_URL="http://your-server:3000"
+NEXTAUTH_SECRET="your-secret-key"
 
 NEXTAUTH_SECRET="your-secret-key"
 ```
