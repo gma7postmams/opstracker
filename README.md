@@ -95,49 +95,49 @@ Features include:
 
 ### Dashboard
 
-docs/screenshots/dashboard.png
+[docs/screenshots/dashboard.png]
 
 Provides a real-time overview of Technical Assistance requests, operational activities, recent actions, and system statistics.
 
 ### Technical Assistance
 
-docs/screenshots/technical-assistance.png
+[docs/screenshots/technical-assistance.png]
 
 ITIL-inspired Technical Assistance management module for incident logging, categorization, client support tracking, and resolution documentation.
 
 ### Other Tasks
 
-docs/screenshots/other-tasks.png
+[docs/screenshots/other-tasks.png]
 
 Operational task tracking module for daily activities, assignments, accountability, and work monitoring.
 
 ### Reports
 
-docs/screenshots/reports.png
+[docs/screenshots/reports.png]
 
 Reporting module for generating operational summaries and activity-based reports.
 
 ### User Management
 
-docs/screenshots/users.png
+[docs/screenshots/users.png]
 
 Administrative management of user accounts, roles, access permissions, and account status.
 
 ### Administration
 
-docs/screenshots/administration.png
+[docs/screenshots/administration.png]
 
 Centralized administration panel for managing master data, branding, backups, restores, and system settings.
 
 ### Audit Logs
 
-docs/screenshots/audit-logs.png
+[docs/screenshots/audit-logs.png]
 
 Comprehensive audit trail capturing user actions, record updates, administrative changes, backups, and restores.
 
 ### Account Settings
 
-docs/screenshots/account-settings.png
+[docs/screenshots/account-settings.png]
 
 User profile management including account settings and password updates.
 
