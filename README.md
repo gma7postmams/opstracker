@@ -4,7 +4,7 @@ A centralized operations management and technical assistance tracking system des
 
 The system provides ITIL-inspired incident logging, operational task tracking, audit monitoring, reporting, backup and restore capabilities, and master data administration.
 
-**Technology Stack**
+## Technology Stack
 
 - Next.js 16
 - PostgreSQL
@@ -95,49 +95,51 @@ Features include:
 
 ### Dashboard
 
-![Dashboard](docs/screenshots/dashboard.pngreal-time overview of Technical Assistance requests, Tasks, recent activities, operational statistics, and system activity.
+docs/screenshots/dashboard.png
+
+Provides a real-time overview of Technical Assistance requests, operational activities, recent actions, and system statistics.
 
 ### Technical Assistance
 
 docs/screenshots/technical-assistance.png
 
-ITIL-inspired Technical Assistance management module for incident logging, client tracking, categorization, priority management, and resolution documentation.
+ITIL-inspired Technical Assistance management module for incident logging, categorization, client support tracking, and resolution documentation.
 
 ### Other Tasks
 
 docs/screenshots/other-tasks.png
 
-Operational activity tracking module for monitoring daily tasks, assignments, accountability, and work duration.
+Operational task tracking module for daily activities, assignments, accountability, and work monitoring.
 
 ### Reports
 
 docs/screenshots/reports.png
 
-Comprehensive reporting tools for Technical Assistance and Operational Tasks with filtering and export capabilities.
+Reporting module for generating operational summaries and activity-based reports.
 
 ### User Management
 
 docs/screenshots/users.png
 
-Administrative user management including account creation, role assignment, status management, and access control.
+Administrative management of user accounts, roles, access permissions, and account status.
 
 ### Administration
 
 docs/screenshots/administration.png
 
-Centralized administration panel for managing Locations, Categories, Activity Types, Shifts, Show Groups, Branding, Backup, and Restore operations.
+Centralized administration panel for managing master data, branding, backups, restores, and system settings.
 
 ### Audit Logs
 
 docs/screenshots/audit-logs.png
 
-Complete audit trail showing user activities, system changes, administrative actions, backup operations, and record updates.
+Comprehensive audit trail capturing user actions, record updates, administrative changes, backups, and restores.
 
 ### Account Settings
 
 docs/screenshots/account-settings.png
 
-User profile management including account information, password updates, and personal settings.
+User profile management including account settings and password updates.
 
 ---
 
@@ -159,11 +161,7 @@ Configure:
 
 ```env
 DATABASE_URL="postgresql://opslog:yourpassword@localhost:5432/opslog?schema=public"
-
-DATABASE_URL="postgresql://opslog:yourpassword@localhost:5432/opslog?schema=public"
 NEXTAUTH_URL="http://your-server:3000"
-NEXTAUTH_SECRET="your-secret-key"
-
 NEXTAUTH_SECRET="your-secret-key"
 ```
 
@@ -203,13 +201,13 @@ The seed process creates:
 
 ## Development
 
-Start development server:
+Start the development server:
 
 ```bash
 npm run dev
 ```
 
-Access:
+Access the application:
 
 ```text
 http://localhost:3000
@@ -219,13 +217,13 @@ http://localhost:3000
 
 ## Production Deployment
 
-Build:
+Build the application:
 
 ```bash
 npm run build
 ```
 
-Start with PM2:
+Start using PM2:
 
 ```bash
 pm2 start npm --name opslog -- start
@@ -234,7 +232,7 @@ pm2 save
 
 ---
 
-## Backup
+## Backup and Restore
 
 Navigate to:
 
@@ -242,12 +240,14 @@ Navigate to:
 Administration → Backup & Restore
 ```
 
-Functions:
+Available functions:
 
 - Download full system backup
-- Preview backup contents
-- Restore using Merge mode
-- Restore using Replace mode
+- Backup preview
+- Merge restore
+- Replace restore
+- Master Data recovery
+- Audit Log restoration
 
 ### Important
 
@@ -260,7 +260,7 @@ JSON backups include:
 - Branding configuration
 - Audit Logs
 
-JSON backups do not include uploaded files stored in:
+JSON backups do **not** include files stored in:
 
 ```text
 public/uploads
@@ -272,7 +272,7 @@ Back up that folder separately.
 
 ## Importing Legacy Data
 
-Supported formats:
+Supported files:
 
 - Microsoft Excel (.xlsx)
 
@@ -280,11 +280,11 @@ Import options:
 
 ### User Import
 
-Import records owned by the currently logged-in user.
+Imports records under the currently logged-in user.
 
 ### Administrative Import
 
-Import records with Assigned To and Accountable Person values from the source file.
+Reads Assigned To and Accountable Person values directly from the source file.
 
 Features:
 
@@ -297,10 +297,10 @@ Features:
 
 ## Security Features
 
-- Authentication via NextAuth
+- NextAuth authentication
 - Role-based permissions
 - Record ownership controls
-- Administrative locking of records
+- Administrative record locking
 - Audit logging of sensitive actions
 
 ---
@@ -313,9 +313,9 @@ app/
 ├── api/
 
 components/
-├── RecordForm
-├── BackupPanel
-├── ConfirmDialog
+├── BackupPanel.tsx
+├── ConfirmDialog.tsx
+├── RecordForm.tsx
 
 lib/
 ├── audit.ts
@@ -332,7 +332,7 @@ prisma/
 
 ## Current Status
 
-**Version Status:** Complete
+**Version Status:** Complete ✅
 
 Completed Development Areas:
 
@@ -347,7 +347,7 @@ Completed Development Areas:
 - Role-Based Security
 - Duration Tracking
 - Administrative Controls
-- Usability Enhancements
+- User Experience Improvements
 
 ---
 
@@ -355,7 +355,7 @@ Completed Development Areas:
 
 **Project Name:** MAMS Support Operations Tracker  
 **Developed By:** Eugene B. Horfilla  
-**Project Period:** September 2, 2026 – Present  
+**Project Period:** September 2, 2026 - September 25, 2026  
 **Status:** Complete ✅
 
-Developed for the MAMS Support Unit to improve Technical Assistance tracking, operational task monitoring, reporting, accountability, and records management.
+Developed for the MAMS Support Unit to improve Technical Assistance tracking, operational task monitoring, reporting, accountability, auditing, and records management.
