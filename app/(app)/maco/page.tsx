@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -14,6 +14,15 @@ export default function MACOPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const [copiedIndex, setCopiedIndex] =
+    useState<number | null>(null);  
+
+  const [aiStatus, setAiStatus] = useState({
+    model: "",
+    url: "",
+    online: false,
+  });    
+
   const hour = new Date().getHours();
 
   const greeting =
@@ -23,8 +32,46 @@ export default function MACOPage() {
       ? "Good afternoon"
       : "Good evening";
 
+    useEffect(() => {
+      async function loadAIStatus() {
+        try {
+          const res =
+            await fetch("/api/admin/ai");
+
+          const settings =
+            await res.json();
+
+          const test =
+            await fetch("/api/admin/ai/test");
+
+          const status =
+            await test.json();
+
+          setAiStatus({
+            model:
+              settings.maco?.model ??
+              "Unknown",
+            url:
+              settings.url ?? "",
+            online:
+              status.success ??
+              status.ok ??
+              false,
+          });
+        } catch {
+          setAiStatus({
+            model: "Unknown",
+            url: "",
+            online: false,
+          });
+        }
+      }
+
+      loadAIStatus();
+    }, []);          
 
   async function askMACO() {
+
     if (!question.trim() || loading) return;
 
     const userQuestion = question;
@@ -345,12 +392,73 @@ export default function MACOPage() {
                             width: "100%",
                           }}
                         >
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "flex-end",
+                              marginBottom: 10,
+                            }}
                           >
-                            {msg.content}
-                          </ReactMarkdown>
+                          <button
+                            className={
+                              copiedIndex === index
+                                ? "copy-action copied"
+                                : "copy-action"
+                            }
+                            title="Copy response"
+                            onClick={() => {
+                              try {
+                                const element =
+                                  document.getElementById(
+                                    `maco-response-${index}`
+                                  );
+
+                                const text =
+                                  element?.innerText ?? msg.content;
+
+                                const textarea =
+                                  document.createElement("textarea");
+
+                                textarea.value = text;
+
+                                document.body.appendChild(textarea);
+
+                                textarea.select();
+
+                                document.execCommand("copy");
+
+                                document.body.removeChild(textarea);
+
+                                setCopiedIndex(index);
+
+                                setTimeout(() => {
+                                  setCopiedIndex(null);
+                                }, 2000);
+                              } catch (err) {
+                                console.error("Copy failed:", err);
+                              }
+                            }}
+                          >
+                            <span>
+                              {copiedIndex === index ? "✓" : "⧉"}
+                            </span>
+
+                            {copiedIndex === index
+                              ? "Copied"
+                              : "Copy"}
+                          </button>
+                          </div>
+
+                          <div id={`maco-response-${index}`}>
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                            >
+                              {msg.content}
+                            </ReactMarkdown>
+                          </div>
                         </div>
+
+
                       </div>
                     )}
                   </div>
@@ -420,6 +528,57 @@ export default function MACOPage() {
               background: "#fafafa",
             }}
           >
+
+          <div
+            style={{
+              maxWidth: 900,
+              margin: "0 auto 10px auto",
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 12,
+              color: "#64748b",
+              paddingRight: 150,
+            }}
+          >
+
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background:
+                  aiStatus.online
+                    ? "#10b981"
+                    : "#ef4444",
+                display: "inline-block",
+                boxShadow:
+                  aiStatus.online
+                    ? "0 0 8px rgba(16,185,129,.5)"
+                    : "0 0 8px rgba(239,68,68,.5)",
+              }}
+            />
+
+            <span>
+              {aiStatus.online
+                ? "Online"
+                : "Offline"}
+            </span>
+
+            <span>•</span>
+
+            <span
+              title={`Server: ${aiStatus.url}`}
+              style={{
+                fontWeight: 600,
+              }}
+            >
+              {aiStatus.model}
+            </span>
+          </div>
+
+
             <div
               style={{
                 display: "flex",
