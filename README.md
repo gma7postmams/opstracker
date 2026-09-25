@@ -95,7 +95,7 @@ Features include:
 
 ### Dashboard
 
-[docs/screenshots/dashboard.png]
+![docs/screenshots/dashboard.png]
 
 Provides a real-time overview of Technical Assistance requests, operational activities, recent actions, and system statistics.
 
