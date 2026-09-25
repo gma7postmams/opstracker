@@ -358,7 +358,7 @@ export default function MACOPage() {
                           display: "flex",
                           gap: 12,
                           alignItems: "flex-start",
-                          maxWidth: "85%",
+                          maxWidth: "100%",
                         }}
                       >
                         <div
@@ -382,82 +382,94 @@ export default function MACOPage() {
                         <div
                           className="maco-markdown"
                           style={{
-                            background: "#fff",
-                            padding: "16px 20px",
-                            borderRadius: 20,
-                            border:
-                              "1px solid rgba(0,0,0,.08)",
-                            boxShadow:
-                              "0 4px 20px rgba(0,0,0,.06)",
                             width: "100%",
+                            padding: 0,
+                            background: "transparent",
                           }}
                         >
                           <div
                             style={{
-                              display: "flex",
-                              justifyContent: "flex-end",
-                              marginBottom: 10,
+                              paddingLeft: 12,
                             }}
                           >
-                          <button
-                            className={
-                              copiedIndex === index
-                                ? "copy-action copied"
-                                : "copy-action"
-                            }
-                            title="Copy response"
-                            onClick={() => {
-                              try {
-                                const element =
-                                  document.getElementById(
-                                    `maco-response-${index}`
-                                  );
+                            <div id={`maco-response-${index}`}>
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                              >
+                                {msg.content}
+                              </ReactMarkdown>
+                            </div>
 
-                                const text =
-                                  element?.innerText ?? msg.content;
-
-                                const textarea =
-                                  document.createElement("textarea");
-
-                                textarea.value = text;
-
-                                document.body.appendChild(textarea);
-
-                                textarea.select();
-
-                                document.execCommand("copy");
-
-                                document.body.removeChild(textarea);
-
-                                setCopiedIndex(index);
-
-                                setTimeout(() => {
-                                  setCopiedIndex(null);
-                                }, 2000);
-                              } catch (err) {
-                                console.error("Copy failed:", err);
-                              }
-                            }}
-                          >
-                            <span>
-                              {copiedIndex === index ? "✓" : "⧉"}
-                            </span>
-
-                            {copiedIndex === index
-                              ? "Copied"
-                              : "Copy"}
-                          </button>
-                          </div>
-
-                          <div id={`maco-response-${index}`}>
-                            <ReactMarkdown
-                              remarkPlugins={[remarkGfm]}
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "flex-start",
+                                marginTop: 40,
+                                paddingTop: 14,
+                                borderTop: "1px solid rgba(0,0,0,.08)",
+                              }}
                             >
-                              {msg.content}
-                            </ReactMarkdown>
+                              <button
+                                className={
+                                  copiedIndex === index
+                                    ? "copy-action copied"
+                                    : "copy-action"
+                                }
+                                title="Copy response"
+                                onClick={() => {
+                                  try {
+                                    const element =
+                                      document.getElementById(
+                                        `maco-response-${index}`
+                                      );
+
+                                    const text =
+                                      element?.innerText ??
+                                      msg.content;
+
+                                    if (navigator?.clipboard?.writeText) {
+                                      navigator.clipboard.writeText(text);
+                                    } else {
+                                      const textarea =
+                                        document.createElement("textarea");
+
+                                      textarea.value = text;
+
+                                      document.body.appendChild(textarea);
+
+                                      textarea.select();
+
+                                      document.execCommand("copy");
+
+                                      document.body.removeChild(textarea);
+                                    }
+
+                                    setCopiedIndex(index);
+
+                                    setTimeout(() => {
+                                      setCopiedIndex(null);
+                                    }, 2000);
+                                  } catch (err) {
+                                    console.error(
+                                      "Copy failed:",
+                                      err
+                                    );
+                                  }
+                                }}
+                              >
+                                <span>
+                                  {copiedIndex === index
+                                    ? "✓"
+                                    : "⧉"}
+                                </span>
+
+                                {copiedIndex === index
+                                  ? " Copied"
+                                  : " Copy"}
+                              </button>
+                            </div>
                           </div>
                         </div>
-
 
                       </div>
                     )}
@@ -676,29 +688,39 @@ export default function MACOPage() {
         }
 
         .maco-markdown p {
-          line-height: 1.9;
-          margin-bottom: 14px;
+          line-height: 1.7;
+          margin-bottom: 10px;
         }
 
         .maco-markdown ul {
-          margin-top: 12px;
-          margin-bottom: 18px;
-          padding-left: 28px;
+          padding-left: 22px;
         }
 
         .maco-markdown li {
-          margin-bottom: 10px;
-          line-height: 1.8;
+          margin-bottom: 6px;
+        }
+
+        .maco-markdown li::marker {
+          color: #6b7280;
         }
 
         .maco-markdown h1 {
-          margin-bottom: 16px;
+          font-size: 24px;
+          font-weight: 700;
+          margin-bottom: 12px;
         }
 
         .maco-markdown h2 {
+          font-size: 20px;
+          font-weight: 700;
           margin-top: 24px;
-          margin-bottom: 12px;
         }
+
+        .maco-markdown h3 {
+          font-size: 18px;
+          font-weight: 600;
+        }
+
 
         .maco-markdown code {
           background: #f3f4f6;
@@ -713,6 +735,12 @@ export default function MACOPage() {
           border-radius: 12px;
           overflow-x: auto;
         }
+
+        .maco-markdown {
+          max-width: 900px;
+        }        
+
+
       `}</style>
     </div>
   );
