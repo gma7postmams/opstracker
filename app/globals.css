@@ -535,3 +535,11 @@ code{background:var(--code-bg);border-radius:4px;padding:1px 5px;font-size:11px}
     opacity: 1;
   }
 }
+
+.audit-row {
+  transition: background-color 0.2s ease;
+}
+
+.audit-row:hover {
+  background-color: #f8fafc;
+}
