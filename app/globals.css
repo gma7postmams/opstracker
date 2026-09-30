@@ -543,3 +543,11 @@ code{background:var(--code-bg);border-radius:4px;padding:1px 5px;font-size:11px}
 .audit-row:hover {
   background-color: #f8fafc;
 }
+
+.email-preview-content tr:hover {
+  background: transparent !important;
+}
+
+.email-preview-content tbody tr:hover {
+  background: transparent !important;
+}

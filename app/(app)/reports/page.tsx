@@ -334,7 +334,7 @@ const activeFilters =
       style={{
         background: "white",
         width: "90%",
-        maxWidth: "1200px",
+        maxWidth: "1450px",
         maxHeight: "90vh",
         overflow: "auto",
         borderRadius: "12px",
@@ -381,10 +381,24 @@ const activeFilters =
       <hr />
 
       <div
-        dangerouslySetInnerHTML={{
-          __html: preview.html,
+        className="email-preview-content"
+        style={{
+          overflowX: "auto",
+          padding: "20px 0",
+          textAlign: "center",
         }}
-      />
+      >
+        <div
+          style={{
+            display: "inline-block",
+            textAlign: "left",
+          }}
+          dangerouslySetInnerHTML={{
+            __html: preview.html,
+          }}
+        />
+      </div>
+
 
       <div
         style={{

@@ -136,22 +136,22 @@ const assistanceRows = assistance
 	  ${r.problem}
 	</td>
 
-        <td style="
-          padding:8px;
-          border:1px solid #ddd;
-          white-space:nowrap;
-          text-align:left;
-        ">
-          ${r.status}
-        </td>
+  <td style="
+    padding:8px;
+    border:1px solid #ddd;
+    white-space:nowrap;
+    text-align:center;
+  ">
+    ${r.status}
+  </td>
 
-	<td style="
-	  padding:8px;
-	  border:1px solid #ddd;
-	  text-align:center;
-	">
-	  ${r.assigned}
-	</td>
+  <td style="
+    padding:8px;
+    border:1px solid #ddd;
+    text-align:center;
+  ">
+    ${r.assigned}
+  </td>
 
       </tr>
     `
@@ -195,7 +195,7 @@ const taskRows = tasks
           padding:8px;
           border:1px solid #ddd;
           white-space:nowrap;
-          text-align:left;
+          text-align:center;
         ">
           ${r.status}
         </td>
@@ -204,7 +204,7 @@ const taskRows = tasks
           padding:8px;
           border:1px solid #ddd;
           white-space:nowrap;
-          text-align:left;
+          text-align:center;
         ">
           ${r.assigned}
         </td>
@@ -216,25 +216,67 @@ const taskRows = tasks
 
 
 const emailHtml = `
-<div style="
+  <table
+  width="100%"
+  cellpadding="0"
+  cellspacing="0"
+  border="0"
+  style="
+  background:#f3f4f6;
+  margin:0;
+  padding:20px 0;
+  "
+  >
+
+  <tr>
+  <td align="center">
+   
+  <table
+  width="1100"
+  cellpadding="0"
+  cellspacing="0"
+  border="0"
+  style="
+  background:#ffffff;
   font-family:Segoe UI,Arial,sans-serif;
-  max-width:800px;
-">
-  <h2 style="
-    color:#2563eb;
-    margin-bottom:10px;
-  ">
-    MAMS Support Activity Report
-  </h2>
+  border-collapse:collapse;
+  "
+  >
+  <tr>
+  <td style="padding:24px;">
 
-  <p>
-    <strong>Prepared By:</strong>
-    ${actor.name}
-  </p>
+  <table
+    width="100%"
+    cellpadding="0"
+    cellspacing="0"
+    border="0"
+    style="
+      background:#2563eb;
+      color:white;
+      margin-bottom:20px;
+    ">
+    <tr>
+      <td style="padding:20px;">
+        <div
+          style="
+            font-size:28px;
+            font-weight:bold;
+            margin-bottom:8px;
+          "
+        >
+          MAMS Support Activity Report
+        </div>
 
-  <p>
-    <strong>Reporting Period:</strong> ${from} to ${to}
-  </p>
+        <div style="font-size:14px;">
+          Prepared By: ${actor.name}
+        </div>
+
+        <div style="font-size:14px;">
+          Reporting Period: ${from} to ${to}
+        </div>
+      </td>
+    </tr>
+  </table>
 
   <p>
     ${activity !== "all"
@@ -251,13 +293,16 @@ const emailHtml = `
   </h3>
 
   <table
+    width="450"
+    cellpadding="0"
+    cellspacing="0"
+    border="0"
     style="
-      border-collapse:collapse;
       width:450px;
+      border-collapse:collapse;
       margin-bottom:20px;
     "
   >
-
 
     <tr>
       <th style="
@@ -322,33 +367,60 @@ const emailHtml = `
 
   </table>
 
-<h3 style="color:#2563eb">
-  Technical Assistance Details
-</h3>
+  <h3 style="
+    color:#2563eb;
+    margin-top:30px;
+    margin-bottom:12px;
+  ">
+    Technical Assistance Details
+  </h3>
 
-<table
-  style="
-    border-collapse:collapse;
-    width:100%;
-    table-layout:fixed;
-    margin-bottom:20px;
-  "
->
+  <table
+    style="
+      border-collapse:collapse;
+      width:100%;
+      table-layout:fixed;
+      margin-bottom:20px;
+    "
+  >
 
-<tr>
-  <th style="padding:8px;border:1px solid #ddd;background:#2563eb;color:white;width:120px;">Ref No</th>
-  <th style="padding:8px;border:1px solid #ddd;background:#2563eb;color:white;width:90px;">Client</th>
-  <th style="padding:8px;border:1px solid #ddd;background:#2563eb;color:white;">Problem</th>
-  <th style="padding:8px;border:1px solid #ddd;background:#2563eb;color:white;width:80px;">Status</th>
-  <th style="padding:8px;border:1px solid #ddd;background:#2563eb;color:white;width:180px;">Assigned</th>
-</tr>
+  <tr>
+    <th style="padding:8px;border:1px solid #ddd;background:#2563eb;color:white;width:140px;">Ref No</th>
+    <th style="padding:8px;border:1px solid #ddd;background:#2563eb;color:white;width:140px;">Client</th>
+    <th style="padding:8px;border:1px solid #ddd;background:#2563eb;color:white;">Problem</th>
+    <th style="
+      padding:8px;
+      border:1px solid #ddd;
+      background:#2563eb;
+      color:white;
+      width:120px;
+      text-align:center;
+    ">
+      Status
+    </th>
+
+    <th style="
+      padding:8px;
+      border:1px solid #ddd;
+      background:#2563eb;
+      color:white;
+      width:220px;
+      text-align:center;
+    ">
+      Assigned
+    </th>
+  </tr>
 
   ${assistanceRows}
 </table>
 
-<h3 style="color:#7f56d9">
-  Other Tasks Details
-</h3>
+  <h3 style="
+    color:#7f56d9;
+    margin-top:30px;
+    margin-bottom:12px;
+  ">
+    Other Tasks Details
+  </h3>
 
 <table
   style="
@@ -359,11 +431,30 @@ const emailHtml = `
   "
 >
   <tr>
-	<th style="padding:8px;border:1px solid #ddd;background:#7f56d9;color:white;width:120px;">Ref No</th>
+	<th style="padding:8px;border:1px solid #ddd;background:#7f56d9;color:white;width:140px;">Ref No</th>
 	<th style="padding:8px;border:1px solid #ddd;background:#7f56d9;color:white;width:140px;white-space:nowrap;">Activity Type</th>
 	<th style="padding:8px;border:1px solid #ddd;background:#7f56d9;color:white;">Description</th>
-	<th style="padding:8px;border:1px solid #ddd;background:#7f56d9;color:white;width:80px;">Status</th>
-	<th style="padding:8px;border:1px solid #ddd;background:#7f56d9;color:white;width:140px;">Assigned</th>	
+    <th style="
+      padding:8px;
+      border:1px solid #ddd;
+      background:#7f56d9;
+      color:white;
+      width:120px;
+      text-align:center;
+    ">
+      Status
+    </th>
+
+    <th style="
+      padding:8px;
+      border:1px solid #ddd;
+      background:#7f56d9;
+      color:white;
+      width:220px;
+      text-align:center;
+    ">
+      Assigned
+    </th>
   </tr>
 
   ${taskRows}
@@ -388,8 +479,14 @@ const emailHtml = `
     Generated automatically by MAMS Support Operations Tracker.
   </p>
 
-</div>
-`;
+  </td>
+  </tr>
+  </table>
+
+  </td>
+  </tr>
+  </table>
+  `;
 
 if (preview) {
   return NextResponse.json({
