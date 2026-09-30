@@ -101,7 +101,10 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const filename = `MAMS_Support_Activity_Report_${from}_to_${to}.xlsx`;
+  const filename =
+    from === to
+      ? `MAMS_Support_Activity_Report_${from}.xlsx`
+      : `MAMS_Support_Activity_Report_${from}_to_${to}.xlsx`;
 
 const assistanceRows = assistance
   .map(
@@ -214,7 +217,19 @@ const taskRows = tasks
   )
   .join("");
 
+  const generatedAt = new Date().toLocaleString("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });  
 
+const reportingPeriod =
+  from === to
+    ? `As of ${from}`
+    : `${from} to ${to}`;
+  
 const emailHtml = `
   <table
   width="100%"
@@ -245,18 +260,21 @@ const emailHtml = `
   <tr>
   <td style="padding:24px;">
 
-  <table
-    width="100%"
-    cellpadding="0"
-    cellspacing="0"
-    border="0"
-    style="
-      background:#2563eb;
-      color:white;
-      margin-bottom:20px;
-    ">
+    <table
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+      border="0"
+      style="
+        background:#2563eb;
+        color:white;
+        margin-bottom:20px;
+        border-radius:10px;
+      "
+    >
+
     <tr>
-      <td style="padding:20px;">
+      <td style="padding:16px;border-radius:10px;">
         <div
           style="
             font-size:28px;
@@ -272,8 +290,17 @@ const emailHtml = `
         </div>
 
         <div style="font-size:14px;">
-          Reporting Period: ${from} to ${to}
+          Reporting Period: ${reportingPeriod}
         </div>
+
+        <div style="
+          font-size:13px;
+          margin-top:4px;
+          color:rgba(255,255,255,0.85);
+        ">
+          Generated: ${generatedAt}
+        </div>
+        
       </td>
     </tr>
   </table>
@@ -297,11 +324,14 @@ const emailHtml = `
     cellpadding="0"
     cellspacing="0"
     border="0"
-    style="
-      width:450px;
-      border-collapse:collapse;
-      margin-bottom:20px;
-    "
+  style="
+    width:450px;
+    border-collapse:separate;
+    border-spacing:0;
+    margin-bottom:20px;
+    border-radius:10px;
+    overflow:hidden;
+  "
   >
 
     <tr>
@@ -350,18 +380,18 @@ const emailHtml = `
 
     <tr>
 
-    <td style="padding:10px;border:1px solid #ddd;font-weight:bold">
-      Total Records
-    </td>
+      <td style="padding:10px;border:1px solid #ddd;font-weight:bold">
+        Total Records
+      </td>
 
-    <td style="
-      padding:10px;
-      border:1px solid #ddd;
-      text-align:right;
-      font-weight:bold;
-    ">
-      ${assistance.length + tasks.length}
-    </td>
+      <td style="
+        padding:10px;
+        border:1px solid #ddd;
+        text-align:right;
+        font-weight:bold;
+      ">
+        ${assistance.length + tasks.length}
+      </td>
 
     </tr>
 
@@ -377,10 +407,13 @@ const emailHtml = `
 
   <table
     style="
-      border-collapse:collapse;
+      border-collapse:separate;
+      border-spacing:0;
       width:100%;
       table-layout:fixed;
       margin-bottom:20px;
+      border-radius:10px;
+      overflow:hidden;
     "
   >
 
@@ -422,14 +455,18 @@ const emailHtml = `
     Other Tasks Details
   </h3>
 
-<table
-  style="
-    border-collapse:collapse;
-    width:100%;
-    table-layout:auto;
-    margin-bottom:20px;
-  "
->
+  <table
+    style="
+      border-collapse:separate;
+      border-spacing:0;
+      width:100%;
+      table-layout:auto;
+      margin-bottom:20px;
+      border-radius:10px;
+      overflow:hidden;
+    "
+  >
+
   <tr>
 	<th style="padding:8px;border:1px solid #ddd;background:#7f56d9;color:white;width:140px;">Ref No</th>
 	<th style="padding:8px;border:1px solid #ddd;background:#7f56d9;color:white;width:140px;white-space:nowrap;">Activity Type</th>
@@ -491,7 +528,7 @@ const emailHtml = `
 if (preview) {
   return NextResponse.json({
     ok: true,
-    subject: `MAMS Support Activity Report (${from} to ${to})`,
+    subject: `MAMS Support Activity Report (${reportingPeriod})`,
     recipients: sender.smtpRecipients,
     html: emailHtml,
   });
@@ -503,7 +540,7 @@ try {
   await transporter.sendMail({
     from: `"MAMS Support Reports" <${sender.smtpEmail}>`,
     to: sender.smtpRecipients,
-    subject: `MAMS Support Activity Report (${from} to ${to})`,
+    subject: `MAMS Support Activity Report (${reportingPeriod})`,
 
     html: emailHtml,
     attachments: [
@@ -518,7 +555,7 @@ await logAudit({
   userId: actor.id,
   action: "REPORT_EMAIL_SENT",
   entityType: "REPORT",
-  entityId: `${from} to ${to}`,
+  entityId: reportingPeriod,
   details: {
     user: actor.name,
     sender: sender.smtpEmail,
@@ -541,7 +578,7 @@ return NextResponse.json({
     userId: actor.id,
     action: "REPORT_EMAIL_FAILED",
     entityType: "REPORT",
-    entityId: `${from} to ${to}`,
+    entityId: reportingPeriod,
     details: {
       user: actor.name,
       sender: sender.smtpEmail,
