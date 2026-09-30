@@ -55,6 +55,10 @@ The system provides ITIL-inspired incident logging, operational task tracking, a
 - System audit records
 - Record modification history
 - Backup and restore audit tracking
+- Advanced audit log filtering
+- User-based audit monitoring
+- Excel export of audit logs
+- Date range and action-based audit reporting
 
 ### Master Data Administration
 
@@ -87,6 +91,8 @@ Features include:
 - Operational summaries
 - Technical Assistance reporting
 - Task reporting
+- Audit Log reporting
+- Excel export functionality
 - Detailed export-ready reports
 
 ---
@@ -133,7 +139,8 @@ Centralized administration panel for managing master data, branding, backups, re
 
 ![Audit Logs](docs/screenshots/audit-logs.png)
 
-Comprehensive audit trail capturing user actions, record updates, administrative changes, backups, and restores.
+Comprehensive audit trail capturing user actions, record updates, administrative changes, backup and restore activities, advanced filtering, and Excel export capabilities.
+
 
 ### Account Settings
 
@@ -302,6 +309,8 @@ Features:
 - Record ownership controls
 - Administrative record locking
 - Audit logging of sensitive actions
+- User activity monitoring and traceability
+- Exportable audit records for compliance and review
 
 ---
 
@@ -330,6 +339,16 @@ prisma/
 
 ---
 
+## Recent Enhancements
+
+- Redesigned Audit Logs interface to align with the Users Management module
+- Added user avatar initials and color-coded activity badges
+- Implemented dynamic filter management with active filter count display
+- Added filtered Audit Log Excel export using ExcelJS
+- Improved audit search, filtering, and reporting experience
+- Removed unused AI configuration components and legacy settings
+
+
 ## Current Status
 
 **Version Status:** Complete ✅
@@ -341,6 +360,7 @@ Completed Development Areas:
 - Other Tasks Module
 - Dashboard and Reporting
 - Audit Logging
+- Audit Log Excel Export
 - Master Data Management
 - Backup and Restore
 - Import and Migration
