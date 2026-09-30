@@ -551,3 +551,11 @@ code{background:var(--code-bg);border-radius:4px;padding:1px 5px;font-size:11px}
 .email-preview-content tbody tr:hover {
   background: transparent !important;
 }
+
+.email-preview-content {
+  color: #111827 !important;
+}
+
+.email-preview-content * {
+  color: inherit;
+}

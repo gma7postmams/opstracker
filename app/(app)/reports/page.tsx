@@ -330,17 +330,19 @@ const activeFilters =
       zIndex: 9999,
     }}
   >
-    <div
-      style={{
-        background: "white",
-        width: "90%",
-        maxWidth: "1450px",
-        maxHeight: "90vh",
-        overflow: "auto",
-        borderRadius: "12px",
-        padding: "24px",
-      }}
-    >
+  <div
+    style={{
+      background: "var(--panel)",
+      color: "var(--text)",
+      width: "95%",
+      maxWidth: "1400px",
+      maxHeight: "90vh",
+      overflow: "auto",
+      borderRadius: "12px",
+      padding: "24px",
+      boxShadow: "0 10px 25px rgba(0,0,0,0.25)",
+    }}
+  >
 
   <div
     style={{
@@ -350,7 +352,9 @@ const activeFilters =
       marginBottom: "12px",
     }}
   >
-    <h2>Email Preview</h2>
+  <h2 style={{ color: "var(--text)" }}>
+    Email Preview
+  </h2>
 
   <button
     onClick={() => setPreview(null)}
@@ -359,35 +363,49 @@ const activeFilters =
       background: "transparent",
       fontSize: "24px",
       cursor: "pointer",
-      color: "#98a2b3",
+      color: "var(--muted)",
       padding: 0,
     }}
-    title="Close"
   >
+
     ✖
   </button>
 
   </div>
 
-	<div className="hint spacedbottom">
-	  <b>Recipients:</b> {preview.recipients}
-	</div>
+  <div
+    className="hint spacedbottom"
+    style={{
+      background: "var(--hint-bg)",
+    }}
+  >
+    <b>Recipients:</b> {preview.recipients}
+  </div>
 
-      <p>
-        <strong>Subject:</strong>{" "}
-        {preview.subject}
-      </p>
+  <p>
+    <strong>Subject:</strong> {preview.subject}
+  </p>
 
-      <hr />
+  <hr
+    style={{
+      border: "none",
+      borderTop: "1px solid var(--border)",
+    }}
+  />
 
-      <div
-        className="email-preview-content"
-        style={{
-          overflowX: "auto",
-          padding: "20px 0",
-          textAlign: "center",
-        }}
-      >
+        <div
+          className="email-preview-content"
+          style={{
+            background: "white",
+            color: "#111827",
+            padding: "24px",
+            borderRadius: "10px",
+            boxShadow: "0 1px 3px rgba(0,0,0,.1)",
+            overflowX: "auto",
+            textAlign: "center",
+          }}
+        >
+
         <div
           style={{
             display: "inline-block",
@@ -461,16 +479,17 @@ const activeFilters =
       zIndex: 9999,
     }}
   >
-    <div
-      style={{
-        background: "white",
-        padding: "24px",
-        borderRadius: "12px",
-        minWidth: "420px",
-        maxWidth: "600px",
-        boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
-      }}
-    >
+  <div
+    style={{
+      background: "var(--panel)",
+      color: "var(--text)",
+      padding: "24px",
+      borderRadius: "12px",
+      minWidth: "420px",
+      maxWidth: "600px",
+      boxShadow: "0 10px 25px rgba(0,0,0,0.25)",
+    }}
+  >
 
     <h3>
       {emailResult.success
