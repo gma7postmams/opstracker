@@ -251,6 +251,7 @@ const matchesSearch =
 
       <tbody>
         {filteredLogs.map((log) => {
+          console.log("AUDIT LOG:", log);
           const userName =
             log.details?.actor ??
             log.details?.user ??
@@ -359,9 +360,50 @@ const matchesSearch =
                 </span>
               </td>
 
-              <td>{log.entityType}</td>
+              <td
+                style={{
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  color: "#374151",
+                }}
+              >
+                {log.entityType}
+              </td>
 
-              <td>{log.entityId}</td>
+              <td>
+                <div>
+                  <div
+                    style={{
+                      fontWeight: 600,
+                    }}
+                  >
+                    {log.entityId || "-"}
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#6b7280",
+                    }}
+                  >
+                    {log.action === "CREATE"
+                      ? "Record Created"
+                      : log.action === "UPDATE"
+                      ? "Record Updated"
+                      : log.action === "DELETE"
+                      ? "Record Deleted"
+                      : log.action === "LOGIN"
+                      ? "User Authentication"
+                      : log.action === "LOGOUT"
+                      ? "Session Ended"
+                      : log.action === "LOCK"
+                      ? "Record Locked"
+                      : log.action === "UNLOCK"
+                      ? "Record Unlocked"
+                      : log.entityType}
+                  </div>
+                </div>
+              </td>
 
               <td>
                 {new Date(log.createdAt).toLocaleString("en-PH", {
