@@ -29,7 +29,12 @@ const OPTIONS: { value: "light" | "dark" | "system"; label: string; icon: React.
 export default function ThemeToggle() {
   const { preference, effective, setPreference } = useTheme();
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
   const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -40,7 +45,11 @@ export default function ThemeToggle() {
     return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onEsc); };
   }, [open]);
 
-  return (
+    if (!mounted) {
+      return null;
+    }
+
+    return (
     <div className="themetoggle" ref={ref}>
       <button
         className="theme-btn"
