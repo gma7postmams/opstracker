@@ -32,7 +32,7 @@ export default function ImageUpload({ kind, value, onChange, round, hint }: {
         ? <img src={value} alt="" className="uploadprev" style={{ borderRadius: round ? "50%" : 10 }} />
         : <div className="uploadprev placeholder" style={{ borderRadius: round ? "50%" : 10 }}>▦</div>}
       <div>
-        <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/x-icon"
+        <input type="file" accept="image/png,image/jpeg,image/webp,image/x-icon"
           onChange={pick} disabled={busy} />
         {hint && <div className="muted upl-hint">{hint}</div>}
         {value && (

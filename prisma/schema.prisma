@@ -44,6 +44,7 @@ model User {
   role         Role         @default(USER)
   avatarUrl    String?      @map("avatar_url")
   active       Boolean      @default(true)
+  mustChangePassword Boolean @default(false) @map("must_change_password")
   lastLogin    DateTime?    @map("last_login")
   createdAt    DateTime     @default(now()) @map("created_at")
 

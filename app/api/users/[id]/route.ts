@@ -58,7 +58,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (d[k] !== undefined) data[k] = d[k];
   }
   if (d.middleInitial !== undefined) data.middleInitial = d.middleInitial?.toUpperCase() || null;
-  if (d.password) data.passwordHash = await bcrypt.hash(d.password, 10);
+  if (d.password) {
+    const username = (d.username ?? target.username).toLowerCase();
+    if (d.password.toLowerCase() === username || d.password.toLowerCase() === `${username}123`) {
+      return NextResponse.json({
+        error: "Validation failed",
+        fields: { password: "Pick a password that isn't based on the username" },
+      }, { status: 400 });
+    }
+    data.passwordHash = await bcrypt.hash(d.password, 10);
+    // Changing your own password completes the forced change; an admin
+    // resetting someone else's hands them a password they must replace.
+    data.mustChangePassword = actor.id !== id;
+  }
 
   // Guard: nobody demotes themselves out of the last admin seat by accident.
   const { canEditRole } = canModifyUser(actor, id);

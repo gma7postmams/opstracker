@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isRecordType, SortKey } from "@/lib/recordTypes";
+import { isRecordType } from "@/lib/recordTypes";
 import { listRecords, nextRefNo, normalizeTimes, delegateFor } from "@/lib/records";
-import { schemaFor, flatten } from "@/lib/validation";
+import { schemaFor, flatten, listQuerySchema, queryObject } from "@/lib/validation";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
   const p = await params;
@@ -11,19 +11,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!isRecordType(p.type)) return NextResponse.json({ error: "Unknown record type" }, { status: 404 });
 
-  const s = req.nextUrl.searchParams;
-  const data = await listRecords(p.type, {
-    q: s.get("q") ?? undefined,
-    status: s.get("status") ?? undefined,
-    location: s.get("location") ?? undefined,
-    shift: s.get("shift") ?? undefined,
-    from: s.get("from") ?? undefined,
-    to: s.get("to") ?? undefined,
-    sort: (s.get("sort") as SortKey) ?? "date",
-    dir: s.get("dir") === "asc" ? "asc" : "desc",
-    page: Number(s.get("page") ?? 1),
-    perPage: Number(s.get("perPage") ?? 50),
-  });
+  const parsed = listQuerySchema.safeParse(queryObject(req.nextUrl.searchParams));
+  if (!parsed.success) {
+    const fields = flatten(parsed.error);
+    return NextResponse.json({ error: Object.values(fields)[0] ?? "Invalid query", fields }, { status: 400 });
+  }
+  const data = await listRecords(p.type, parsed.data);
   return NextResponse.json(data);
 }
 

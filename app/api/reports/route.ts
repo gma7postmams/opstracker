@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { minutesBetween } from "@/lib/format";
+import { reportQuerySchema, queryObject, flatten } from "@/lib/validation";
 
 interface Row {
   user: string; total: number; closed: number; open: number; pending: number;
@@ -42,11 +43,14 @@ export async function GET(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const s = req.nextUrl.searchParams;
-  const from = s.get("from") || new Date(Date.now() - 29 * 864e5).toISOString().slice(0, 10);
-  const to = s.get("to") || new Date().toISOString().slice(0, 10);
-  const activity = s.get("activity") || "all";
-  const status = s.get("status") || "all";
+  const parsed = reportQuerySchema.safeParse(queryObject(req.nextUrl.searchParams));
+  if (!parsed.success) {
+    const fields = flatten(parsed.error);
+    return NextResponse.json({ error: Object.values(fields)[0] ?? "Invalid query", fields }, { status: 400 });
+  }
+  const { activity, status } = parsed.data;
+  const from = parsed.data.from ?? new Date(Date.now() - 29 * 864e5).toISOString().slice(0, 10);
+  const to = parsed.data.to ?? new Date().toISOString().slice(0, 10);
 
   if (from > to) {
     return NextResponse.json({ error: "From date must be on or before To date" }, { status: 400 });

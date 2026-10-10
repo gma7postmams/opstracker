@@ -2,6 +2,8 @@ export interface SessionUser {
   id: number;
   role: "ADMIN" | "USER";
   name: string;
+  /** Set for accounts still on a seeded/admin-reset password. */
+  mustChangePassword?: boolean;
 }
 
 interface OwnableRecord {

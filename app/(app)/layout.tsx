@@ -4,6 +4,7 @@ import { currentUser } from "@/lib/auth";
 import { getBranding } from "@/lib/branding";
 import { prisma } from "@/lib/prisma";
 import Shell from "@/components/Shell";
+import ForcePasswordChange from "@/components/ForcePasswordChange";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await currentUser();
@@ -16,7 +17,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <Shell branding={branding} user={{ ...user, avatarUrl: me?.avatarUrl ?? null }}>
-      {children}
+      {user.mustChangePassword ? <ForcePasswordChange userId={user.id} /> : children}
     </Shell>
   );
 }

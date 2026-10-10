@@ -67,9 +67,28 @@ export const authOptions: NextAuthOptions = {
   },
 };
 
-/** Returns the session user, or null when unauthenticated. */
+/**
+ * Returns the session user, or null when unauthenticated.
+ *
+ * The JWT only proves who signed in up to 12 hours ago, so role, active flag
+ * and name are read from the database on every call. A deactivated account is
+ * locked out immediately and a demotion takes effect on the next request,
+ * instead of lingering until the token expires.
+ */
 export async function currentUser(): Promise<SessionUser | null> {
   const session = await getServerSession(authOptions);
   if (!session?.user) return null;
-  return { id: session.user.id, role: session.user.role, name: session.user.name };
+
+  const fresh = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, role: true, active: true, firstName: true, middleInitial: true, surname: true, mustChangePassword: true },
+  });
+  if (!fresh || !fresh.active) return null;
+
+  return {
+    id: fresh.id,
+    role: fresh.role,
+    name: fullName(fresh),
+    mustChangePassword: fresh.mustChangePassword,
+  };
 }

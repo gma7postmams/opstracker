@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { SORTABLE } from "./recordTypes";
+import { minutesBetween } from "./format";
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -19,13 +21,26 @@ const shared = {
   remarks: z.string().optional().nullable(),
 };
 
+/** Longest span we accept for one record; anything longer is almost certainly a typo. */
+const MAX_SPAN_MINUTES = 16 * 60;
+
 /**
  * Both time rules live here rather than in the route so the CSV importer and
  * the form get identical treatment.
+ *
+ * An end time earlier than the start time means the work ran past midnight
+ * (the Night shift), matching how minutesBetween() measures it. Because that
+ * would also swallow a mistyped end time, spans over 16 hours are rejected.
  */
 const timeRules = (v: any, ctx: z.RefinementCtx) => {
-  if (v.timeEnded && v.timeEnded < v.timeStarted) {
-    ctx.addIssue({ code: "custom", path: ["timeEnded"], message: "Time ended is before time started" });
+  if (v.timeEnded) {
+    const span = minutesBetween(v.timeStarted, v.timeEnded);
+    if (span !== null && span > MAX_SPAN_MINUTES) {
+      ctx.addIssue({
+        code: "custom", path: ["timeEnded"],
+        message: "That runs for over 16 hours — check the start and end times",
+      });
+    }
   }
   if (v.status === "CLOSED" && !v.timeEnded) {
     ctx.addIssue({ code: "custom", path: ["timeEnded"], message: "A closed record needs a time ended" });
@@ -94,3 +109,36 @@ export function flatten(err: z.ZodError) {
   for (const i of err.issues) out[i.path.join(".") || "_"] = i.message;
   return out;
 }
+
+/**
+ * Query strings arrive as untyped text, so they are parsed once here instead of
+ * being cast in each route. Empty values mean "not provided".
+ */
+export function queryObject(params: URLSearchParams) {
+  const out: Record<string, string> = {};
+  params.forEach((v, k) => { if (v !== "") out[k] = v; });
+  return out;
+}
+
+const ymdParam = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a YYYY-MM-DD date")
+  .refine((v) => !Number.isNaN(Date.parse(v)), "Not a real date");
+
+export const listQuerySchema = z.object({
+  q: z.string().max(200).optional(),
+  status: z.enum(["all", "OPEN", "CLOSE_PENDING", "CLOSED"]).optional(),
+  location: z.string().max(120).optional(),
+  shift: z.string().max(120).optional(),
+  from: ymdParam.optional(),
+  to: ymdParam.optional(),
+  sort: z.enum(SORTABLE).default("date"),
+  dir: z.enum(["asc", "desc"]).default("desc"),
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+  perPage: z.coerce.number().int().min(1).max(200).default(50),
+});
+
+export const reportQuerySchema = z.object({
+  from: ymdParam.optional(),
+  to: ymdParam.optional(),
+  activity: z.enum(["all", "assistance", "tasks"]).default("all"),
+  status: z.enum(["all", "OPEN", "CLOSE_PENDING", "CLOSED"]).default("all"),
+});

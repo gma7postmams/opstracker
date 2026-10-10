@@ -66,6 +66,8 @@ export async function POST(req: NextRequest) {
       role: d.role,
       avatarUrl: d.avatarUrl || null,
       passwordHash: await bcrypt.hash(d.password, 10),
+      // The admin chose this password, so the person it belongs to must replace it.
+      mustChangePassword: true,
     },
     select: PUBLIC,
   });

@@ -10,7 +10,8 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "db:flag-defaults": "tsx prisma/flag-default-passwords.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

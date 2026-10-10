@@ -29,28 +29,34 @@ npm run db:seed
 ```
 
 The seed creates:
-- One bootstrap admin: `admin` / `admin123` (override with `SEED_ADMIN_PASSWORD=...`)
-- Ten named team accounts, one per person, each with a default password of
-  `<username>123` — e.g. `renan` / `renan123`, `janice` / `janice123`
+- A bootstrap admin, `admin`
+- Ten named team accounts, one per person
 - The default master data (locations, shifts, categories, activity types)
 
-**Change every default password before going live.** The named team accounts
-exist so each person's work is attributed to them from day one, rather than
-importing everything under a shared login.
+Every new account gets a **random password, printed once** at the end of the
+seed run. Copy them then — they are not stored anywhere readable. Each user is
+forced to choose their own password at first sign-in. Set `SEED_ADMIN_PASSWORD`
+to choose the admin password yourself for scripted installs. Re-running the
+seed never changes an existing account's password.
+
+Upgrading a database that was seeded with the old `<username>123` defaults:
+
+```bash
+npm run db:flag-defaults    # flags accounts still on a default password
+```
+
+Flagged users must set a new password at their next sign-in.
 
 ### Demo accounts
 
-The sign-in screen deliberately shows no demo credentials — advertising a
-working login on a reachable page is not something a production system should
-do. A generic `user` / `user123` account is available for demos and training
-but is **not** seeded by default:
+The sign-in screen deliberately shows no demo credentials. A generic `user`
+account is available for demos and training but is **not** seeded by default:
 
 ```bash
 SEED_DEMO_USER=true npm run db:seed
 ```
 
-Do not enable it on the live instance. The standalone `preview.html` mockup
-still has the quick-fill buttons, since it exists purely to be clicked through.
+Do not enable it on the live instance.
 
 ```bash
 npm run dev        # http://localhost:3000
@@ -78,7 +84,7 @@ Set `NEXTAUTH_URL` to the URL users actually visit — auth cookies depend on it
 
 Administration → Backup & restore downloads a full JSON export.
 
-**The JSON does not include uploaded images.** For a complete backup take both:
+**The JSON does not include uploaded images** (PNG, JPG, WebP or ICO — SVG is not accepted). For a complete backup take both:
 
 ```bash
 # database + settings
