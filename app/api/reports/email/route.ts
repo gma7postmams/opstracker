@@ -118,15 +118,25 @@ const escapeHtml = (value: unknown) =>
 const cellStyle = "padding:9px 8px;border-bottom:1px solid #e3e8ee;color:#273444;font-family:Arial,sans-serif;font-size:12px;line-height:17px;word-break:break-word;";
 const tableStyle = "width:100%;border-collapse:collapse;table-layout:fixed;";
 const headerCellStyle = "padding:10px 8px;background:#edf3f4;border-bottom:1px solid #d7e0e5;color:#435564;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;letter-spacing:.04em;text-align:left;white-space:nowrap;";
-const tableHead = (labels: string[]) => `<tr>${labels.map((label) => `<th align="left" style="${headerCellStyle}">${label}</th>`).join("")}</tr>`;
+const detailStyle = "margin-top:6px;padding:6px 8px;background-color:#f3f6f7;border-left:2px solid #bac8ce;color:#6b7785;font-family:Arial,sans-serif;font-size:10px;line-height:14px;word-break:break-word;word-wrap:break-word;overflow-wrap:break-word;";
+const secondaryDetail = (label: string, value: unknown) =>
+  value ? `<div style="${detailStyle}"><strong>${label}:</strong><br>${escapeHtml(value)}</div>` : "";
+const tableHead = (labels: string[]) => `<tr>${labels.map((label) => {
+  const align = label === "Status" || label === "Assigned" ? "center" : "left";
+  return `<th align="${align}" style="${headerCellStyle}text-align:${align};">${label}</th>`;
+}).join("")}</tr>`;
 const assistanceRows = assistance.length
   ? assistance.map((row) => `
       <tr>
         <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.refNo)}</td>
         <td style="${cellStyle}">${escapeHtml(row.clientName)}</td>
-        <td style="${cellStyle}">${escapeHtml(row.problem)}</td>
+        <td style="${cellStyle}vertical-align:top;">
+          <div>${escapeHtml(row.problem)}</div>
+          ${secondaryDetail("Resolution", row.resolution)}
+          ${secondaryDetail("Remarks", row.remarks)}
+        </td>
         <td style="${cellStyle}text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.status)}</td>
-        <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.assigned)}</td>
+        <td style="${cellStyle}text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.assigned)}</td>
       </tr>`).join("")
   : `<tr><td colspan="5" style="${cellStyle}color:#6b7785;text-align:center;padding:18px;">No technical assistance records in this period.</td></tr>`;
 
@@ -137,10 +147,10 @@ const taskRows = tasks.length
         <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.activityType)}</td>
         <td style="${cellStyle}vertical-align:top;">
           <div>${escapeHtml(row.description)}</div>
-          ${row.remarks ? `<div style="margin-top:6px;padding:6px 8px;background-color:#f3f6f7;border-left:2px solid #bac8ce;color:#6b7785;font-family:Arial,sans-serif;font-size:10px;line-height:14px;word-break:break-word;word-wrap:break-word;overflow-wrap:break-word;"><strong>Remarks:</strong><br>${escapeHtml(row.remarks)}</div>` : ""}
+          ${secondaryDetail("Remarks", row.remarks)}
         </td>
         <td style="${cellStyle}text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.status === "CLOSE_PENDING" ? "Close pending" : row.status)}</td>
-        <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.assigned)}</td>
+        <td style="${cellStyle}text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.assigned)}</td>
       </tr>`).join("")
   : `<tr><td colspan="5" style="${cellStyle}color:#6b7785;text-align:center;padding:18px;">No other task records in this period.</td></tr>`;
 
@@ -205,13 +215,13 @@ const emailHtml = `
             <tr>${summaryCard("Open", statusCounts.open, "#c74646", "&#9675;")}${summaryCard("Close Pending", statusCounts.pending, "#b77914", "&#9684;")}${summaryCard("Closed", statusCounts.closed, "#34845e", "&#10003;")}</tr>
           </table>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${tableStyle}margin-top:22px;">
-            <colgroup><col width="13%"><col width="22%"><col width="38%"><col width="13%"><col width="14%"></colgroup>
+            <colgroup><col width="14%"><col width="16%"><col width="45%"><col width="10%"><col width="15%"></colgroup>
             <tr><td colspan="5" style="padding:0 0 9px;color:#165d59;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Technical assistance details</td></tr>
             ${tableHead(["Ref No", "Client", "Problem", "Status", "Assigned"])}
             ${assistanceRows}
           </table>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${tableStyle}margin-top:22px;">
-            <colgroup><col width="13%"><col width="18%"><col width="39%"><col width="14%"><col width="16%"></colgroup>
+            <colgroup><col width="14%"><col width="16%"><col width="45%"><col width="10%"><col width="15%"></colgroup>
             <tr><td colspan="5" style="padding:0 0 9px;color:#165d59;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Other task details</td></tr>
             ${tableHead(["Ref No", "Activity type", "Description", "Status", "Assigned"])}
             ${taskRows}
