@@ -250,13 +250,9 @@ const activeFilters =
     <div className="page report-page">
       <style jsx global>{`
         .report-page { color: var(--text); }
-        .report-page .report-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin:0 0 12px; }
-        .report-page .report-eyebrow { color:#237a75; font-size:11px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; }
-        .report-page .report-heading h1 { margin:4px 0 5px; font-size:26px; line-height:1.2; }
-        .report-page .report-subtitle { color:var(--muted); font-size:14px; }
         .report-page .filters { border:1px solid var(--border); border-radius:10px; padding:12px; background:var(--panel); box-shadow:0 3px 12px rgba(18,38,63,.04); align-items:end; }
+        .report-page .report-actions { display:flex; flex-direction:row; flex-shrink:0; gap:8px; margin-left:auto; }
         .report-page .flabel { font-size:10px; font-weight:750; letter-spacing:.055em; }
-        .report-page .report-actions { display:flex; flex-wrap:wrap; gap:8px; align-self:end; }
         .report-page .report-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); grid-auto-rows:1fr; gap:12px; margin:12px 0 12px; }
         .report-page .report-kpi { position:relative; display:flex; flex-direction:column; overflow:hidden; min-height:102px; padding:14px 16px 12px 20px; border:1px solid color-mix(in srgb,var(--border) 70%,var(--muted)); border-radius:9px; background:var(--panel); box-shadow:0 3px 12px rgba(0,0,0,.12); transition:transform .18s ease,box-shadow .18s ease; }
         .report-page .report-kpi:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.18); }
@@ -281,23 +277,9 @@ const activeFilters =
         .report-page .report-history .status.closed { color:#15803d; border-color:#bbf7d0; background:#f0fdf4; }
         .report-page .report-history tfoot td { background:var(--hint-bg); }
         .report-page .email-preview-frame { display:block; width:100%; height:70vh; min-height:520px; border:1px solid #dfe5eb; }
-        @media(max-width:760px) { .report-page .report-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .report-page .report-heading { display:block; } .report-page .report-actions { margin-top:12px; } }
-        @media(max-width:480px) { .report-page .report-heading h1 { font-size:22px; } .report-page .report-kpi { padding:13px 12px 12px 15px; } .report-page .report-kpi strong { font-size:24px; } }
+        @media(max-width:760px) { .report-page .report-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .report-page .report-actions { flex-direction:row; flex-wrap:wrap; width:100%; justify-content:flex-end; } }
+        @media(max-width:480px) { .report-page .report-kpi { padding:13px 12px 12px 15px; } .report-page .report-kpi strong { font-size:24px; } }
       `}</style>
-      <div className="report-heading">
-        <div>
-          <div className="report-eyebrow">Operations intelligence</div>
-          <h1>Reporting &amp; Analytics</h1>
-          <div className="report-subtitle">Track workload, resolution, and team activity across your selected period.</div>
-        </div>
-        <div className="report-actions">
-          <button className="secondary" onClick={exportExcel} disabled={!d || !isReportRangeValid}>Export Excel</button>
-          <button className="primary" onClick={previewEmail} disabled={!d || !isReportRangeValid || sendingPreview}>
-            {sendingPreview ? "Generating preview..." : "Preview email"}
-          </button>
-        </div>
-      </div>
-
       <div className="filters">
         <label className="flabel">PERIOD
           <select value={dateRangePreset} onChange={(e) => selectDateRange(e.target.value as DateRangePreset)}>
@@ -359,6 +341,13 @@ const activeFilters =
             ✕ Clear {activeFilters} filter{activeFilters > 1 ? "s" : ""}
           </button>
         )}
+
+        <div className="report-actions">
+          <button className="secondary" onClick={exportExcel} disabled={!d || !isReportRangeValid}>Export Excel</button>
+          <button className="primary" onClick={previewEmail} disabled={!d || !isReportRangeValid || sendingPreview}>
+            {sendingPreview ? "Generating preview..." : "Preview email"}
+          </button>
+        </div>
 
       </div>
 
