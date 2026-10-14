@@ -299,6 +299,17 @@ export default function RecordsView(props: Props) {
       <section className="panel table crm-table-wrap">
         {rows.length ? (
           <table>
+            <colgroup>
+              <col className="crm-col-select" />
+              <col className="crm-col-id" />
+              <col className="crm-col-date" />
+              <col className="crm-col-location" />
+              <col className="crm-col-activity" />
+              <col className="crm-col-priority" />
+              <col className="crm-col-duration" />
+              <col className="crm-col-status" />
+              <col className="crm-col-assigned" />
+            </colgroup>
             <thead>
               <tr>
                 <th className="selcol">
@@ -406,12 +417,21 @@ export default function RecordsView(props: Props) {
         .crm-kpi-pending { --kpi-accent: #d97706; --kpi-tint: #fffbeb; }
         .crm-kpi-closed { --kpi-accent: #16a34a; --kpi-tint: #f0fdf4; }
         .crm-table-wrap { max-height: 70vh; overflow: auto; border: 1px solid #e5eaf0; border-radius: 10px; box-shadow: 0 4px 16px rgba(31, 48, 68, 0.06); }
-        .crm-table-wrap table { border-collapse: separate; border-spacing: 0; }
+        .crm-table-wrap table { width: 100%; min-width: 960px; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
+        .crm-col-select { width: 3%; }
+        .crm-col-id { width: 8%; }
+        .crm-col-date { width: 8%; }
+        .crm-col-location { width: 11%; }
+        .crm-col-activity { width: 37%; }
+        .crm-col-priority { width: 7%; }
+        .crm-col-duration { width: 8%; }
+        .crm-col-status { width: 9%; }
+        .crm-col-assigned { width: 9%; }
         .crm-table-wrap thead { position: sticky; top: 0; z-index: 2; }
         .crm-table-wrap thead th { background: #f7f9fc; box-shadow: 0 1px 0 #e5eaf0; }
         .crm-table-wrap tbody tr { transition: background-color 150ms ease; }
         .crm-table-wrap tbody tr:hover { background: #f5f9ff; }
-        .crm-activity-cell { min-width: 240px; max-width: 360px; }
+        .crm-activity-cell { min-width: 0; }
         .crm-title-clamp, .crm-description-clamp, .crm-remarks-clamp { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; }
         .crm-title-clamp { -webkit-line-clamp: 1; line-clamp: 1; }
         .crm-description-clamp { margin-top: 4px; color: #64748b; -webkit-line-clamp: 2; line-clamp: 2; }

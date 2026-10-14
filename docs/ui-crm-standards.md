@@ -96,3 +96,7 @@ Create a premium modern CRM dashboard experience similar to:
 - Vercel Dashboard
 
 while preserving the existing OpsTracker functionality and data behavior.
+
+## Table Column Sizing
+
+For Technical Assistance and Other Tasks tables, make Activity / Description the primary content column at approximately 35-40% of the table width. Keep Title first, followed by Description and optional Remarks; clamp Description and Remarks to two lines. Reduce the Date, Priority, Duration, and Status columns, while retaining enough width for Location and Assigned values to remain readable. Use fixed column proportions within the existing horizontally scrollable table wrapper so narrow viewports remain usable without compressing the primary content.
