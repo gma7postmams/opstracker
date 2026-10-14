@@ -188,7 +188,7 @@ export default function RecordsView(props: Props) {
   );
 
   return (
-    <div className="page">
+    <div className="page records-page">
       <div className="toolbar">
         <div className="search">
           <Search size={16} aria-hidden="true" />
@@ -260,23 +260,19 @@ export default function RecordsView(props: Props) {
 
       <section className="crm-kpis" aria-label="Record summary">
         <article className="crm-kpi crm-kpi-total">
-          <span className="crm-kpi-icon"><Activity size={17} aria-hidden="true" /></span>
-          <span className="crm-kpi-label">Total Records</span>
+          <span className="crm-kpi-top"><span>Total Records</span><span className="crm-kpi-icon"><Activity size={16} aria-hidden="true" /></span></span>
           <strong>{rows.length}</strong>
         </article>
         <article className="crm-kpi crm-kpi-open">
-          <span className="crm-kpi-icon"><CircleDot size={17} aria-hidden="true" /></span>
-          <span className="crm-kpi-label">Open</span>
+          <span className="crm-kpi-top"><span>Open</span><span className="crm-kpi-icon"><CircleDot size={16} aria-hidden="true" /></span></span>
           <strong>{statusCounts.OPEN ?? 0}</strong>
         </article>
         <article className="crm-kpi crm-kpi-pending">
-          <span className="crm-kpi-icon"><Clock3 size={17} aria-hidden="true" /></span>
-          <span className="crm-kpi-label">Close Pending</span>
+          <span className="crm-kpi-top"><span>Close Pending</span><span className="crm-kpi-icon"><Clock3 size={16} aria-hidden="true" /></span></span>
           <strong>{statusCounts.CLOSE_PENDING ?? 0}</strong>
         </article>
         <article className="crm-kpi crm-kpi-closed">
-          <span className="crm-kpi-icon"><CheckCircle2 size={17} aria-hidden="true" /></span>
-          <span className="crm-kpi-label">Closed</span>
+          <span className="crm-kpi-top"><span>Closed</span><span className="crm-kpi-icon"><CheckCircle2 size={16} aria-hidden="true" /></span></span>
           <strong>{statusCounts.CLOSED ?? 0}</strong>
         </article>
       </section>
@@ -400,23 +396,27 @@ export default function RecordsView(props: Props) {
         />
       )}
       <style jsx>{`
+        .records-page { width: 100%; max-width: none; min-width: 0; margin: 0; padding: 0; }
+        .records-page > .toolbar, .records-page > .filters, .records-page > .crm-kpis, .records-page > .resultline, .records-page > .crm-table-wrap, .records-page > .crm-pagination { width: 100%; min-width: 0; box-sizing: border-box; margin-left: 0; margin-right: 0; }
         .crm-filter-label { display: inline-flex; align-items: center; gap: 5px; }
+        .toolbar { margin-bottom: 12px; }
         .toolbar :global(button) { display: inline-flex; align-items: center; justify-content: center; gap: 7px; transition: transform 180ms ease, box-shadow 180ms ease; }
         .toolbar :global(button:hover:not(:disabled)) { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(27, 47, 72, 0.12); }
         .search { display: flex; align-items: center; gap: 9px; }
         .search :global(svg) { flex: 0 0 auto; color: #64748b; }
-        .crm-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 18px 0; }
-        .crm-kpi { position: relative; display: grid; grid-template-columns: 34px 1fr; grid-template-rows: auto auto; align-items: center; column-gap: 11px; min-height: 88px; padding: 15px 18px; overflow: hidden; border: 1px solid #e5eaf0; border-radius: 10px; background: linear-gradient(145deg, #fff, #f8fafc); box-shadow: 0 3px 12px rgba(31, 48, 68, 0.06); transition: transform 180ms ease, box-shadow 180ms ease; }
-        .crm-kpi::before { position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--kpi-accent); content: ""; }
-        .crm-kpi:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(31, 48, 68, 0.1); }
-        .crm-kpi-icon { grid-row: 1 / span 2; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; color: var(--kpi-accent); background: var(--kpi-tint); }
-        .crm-kpi-label { color: #637083; font-size: 12px; font-weight: 600; }
-        .crm-kpi strong { color: #182536; font-size: 22px; line-height: 1.15; }
+        .filters { margin-bottom: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel); box-shadow: 0 3px 12px rgba(18, 38, 63, 0.04); align-items: end; }
+        .crm-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 12px 0; }
+        .crm-kpi { position: relative; display: flex; flex-direction: column; min-height: 102px; padding: 14px 16px 12px 20px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--border) 70%, var(--muted)); border-radius: 9px; background: var(--panel); box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12); transition: transform 180ms ease, box-shadow 180ms ease; }
+        .crm-kpi::before { position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--kpi-accent); content: ""; }
+        .crm-kpi:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18); }
+        .crm-kpi-top { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 12px; font-weight: 650; }
+        .crm-kpi-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 7px; color: var(--kpi-accent); background: color-mix(in srgb, var(--kpi-accent) 15%, var(--panel)); }
+        .crm-kpi strong { display: block; margin-top: 7px; color: var(--text); font-size: 27px; line-height: 1; }
         .crm-kpi-total { --kpi-accent: #64748b; --kpi-tint: #f1f5f9; }
         .crm-kpi-open { --kpi-accent: #2563eb; --kpi-tint: #eff6ff; }
         .crm-kpi-pending { --kpi-accent: #d97706; --kpi-tint: #fffbeb; }
         .crm-kpi-closed { --kpi-accent: #16a34a; --kpi-tint: #f0fdf4; }
-        .crm-table-wrap { max-height: 70vh; overflow: auto; border: 1px solid #e5eaf0; border-radius: 10px; box-shadow: 0 4px 16px rgba(31, 48, 68, 0.06); }
+        .crm-table-wrap { max-height: 70vh; overflow: auto; padding: 0; border: 1px solid #e5eaf0; border-radius: 10px; box-shadow: 0 4px 16px rgba(31, 48, 68, 0.06); }
         .crm-table-wrap table { width: 100%; min-width: 960px; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
         .crm-col-select { width: 3%; }
         .crm-col-id { width: 8%; }
@@ -429,8 +429,8 @@ export default function RecordsView(props: Props) {
         .crm-col-assigned { width: 9%; }
         .crm-table-wrap thead { position: sticky; top: 0; z-index: 2; }
         .crm-table-wrap thead th { background: #f7f9fc; box-shadow: 0 1px 0 #e5eaf0; }
-        .crm-table-wrap tbody tr { transition: background-color 150ms ease; }
-        .crm-table-wrap tbody tr:hover { background: #f5f9ff; }
+        .crm-table-wrap tbody tr { transition: background-color 180ms ease; }
+        .crm-table-wrap tbody tr:hover { background: color-mix(in srgb, #237a75 12%, var(--panel)); }
         .crm-activity-cell { min-width: 0; }
         .crm-title-clamp, .crm-description-clamp, .crm-remarks-clamp { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; }
         .crm-title-clamp { -webkit-line-clamp: 1; line-clamp: 1; }
@@ -444,7 +444,7 @@ export default function RecordsView(props: Props) {
         .crm-priority-low { color: #475569; border-color: #e2e8f0; background: #f1f5f9; }
         .crm-priority-high { color: #c2410c; border-color: #fed7aa; background: #fff7ed; }
         .crm-priority-critical { color: #b91c1c; border-color: #fecaca; background: #fef2f2; }
-        .crm-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 12px; padding: 10px 12px; border: 1px solid #e5eaf0; border-radius: 9px; background: #fff; color: #64748b; font-size: 12px; }
+        .crm-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 12px; padding: 10px 0; border: 1px solid #e5eaf0; border-radius: 9px; background: #fff; color: #64748b; font-size: 12px; }
         .crm-pagination-total { margin-right: auto; font-weight: 600; }
         .crm-page-size { display: inline-flex; align-items: center; gap: 7px; }
         .crm-page-size select, .crm-page-button { min-height: 32px; padding: 5px 9px; border: 1px solid #dce3eb; border-radius: 6px; background: #fff; color: #344256; }
@@ -453,7 +453,7 @@ export default function RecordsView(props: Props) {
         .crm-page-button:disabled { cursor: not-allowed; opacity: 0.45; }
         @media (max-width: 700px) {
           .crm-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
-          .crm-kpi { min-height: 78px; padding: 11px; }
+          .crm-kpi { min-height: 88px; padding: 11px 12px 11px 16px; }
           .crm-pagination { flex-wrap: wrap; justify-content: flex-start; }
           .crm-pagination-total { flex-basis: 100%; }
         }

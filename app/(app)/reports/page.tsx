@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/components/Toast";
 import { useSession } from "next-auth/react";
+import { Activity, CheckCircle2, CircleDot, Clock3 } from "lucide-react";
 
 
 const formatDate = (date: Date) => {
@@ -249,20 +250,20 @@ const activeFilters =
     <div className="page report-page">
       <style jsx global>{`
         .report-page { color: var(--text); }
-        .report-page .report-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin:0 0 20px; }
+        .report-page .report-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin:0 0 12px; }
         .report-page .report-eyebrow { color:#237a75; font-size:11px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; }
         .report-page .report-heading h1 { margin:4px 0 5px; font-size:26px; line-height:1.2; }
         .report-page .report-subtitle { color:var(--muted); font-size:14px; }
-        .report-page .filters { border:1px solid var(--border); border-radius:10px; padding:16px; background:var(--panel); box-shadow:0 3px 12px rgba(18,38,63,.04); align-items:end; }
+        .report-page .filters { border:1px solid var(--border); border-radius:10px; padding:12px; background:var(--panel); box-shadow:0 3px 12px rgba(18,38,63,.04); align-items:end; }
         .report-page .flabel { font-size:10px; font-weight:750; letter-spacing:.055em; }
         .report-page .report-actions { display:flex; flex-wrap:wrap; gap:8px; align-self:end; }
-        .report-page .report-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); grid-auto-rows:1fr; gap:12px; margin:18px 0 12px; }
-        .report-page .report-kpi { position:relative; display:flex; flex-direction:column; overflow:hidden; min-height:112px; padding:16px 17px 14px 20px; border:1px solid var(--border); border-radius:9px; background:linear-gradient(145deg,var(--panel),rgba(255,255,255,.72)); box-shadow:0 4px 14px rgba(18,38,63,.06); transition:transform .18s ease,box-shadow .18s ease; }
-        .report-page .report-kpi:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(18,38,63,.1); }
+        .report-page .report-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); grid-auto-rows:1fr; gap:12px; margin:12px 0 12px; }
+        .report-page .report-kpi { position:relative; display:flex; flex-direction:column; overflow:hidden; min-height:102px; padding:14px 16px 12px 20px; border:1px solid color-mix(in srgb,var(--border) 70%,var(--muted)); border-radius:9px; background:var(--panel); box-shadow:0 3px 12px rgba(0,0,0,.12); transition:transform .18s ease,box-shadow .18s ease; }
+        .report-page .report-kpi:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.18); }
         .report-page .report-kpi:before { position:absolute; inset:0 auto 0 0; width:4px; content:""; background:var(--kpi-accent); }
         .report-page .report-kpi-top { display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:12px; font-weight:650; }
-        .report-page .report-kpi-icon { display:grid; place-items:center; width:30px; height:30px; border-radius:7px; color:var(--kpi-accent); background:color-mix(in srgb,var(--kpi-accent) 11%,transparent); }
-        .report-page .report-kpi strong { display:block; margin-top:7px; font-size:27px; line-height:1; letter-spacing:0; }
+        .report-page .report-kpi-icon { display:grid; place-items:center; width:30px; height:30px; border-radius:7px; color:var(--kpi-accent); background:color-mix(in srgb,var(--kpi-accent) 15%,var(--panel)); }
+        .report-page .report-kpi strong { display:block; margin-top:7px; color:var(--text); font-size:27px; line-height:1; letter-spacing:0; }
         .report-page .report-kpi small { display:block; margin-top:auto; padding-top:7px; color:var(--muted); font-size:11px; }
         .report-page .report-history { overflow:hidden; border-radius:9px; box-shadow:0 3px 12px rgba(18,38,63,.04); }
         .report-page .report-history .panelhead { padding:17px 18px; border-bottom:1px solid var(--border); }
@@ -272,7 +273,12 @@ const activeFilters =
         .report-page .report-history thead { position:sticky; top:0; z-index:1; }
         .report-page .report-history th { padding:11px 14px; background:var(--hint-bg); color:var(--muted); font-size:10px; font-weight:750; letter-spacing:.045em; text-transform:uppercase; white-space:nowrap; }
         .report-page .report-history td { padding:12px 14px; border-bottom:1px solid var(--border); font-size:13px; }
-        .report-page .report-history tbody tr:hover { background:rgba(35,122,117,.045); }
+        .report-page .report-history tbody tr { transition:background-color .18s ease; }
+        .report-page .report-history tbody tr:hover { background:color-mix(in srgb,#237a75 12%,var(--panel)); }
+        .report-page .report-history .status { display:inline-flex; align-items:center; justify-content:center; min-width:24px; padding:3px 8px; border:1px solid transparent; border-radius:999px; font-size:11px; font-weight:650; }
+        .report-page .report-history .status.open { color:#1d4ed8; border-color:#bfdbfe; background:#eff6ff; }
+        .report-page .report-history .status.pending { color:#b45309; border-color:#fde68a; background:#fffbeb; }
+        .report-page .report-history .status.closed { color:#15803d; border-color:#bbf7d0; background:#f0fdf4; }
         .report-page .report-history tfoot td { background:var(--hint-bg); }
         .report-page .email-preview-frame { display:block; width:100%; height:70vh; min-height:520px; border:1px solid #dfe5eb; }
         @media(max-width:760px) { .report-page .report-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .report-page .report-heading { display:block; } .report-page .report-actions { margin-top:12px; } }
@@ -359,20 +365,20 @@ const activeFilters =
       {!isReportRangeValid ? <div className="empty">Choose a valid From and To date to run this report.</div> : !d ? <div className="muted">Loading…</div> : (
         <>
           <div className="report-kpis">
-            <div className="report-kpi" style={{ "--kpi-accent": "#237a75" } as React.CSSProperties}>
-              <div className="report-kpi-top"><span>Total records</span><span className="report-kpi-icon">◎</span></div>
+            <div className="report-kpi" style={{ "--kpi-accent": "#64748b" } as React.CSSProperties}>
+              <div className="report-kpi-top"><span>Total records</span><span className="report-kpi-icon"><Activity size={16} aria-hidden="true" /></span></div>
               <strong>{totalRecords}</strong><small>{s.assistance} assistance · {s.tasks} other tasks</small>
             </div>
-            <div className="report-kpi" style={{ "--kpi-accent": "#3478c8" } as React.CSSProperties}>
-              <div className="report-kpi-top"><span>Open</span><span className="report-kpi-icon">◷</span></div>
+            <div className="report-kpi" style={{ "--kpi-accent": "#2563eb" } as React.CSSProperties}>
+              <div className="report-kpi-top"><span>Open</span><span className="report-kpi-icon"><CircleDot size={16} aria-hidden="true" /></span></div>
               <strong>{s.open}</strong><small>Awaiting resolution</small>
             </div>
-            <div className="report-kpi" style={{ "--kpi-accent": "#c38321" } as React.CSSProperties}>
-              <div className="report-kpi-top"><span>Close pending</span><span className="report-kpi-icon">◌</span></div>
+            <div className="report-kpi" style={{ "--kpi-accent": "#d97706" } as React.CSSProperties}>
+              <div className="report-kpi-top"><span>Close pending</span><span className="report-kpi-icon"><Clock3 size={16} aria-hidden="true" /></span></div>
               <strong>{s.pending}</strong><small>Pending completion review</small>
             </div>
-            <div className="report-kpi" style={{ "--kpi-accent": "#34845e" } as React.CSSProperties}>
-              <div className="report-kpi-top"><span>Closed</span><span className="report-kpi-icon">✓</span></div>
+            <div className="report-kpi" style={{ "--kpi-accent": "#16a34a" } as React.CSSProperties}>
+              <div className="report-kpi-top"><span>Closed</span><span className="report-kpi-icon"><CheckCircle2 size={16} aria-hidden="true" /></span></div>
               <strong>{s.closed}</strong><small>{s.avgPerDay} average completed per day</small>
             </div>
           </div>
