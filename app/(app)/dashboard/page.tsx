@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { priorityLabel } from "@/lib/recordTypes";
 import { useSession } from "next-auth/react";
+import { Activity, CheckCircle2, ClipboardList, CircleDot, Clock3, Wrench } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 const PALETTE = ["#3b82f6", "#7f56d9", "#06aed4", "#f79009", "#12b76a", "#f04438", "#ee46bc"];
 
@@ -69,10 +71,13 @@ export default function Dashboard() {
 const quote =
   QUOTES[new Date().getDate() % QUOTES.length];
 
-  const card = (n: number, label: string, tone: string, icon: string) => (
-    <div className={`card ${tone}`} key={label}>
-      <div className={`ico i-${tone}`}>{icon}</div>
-      <div><strong>{n}</strong><span>{label}</span></div>
+  const card = (n: number, label: string, tone: string, Icon: LucideIcon) => (
+    <div className={`dashboard-kpi ${tone}`} key={label}>
+      <div className="dashboard-kpi-head">
+        <span className="dashboard-kpi-icon"><Icon size={16} aria-hidden="true" /></span>
+        <span className="dashboard-kpi-label">{label}</span>
+      </div>
+      <strong className="dashboard-kpi-value">{n}</strong>
     </div>
   );
 
@@ -101,14 +106,23 @@ const quote =
         </p>
       </div>
 
-      <div className="cards">
-        {card(d.assistance.total, "Technical Assistance", "cb", "◉")}
-        {card(d.tasks.total, "Other Tasks", "cp", "☷")}
-        {card(total, "Total Activity", "cc", "∑")}
-        {card(open, "Open", "co", "!")}
-        {card(pending, "Close Pending", "cy", "◑")}
-        {card(closed, "Closed", "cg", "✓")}
-	{card(d.overdue, "Overdue", d.overdue > 0 ? "cr" : "cg", "⚠")}
+      <div className="dashboard-summaries">
+        <section className="dashboard-summary" aria-labelledby="activity-summary-title">
+          <h3 id="activity-summary-title">Activity Summary</h3>
+          <div className="dashboard-kpis">
+            {card(total, "Total Records", "cb", Activity)}
+            {card(d.assistance.total, "Technical Assistance", "cc", Wrench)}
+            {card(d.tasks.total, "Other Tasks", "cy", ClipboardList)}
+          </div>
+        </section>
+        <section className="dashboard-summary" aria-labelledby="status-summary-title">
+          <h3 id="status-summary-title">Status Summary</h3>
+          <div className="dashboard-kpis">
+            {card(open, "Open", "cb", CircleDot)}
+            {card(pending, "Close Pending", "cy", Clock3)}
+            {card(closed, "Closed", "cg", CheckCircle2)}
+          </div>
+        </section>
       </div>
 
       <section className="panel spaced">

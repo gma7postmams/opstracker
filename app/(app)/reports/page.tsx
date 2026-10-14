@@ -30,7 +30,7 @@ function Tally({ title, note, rows, accent, days }: {
     { total: 0, closed: 0, open: 0, pending: 0 }
   );
   return (
-    <div className="panel spaced" style={{ borderTop: `3px solid ${accent}` }}>
+    <div className="panel spaced report-history" style={{ borderTop: `3px solid ${accent}` }}>
       <div className="panelhead">
         <div><h3>{title}</h3><span className="muted">{note}</span></div>
         <span className="chip">{sum.total} record{sum.total === 1 ? "" : "s"}</span>
@@ -211,9 +211,56 @@ const activeFilters =
   (isAdmin && f.userId !== "all" ? 1 : 0);
 
   const s = d?.summary;
+  const totalRecords = (s?.assistance ?? 0) + (s?.tasks ?? 0);
 
   return (
-    <div className="page">
+    <div className="page report-page">
+      <style jsx global>{`
+        .report-page { color: var(--text); }
+        .report-page .report-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin:0 0 20px; }
+        .report-page .report-eyebrow { color:#237a75; font-size:11px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; }
+        .report-page .report-heading h1 { margin:4px 0 5px; font-size:26px; line-height:1.2; }
+        .report-page .report-subtitle { color:var(--muted); font-size:14px; }
+        .report-page .filters { border:1px solid var(--border); border-radius:10px; padding:16px; background:var(--panel); box-shadow:0 3px 12px rgba(18,38,63,.04); align-items:end; }
+        .report-page .flabel { font-size:10px; font-weight:750; letter-spacing:.055em; }
+        .report-page .report-actions { display:flex; flex-wrap:wrap; gap:8px; align-self:end; }
+        .report-page .report-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); grid-auto-rows:1fr; gap:12px; margin:18px 0 12px; }
+        .report-page .report-kpi { position:relative; display:flex; flex-direction:column; overflow:hidden; min-height:112px; padding:16px 17px 14px 20px; border:1px solid var(--border); border-radius:9px; background:linear-gradient(145deg,var(--panel),rgba(255,255,255,.72)); box-shadow:0 4px 14px rgba(18,38,63,.06); transition:transform .18s ease,box-shadow .18s ease; }
+        .report-page .report-kpi:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(18,38,63,.1); }
+        .report-page .report-kpi:before { position:absolute; inset:0 auto 0 0; width:4px; content:""; background:var(--kpi-accent); }
+        .report-page .report-kpi-top { display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:12px; font-weight:650; }
+        .report-page .report-kpi-icon { display:grid; place-items:center; width:30px; height:30px; border-radius:7px; color:var(--kpi-accent); background:color-mix(in srgb,var(--kpi-accent) 11%,transparent); }
+        .report-page .report-kpi strong { display:block; margin-top:7px; font-size:27px; line-height:1; letter-spacing:0; }
+        .report-page .report-kpi small { display:block; margin-top:auto; padding-top:7px; color:var(--muted); font-size:11px; }
+        .report-page .report-range { display:flex; align-items:center; gap:7px; margin:14px 0; font-size:12px; }
+        .report-page .report-history { overflow:hidden; border-radius:9px; box-shadow:0 3px 12px rgba(18,38,63,.04); }
+        .report-page .report-history .panelhead { padding:17px 18px; border-bottom:1px solid var(--border); }
+        .report-page .report-history .panelhead h3 { margin:0 0 3px; font-size:15px; }
+        .report-page .report-history .table { overflow:auto; }
+        .report-page .report-history table { width:100%; border-collapse:collapse; }
+        .report-page .report-history thead { position:sticky; top:0; z-index:1; }
+        .report-page .report-history th { padding:11px 14px; background:var(--hint-bg); color:var(--muted); font-size:10px; font-weight:750; letter-spacing:.045em; text-transform:uppercase; white-space:nowrap; }
+        .report-page .report-history td { padding:12px 14px; border-bottom:1px solid var(--border); font-size:13px; }
+        .report-page .report-history tbody tr:hover { background:rgba(35,122,117,.045); }
+        .report-page .report-history tfoot td { background:var(--hint-bg); }
+        .report-page .email-preview-frame { display:block; width:100%; height:70vh; min-height:520px; border:1px solid #dfe5eb; }
+        @media(max-width:760px) { .report-page .report-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .report-page .report-heading { display:block; } .report-page .report-actions { margin-top:12px; } }
+        @media(max-width:480px) { .report-page .report-heading h1 { font-size:22px; } .report-page .report-kpi { padding:13px 12px 12px 15px; } .report-page .report-kpi strong { font-size:24px; } }
+      `}</style>
+      <div className="report-heading">
+        <div>
+          <div className="report-eyebrow">Operations intelligence</div>
+          <h1>Reports</h1>
+          <div className="report-subtitle">Track workload, resolution, and team activity across your selected period.</div>
+        </div>
+        <div className="report-actions">
+          <button className="secondary" onClick={exportExcel} disabled={!d}>Export Excel</button>
+          <button className="primary" onClick={previewEmail} disabled={!d || sendingPreview}>
+            {sendingPreview ? "Generating preview..." : "Preview email"}
+          </button>
+        </div>
+      </div>
+
       <div className="filters">
         <label className="flabel">FROM<input type="date" value={f.from} onChange={(e) => setF({ ...f, from: e.target.value })} /></label>
         <label className="flabel">TO<input type="date" value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })} /></label>
@@ -268,39 +315,31 @@ const activeFilters =
           </button>
         )}
 
-<div className="btngroup">
-
-<button className="secondary" onClick={exportExcel} disabled={!d}>
-  Export Excel
-</button>
-
-<button
-  className="primary"
-  onClick={previewEmail}
-  disabled={!d || sendingPreview}
->
-  {sendingPreview ? "Generating..." : "Preview Email"}
-</button>
-
-
-</div>
-
-
       </div>
 
       {!d ? <div className="muted">Loading…</div> : (
         <>
-          <div className="cards">
-            <div className="card cb"><div className="ico i-cb">◉</div><div><strong>{s.assistance}</strong><span>Technical Assistance</span></div></div>
-            <div className="card cp"><div className="ico i-cp">☷</div><div><strong>{s.tasks}</strong><span>Other Tasks</span></div></div>
-            <div className="card cg"><div className="ico i-cg">✓</div><div><strong>{s.closed}</strong><span>Completed</span></div></div>
-            <div className="card cy"><div className="ico i-cy">◑</div><div><strong>{s.pending}</strong><span>Close Pending</span></div></div>
-            <div className="card co"><div className="ico i-co">!</div><div><strong>{s.open}</strong><span>Open</span></div></div>
-            <div className="card cc"><div className="ico i-cc">↗</div><div><strong>{s.avgPerDay}</strong><span>Avg. completed / day</span></div></div>
+          <div className="report-kpis">
+            <div className="report-kpi" style={{ "--kpi-accent": "#237a75" } as React.CSSProperties}>
+              <div className="report-kpi-top"><span>Total records</span><span className="report-kpi-icon">◎</span></div>
+              <strong>{totalRecords}</strong><small>{s.assistance} assistance · {s.tasks} other tasks</small>
+            </div>
+            <div className="report-kpi" style={{ "--kpi-accent": "#3478c8" } as React.CSSProperties}>
+              <div className="report-kpi-top"><span>Open</span><span className="report-kpi-icon">◷</span></div>
+              <strong>{s.open}</strong><small>Awaiting resolution</small>
+            </div>
+            <div className="report-kpi" style={{ "--kpi-accent": "#c38321" } as React.CSSProperties}>
+              <div className="report-kpi-top"><span>Close pending</span><span className="report-kpi-icon">◌</span></div>
+              <strong>{s.pending}</strong><small>Pending completion review</small>
+            </div>
+            <div className="report-kpi" style={{ "--kpi-accent": "#34845e" } as React.CSSProperties}>
+              <div className="report-kpi-top"><span>Closed</span><span className="report-kpi-icon">✓</span></div>
+              <strong>{s.closed}</strong><small>{s.avgPerDay} average completed per day</small>
+            </div>
           </div>
 
-          <div className="muted rangeline">
-            {d.range.from} to {d.range.to} · {d.range.days} calendar day{d.range.days === 1 ? "" : "s"} · tallied by Assigned To
+          <div className="muted report-range">
+            <span aria-hidden="true">◷</span>{d.range.from} to {d.range.to}<span>·</span>{d.range.days} calendar day{d.range.days === 1 ? "" : "s"}<span>·</span> Tallied by Assigned To
           </div>
 
           {d.tallies.assistance && (
@@ -335,11 +374,11 @@ const activeFilters =
       background: "var(--panel)",
       color: "var(--text)",
       width: "95%",
-      maxWidth: "1400px",
-      maxHeight: "90vh",
+      maxWidth: "1000px",
+      maxHeight: "94vh",
       overflow: "auto",
-      borderRadius: "12px",
-      padding: "24px",
+      borderRadius: "8px",
+      padding: "12px",
       boxShadow: "0 10px 25px rgba(0,0,0,0.25)",
     }}
   >
@@ -393,29 +432,13 @@ const activeFilters =
     }}
   />
 
-        <div
-          className="email-preview-content"
-          style={{
-            background: "white",
-            color: "#111827",
-            padding: "24px",
-            borderRadius: "10px",
-            boxShadow: "0 1px 3px rgba(0,0,0,.1)",
-            overflowX: "auto",
-            textAlign: "center",
-          }}
-        >
-
-        <div
-          style={{
-            display: "inline-block",
-            textAlign: "left",
-          }}
-          dangerouslySetInnerHTML={{
-            __html: preview.html,
-          }}
+        <iframe
+          title="Email report preview"
+          srcDoc={preview.html}
+          className="email-preview-frame email-preview-content"
+          sandbox=""
+          style={{ border: "1px solid #dfe5eb" }}
         />
-      </div>
 
 
       <div
