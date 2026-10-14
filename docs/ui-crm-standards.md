@@ -97,6 +97,12 @@ Create a premium modern CRM dashboard experience similar to:
 
 while preserving the existing OpsTracker functionality and data behavior.
 
+## Email Activity Summary
+
+Email report Activity Summary uses exactly three compact KPI cards, ordered Technical Assistance, Other Tasks, and Total Records. Keep the cards approximately 160-180px wide, equal in width and height, compact, centered, and naturally spaced within the email width rather than stretching them across the row. Use white rounded cards with a subtle glossy appearance, a subtle shadow, and a colored left accent: cyan for Technical Assistance, amber for Other Tasks, and blue for Total Records. Place each icon to the left of its label and center the value below.
+
+Keep the email Status Summary with three equally sized cards ordered Open, Close Pending, and Closed. Use red for Open, amber for Close Pending, and green for Closed. Preserve the same compact rounded CRM glossy appearance as the Activity Summary cards. Use Outlook-compatible presentation tables and inline styles, with graceful fallback where email clients do not support rounded corners or shadows; do not make the cards full-width table cells.
+
 ## Table Column Sizing
 
 For Technical Assistance and Other Tasks tables, make Activity / Description the primary content column at approximately 35-40% of the table width. Keep Title first, followed by Description and optional Remarks; clamp Description and Remarks to two lines. Reduce the Date, Priority, Duration, and Status columns, while retaining enough width for Location and Assigned values to remain readable. Use fixed column proportions within the existing horizontally scrollable table wrapper so narrow viewports remain usable without compressing the primary content.

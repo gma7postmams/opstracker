@@ -106,424 +106,126 @@ export async function POST(req: NextRequest) {
       ? `MAMS_Support_Activity_Report_${from}.xlsx`
       : `MAMS_Support_Activity_Report_${from}_to_${to}.xlsx`;
 
-const assistanceRows = assistance
-  .map(
-    (r) => `
+const escapeHtml = (value: unknown) =>
+  String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character]!);
+
+const cellStyle = "padding:9px 8px;border-bottom:1px solid #e3e8ee;color:#273444;font-family:Arial,sans-serif;font-size:12px;line-height:17px;word-break:break-word;";
+const tableStyle = "width:100%;border-collapse:collapse;table-layout:fixed;";
+const headerCellStyle = "padding:10px 8px;background:#edf3f4;border-bottom:1px solid #d7e0e5;color:#435564;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;letter-spacing:.04em;text-align:left;white-space:nowrap;";
+const tableHead = (labels: string[]) => `<tr>${labels.map((label) => `<th align="left" style="${headerCellStyle}">${label}</th>`).join("")}</tr>`;
+const assistanceRows = assistance.length
+  ? assistance.map((row) => `
       <tr>
+        <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.refNo)}</td>
+        <td style="${cellStyle}">${escapeHtml(row.clientName)}</td>
+        <td style="${cellStyle}">${escapeHtml(row.problem)}</td>
+        <td style="${cellStyle}text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.status)}</td>
+        <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.assigned)}</td>
+      </tr>`).join("")
+  : `<tr><td colspan="5" style="${cellStyle}color:#6b7785;text-align:center;padding:18px;">No technical assistance records in this period.</td></tr>`;
 
-        <td style="
-          padding:8px;
-          border:1px solid #ddd;
-          white-space:nowrap;
-          text-align:left;
-        ">
-          ${r.refNo}
-        </td>
-
-        <td style="
-          padding:8px;
-          border:1px solid #ddd;
-          white-space:nowrap;
-          text-align:left;
-        ">
-          ${r.clientName}
-        </td>
-
-	<td style="
-	  padding:8px;
-	  border:1px solid #ddd;
-	  text-align:left;
-	  word-break:break-word;
-	  overflow-wrap:break-word;
-	">
-	  ${r.problem}
-	</td>
-
-  <td style="
-    padding:8px;
-    border:1px solid #ddd;
-    white-space:nowrap;
-    text-align:center;
-  ">
-    ${r.status}
-  </td>
-
-  <td style="
-    padding:8px;
-    border:1px solid #ddd;
-    text-align:center;
-  ">
-    ${r.assigned}
-  </td>
-
-      </tr>
-    `
-  )
-  .join("");
-
-
-
-const taskRows = tasks
-  .map(
-    (r) => `
+const taskRows = tasks.length
+  ? tasks.map((row) => `
       <tr>
-
-        <td style="
-          padding:8px;
-          border:1px solid #ddd;
-          white-space:nowrap;
-          text-align:left;
-        ">
-          ${r.refNo}
+        <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.refNo)}</td>
+        <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.activityType)}</td>
+        <td style="${cellStyle}vertical-align:top;">
+          <div>${escapeHtml(row.description)}</div>
+          ${row.remarks ? `<div style="margin-top:6px;padding:6px 8px;background-color:#f3f6f7;border-left:2px solid #bac8ce;color:#6b7785;font-family:Arial,sans-serif;font-size:10px;line-height:14px;word-break:break-word;word-wrap:break-word;overflow-wrap:break-word;"><strong>Remarks:</strong><br>${escapeHtml(row.remarks)}</div>` : ""}
         </td>
+        <td style="${cellStyle}text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.status === "CLOSE_PENDING" ? "Close pending" : row.status)}</td>
+        <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.assigned)}</td>
+      </tr>`).join("")
+  : `<tr><td colspan="5" style="${cellStyle}color:#6b7785;text-align:center;padding:18px;">No other task records in this period.</td></tr>`;
 
-        <td style="
-          padding:8px;
-          border:1px solid #ddd;
-          white-space:nowrap;
-          text-align:left;
-        ">
-          ${r.activityType}
-        </td>
-
-        <td style="
-          padding:8px;
-          border:1px solid #ddd;
-          text-align:left;
-        ">
-          ${r.description}
-        </td>
-
-        <td style="
-          padding:8px;
-          border:1px solid #ddd;
-          white-space:nowrap;
-          text-align:center;
-        ">
-          ${r.status}
-        </td>
-
-        <td style="
-          padding:8px;
-          border:1px solid #ddd;
-          white-space:nowrap;
-          text-align:center;
-        ">
-          ${r.assigned}
-        </td>
-
-      </tr>
-    `
-  )
-  .join("");
-
-  const generatedAt = new Date().toLocaleString("en-PH", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });  
+const generatedAt = new Date().toLocaleString("en-PH", {
+  year: "numeric",
+  month: "short",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+});
 
 const reportingPeriod =
   from === to
     ? `As of ${from}`
     : `${from} to ${to}`;
-  
+
+const totalRecords = assistance.length + tasks.length;
+const allRows = [...assistance, ...tasks];
+const statusCounts = {
+  open: allRows.filter((row) => row.status === "OPEN").length,
+  pending: allRows.filter((row) => row.status === "CLOSE_PENDING").length,
+  closed: allRows.filter((row) => row.status === "CLOSED").length,
+};
+const summaryCard = (label: string, value: number, color: string, icon: string) => `
+  <td class="summary-cell" width="33.33%" align="center" valign="middle" style="width:33.33%;padding:4px 3px;vertical-align:middle;">
+    <table class="summary-card" role="presentation" width="170" height="78" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:170px;height:78px;table-layout:fixed;border:1px solid #e3e8ee;border-left:4px solid ${color};border-radius:7px;background-color:#ffffff;background-image:linear-gradient(180deg,#ffffff 0%,#f8fafb 100%);box-shadow:0 2px 7px rgba(32,53,67,.10);">
+      <tr>
+        <td height="36" align="center" valign="middle" style="height:36px;padding:5px 5px 0;vertical-align:middle;">
+          <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+            <tr>
+              <td width="18" valign="middle" style="width:18px;padding:0 4px 0 0;color:${color};font-family:'Segoe UI Symbol',Arial,sans-serif;font-size:12px;font-weight:bold;line-height:15px;vertical-align:middle;"><span aria-hidden="true">${icon}</span></td>
+              <td valign="middle" style="padding:0;color:#536575;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;line-height:13px;vertical-align:middle;">${label}</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr><td height="34" align="center" valign="middle" style="height:34px;padding:0 7px 5px;color:${color};font-family:Arial,sans-serif;font-size:20px;font-weight:bold;line-height:24px;text-align:center;vertical-align:middle;">${value}</td></tr>
+    </table>
+  </td>`;
+
+const emailWidth = 900;
+
 const emailHtml = `
-  <table
-  width="100%"
-  cellpadding="0"
-  cellspacing="0"
-  border="0"
-  style="
-  background:#f3f4f6;
-  margin:0;
-  padding:20px 0;
-  "
-  >
-
-  <tr>
-  <td align="center">
-   
-  <table
-  width="1100"
-  cellpadding="0"
-  cellspacing="0"
-  border="0"
-  style="
-  background:#ffffff;
-  font-family:Segoe UI,Arial,sans-serif;
-  border-collapse:collapse;
-  "
-  >
-  <tr>
-  <td style="padding:24px;">
-
-    <table
-      width="100%"
-      cellpadding="0"
-      cellspacing="0"
-      border="0"
-      style="
-        background:#2563eb;
-        color:white;
-        margin-bottom:20px;
-        border-radius:10px;
-      "
-    >
-
-    <tr>
-      <td style="padding:16px;border-radius:10px;">
-        <div
-          style="
-            font-size:28px;
-            font-weight:bold;
-            margin-bottom:8px;
-          "
-        >
-          MAMS Support Activity Report
-        </div>
-
-        <div style="font-size:14px;">
-          Prepared By: ${actor.name}
-        </div>
-
-        <div style="font-size:14px;">
-          Reporting Period: ${reportingPeriod}
-        </div>
-
-        <div style="
-          font-size:13px;
-          margin-top:4px;
-          color:rgba(255,255,255,0.85);
-        ">
-          Generated: ${generatedAt}
-        </div>
-        
-      </td>
-    </tr>
+<!doctype html>
+<html lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>MAMS Support Activity Report</title><style type="text/css">@media only screen and (max-width:600px){.summary-card{width:100% !important;max-width:100% !important}.summary-cell{padding:4px 2px !important}}</style></head>
+<body style="margin:0;padding:0;background-color:#f1f4f5;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f1f4f5" style="width:100%;background-color:#f1f4f5;border-collapse:collapse;">
+    <tr><td align="center" style="padding:20px 10px;">
+      <table role="presentation" width="${emailWidth}" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:100%;max-width:${emailWidth}px;background-color:#ffffff;border-collapse:collapse;font-family:Arial,sans-serif;">
+        <tr><td bgcolor="#165d59" style="padding:24px 22px;background-color:#165d59;color:#ffffff;">
+          <div style="font-family:Arial,sans-serif;font-size:23px;line-height:29px;font-weight:bold;">MAMS Support Activity Report</div>
+          <div style="padding-top:9px;font-family:Arial,sans-serif;font-size:13px;line-height:20px;color:#e2f1ef;">Reporting period: ${escapeHtml(reportingPeriod)}</div>
+          <div style="font-family:Arial,sans-serif;font-size:12px;line-height:19px;color:#e2f1ef;">Prepared by ${escapeHtml(actor.name)} &nbsp;|&nbsp; Generated ${escapeHtml(generatedAt)}</div>
+        </td></tr>
+        <tr><td style="padding:19px 16px 4px;">
+          ${(activity !== "all" || status !== "all") ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;"><tr><td style="padding:10px 12px;background-color:#f2f7f7;border-left:3px solid #59a59d;color:#435564;font-family:Arial,sans-serif;font-size:12px;line-height:19px;">${activity !== "all" ? `<strong>Activity:</strong> ${escapeHtml(activity)} &nbsp;&nbsp;` : ""}${status !== "all" ? `<strong>Status:</strong> ${escapeHtml(status)}` : ""}</td></tr></table>` : ""}
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed;">
+            <tr><td colspan="3" style="padding:10px 5px 4px;color:#263947;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Activity Summary</td></tr>
+            <tr>${summaryCard("Technical Assistance", assistance.length, "#0786a3", "&#8984;")}${summaryCard("Other Tasks", tasks.length, "#b77914", "&#9776;")}${summaryCard("Total Records", totalRecords, "#2563a8", "&#9638;")}</tr>
+            <tr><td colspan="3" style="padding:10px 5px 4px;color:#263947;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Status Summary</td></tr>
+            <tr>${summaryCard("Open", statusCounts.open, "#c74646", "&#9675;")}${summaryCard("Close Pending", statusCounts.pending, "#b77914", "&#9684;")}${summaryCard("Closed", statusCounts.closed, "#34845e", "&#10003;")}</tr>
+          </table>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${tableStyle}margin-top:22px;">
+            <colgroup><col width="13%"><col width="22%"><col width="38%"><col width="13%"><col width="14%"></colgroup>
+            <tr><td colspan="5" style="padding:0 0 9px;color:#165d59;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Technical assistance details</td></tr>
+            ${tableHead(["Ref No", "Client", "Problem", "Status", "Assigned"])}
+            ${assistanceRows}
+          </table>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${tableStyle}margin-top:22px;">
+            <colgroup><col width="13%"><col width="18%"><col width="39%"><col width="14%"><col width="16%"></colgroup>
+            <tr><td colspan="5" style="padding:0 0 9px;color:#165d59;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Other task details</td></tr>
+            ${tableHead(["Ref No", "Activity type", "Description", "Status", "Assigned"])}
+            ${taskRows}
+          </table>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin-top:22px;border-top:1px solid #e3e8ee;border-collapse:collapse;">
+            <tr><td style="padding:14px 0 4px;color:#4d5c68;font-family:Arial,sans-serif;font-size:12px;line-height:19px;">The detailed Excel workbook is attached as <strong>${escapeHtml(filename)}</strong>.</td></tr>
+            <tr><td style="padding:0 0 15px;color:#78848e;font-family:Arial,sans-serif;font-size:11px;line-height:17px;">Generated automatically by MAMS Support Operations Tracker.</td></tr>
+          </table>
+        </td></tr>
+      </table>
+    </td></tr>
   </table>
-
-  <p>
-    ${activity !== "all"
-      ? `<strong>Activity Filter:</strong> ${activity}<br>`
-      : ""}
-
-    ${status !== "all"
-      ? `<strong>Status Filter:</strong> ${status}<br>`
-      : ""}  
-  </p>
-
-  <h3 style="color:#2563eb;margin-top:20px;margin-bottom:10px;">
-    Activity Summary
-  </h3>
-
-  <table
-    width="450"
-    cellpadding="0"
-    cellspacing="0"
-    border="0"
-  style="
-    width:450px;
-    border-collapse:separate;
-    border-spacing:0;
-    margin-bottom:20px;
-    border-radius:10px;
-    overflow:hidden;
-  "
-  >
-
-    <tr>
-      <th style="
-        padding:10px;
-        border:1px solid #ddd;
-        background:#2563eb;
-        color:white;
-        text-align:left;
-      ">
-        Metric
-      </th>
-
-      <th style="
-        padding:10px;
-        border:1px solid #ddd;
-        background:#2563eb;
-        color:white;
-        text-align:right;
-      ">
-        Value
-      </th>
-    </tr>
-
-    <tr>
-      <td style="padding:10px;border:1px solid #ddd">
-        Technical Assistance
-      </td>
-
-      <td style="padding:10px;border:1px solid #ddd;text-align:right">
-        ${assistance.length}
-      </td>
-      
-    </tr>
-
-    <tr>
-      <td style="padding:10px;border:1px solid #ddd">
-        Other Tasks
-      </td>
-
-      <td style="padding:10px;border:1px solid #ddd;text-align:right">
-        ${tasks.length}
-      </td>
-
-    </tr>
-
-    <tr>
-
-      <td style="padding:10px;border:1px solid #ddd;font-weight:bold">
-        Total Records
-      </td>
-
-      <td style="
-        padding:10px;
-        border:1px solid #ddd;
-        text-align:right;
-        font-weight:bold;
-      ">
-        ${assistance.length + tasks.length}
-      </td>
-
-    </tr>
-
-  </table>
-
-  <h3 style="
-    color:#2563eb;
-    margin-top:30px;
-    margin-bottom:12px;
-  ">
-    Technical Assistance Details
-  </h3>
-
-  <table
-    style="
-      border-collapse:separate;
-      border-spacing:0;
-      width:100%;
-      table-layout:fixed;
-      margin-bottom:20px;
-      border-radius:10px;
-      overflow:hidden;
-    "
-  >
-
-  <tr>
-    <th style="padding:8px;border:1px solid #ddd;background:#2563eb;color:white;width:140px;">Ref No</th>
-    <th style="padding:8px;border:1px solid #ddd;background:#2563eb;color:white;width:140px;">Client</th>
-    <th style="padding:8px;border:1px solid #ddd;background:#2563eb;color:white;">Problem</th>
-    <th style="
-      padding:8px;
-      border:1px solid #ddd;
-      background:#2563eb;
-      color:white;
-      width:120px;
-      text-align:center;
-    ">
-      Status
-    </th>
-
-    <th style="
-      padding:8px;
-      border:1px solid #ddd;
-      background:#2563eb;
-      color:white;
-      width:220px;
-      text-align:center;
-    ">
-      Assigned
-    </th>
-  </tr>
-
-  ${assistanceRows}
-</table>
-
-  <h3 style="
-    color:#7f56d9;
-    margin-top:30px;
-    margin-bottom:12px;
-  ">
-    Other Tasks Details
-  </h3>
-
-  <table
-    style="
-      border-collapse:separate;
-      border-spacing:0;
-      width:100%;
-      table-layout:auto;
-      margin-bottom:20px;
-      border-radius:10px;
-      overflow:hidden;
-    "
-  >
-
-  <tr>
-	<th style="padding:8px;border:1px solid #ddd;background:#7f56d9;color:white;width:140px;">Ref No</th>
-	<th style="padding:8px;border:1px solid #ddd;background:#7f56d9;color:white;width:140px;white-space:nowrap;">Activity Type</th>
-	<th style="padding:8px;border:1px solid #ddd;background:#7f56d9;color:white;">Description</th>
-    <th style="
-      padding:8px;
-      border:1px solid #ddd;
-      background:#7f56d9;
-      color:white;
-      width:120px;
-      text-align:center;
-    ">
-      Status
-    </th>
-
-    <th style="
-      padding:8px;
-      border:1px solid #ddd;
-      background:#7f56d9;
-      color:white;
-      width:220px;
-      text-align:center;
-    ">
-      Assigned
-    </th>
-  </tr>
-
-  ${taskRows}
-</table>
-
-
-  <p>
-    The detailed Excel workbook is attached to this email.
-  </p>
-
-  <p>
-    File:
-    <strong>${filename}</strong>
-  </p>
-
-  <hr>
-
-  <p style="
-    color:#666;
-    font-size:12px;
-  ">
-    Generated automatically by MAMS Support Operations Tracker.
-  </p>
-
-  </td>
-  </tr>
-  </table>
-
-  </td>
-  </tr>
-  </table>
-  `;
+</body>
+</html>`;
 
 if (preview) {
   return NextResponse.json({
