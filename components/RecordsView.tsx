@@ -36,6 +36,32 @@ interface Props {
 
 const STATUSES = ["OPEN", "CLOSE_PENDING", "CLOSED"];
 const emptyFilters = { q: "", status: "all", location: "all", shift: "all", from: "", to: "" };
+type Period = "Today" | "This Week" | "This Month" | "All Records" | "Custom";
+
+function localDateValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function periodDates(period: Exclude<Period, "Custom">) {
+  const today = new Date();
+  const to = localDateValue(today);
+
+  if (period === "All Records") return { from: "", to: "" };
+  if (period === "Today") return { from: to, to };
+
+  const from = new Date(today);
+  if (period === "This Week") {
+    const daysSinceMonday = (today.getDay() + 6) % 7;
+    from.setDate(today.getDate() - daysSinceMonday);
+  } else {
+    from.setDate(1);
+  }
+
+  return { from: localDateValue(from), to };
+}
 
 export default function RecordsView(props: Props) {
   const { type, label, singular, subjectHeader, subjectField, bodyField } = props;
@@ -43,7 +69,8 @@ export default function RecordsView(props: Props) {
   const isAdmin = session?.user.role === "ADMIN";
   const toast = useToast();
 
-  const [filters, setFilters] = useState(emptyFilters);
+  const [period, setPeriod] = useState<Period>("Today");
+  const [filters, setFilters] = useState(() => ({ ...emptyFilters, ...periodDates("Today") }));
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -77,9 +104,10 @@ export default function RecordsView(props: Props) {
   const activeCount = useMemo(
     () =>
       (Object.keys(emptyFilters) as (keyof typeof emptyFilters)[])
-        .filter((k) => filters[k] && filters[k] !== "all").length +
+        .filter((k) => k !== "from" && k !== "to" && filters[k] && filters[k] !== "all").length +
+      (period !== "Today" ? 1 : 0) +
       (userFilter !== defaultUserFilter ? 1 : 0),
-    [filters, userFilter, defaultUserFilter]
+    [filters, period, userFilter, defaultUserFilter]
   );
 
   const load = useCallback(async () => {
@@ -111,8 +139,18 @@ export default function RecordsView(props: Props) {
   const clearFilters = () => {
     setSelected(new Set());
     setPage(1);
-    setFilters(emptyFilters);
+    setPeriod("Today");
+    setFilters({ ...emptyFilters, ...periodDates("Today") });
     setUserFilter(defaultUserFilter);
+  };
+
+  const changePeriod = (nextPeriod: Period) => {
+    setSelected(new Set());
+    setPage(1);
+    setPeriod(nextPeriod);
+    if (nextPeriod !== "Custom") {
+      setFilters((current) => ({ ...current, ...periodDates(nextPeriod) }));
+    }
   };
 
   const toggleSort = (key: string) => {
@@ -204,7 +242,15 @@ export default function RecordsView(props: Props) {
       </div>
 
       <div className="filters">
-
+        <label className="flabel"><span className="crm-filter-label"><CalendarDays size={14} aria-hidden="true" /> PERIOD</span>
+          <select value={period} onChange={(e) => changePeriod(e.target.value as Period)}>
+            <option>Today</option>
+            <option>This Week</option>
+            <option>This Month</option>
+            <option>All Records</option>
+            <option>Custom</option>
+          </select>
+        </label>
         <label className="flabel">
           <span className="crm-filter-label"><UserRound size={14} aria-hidden="true" /> USER</span>
 
@@ -246,10 +292,10 @@ export default function RecordsView(props: Props) {
           </select>
         </label>
         <label className="flabel"><span className="crm-filter-label"><CalendarDays size={14} aria-hidden="true" /> FROM</span>
-          <input type="date" value={filters.from} onChange={(e) => setFilter("from", e.target.value)} />
+          <input type="date" value={filters.from} disabled={period !== "Custom"} onChange={(e) => setFilter("from", e.target.value)} />
         </label>
         <label className="flabel"><span className="crm-filter-label"><CalendarDays size={14} aria-hidden="true" /> TO</span>
-          <input type="date" value={filters.to} onChange={(e) => setFilter("to", e.target.value)} />
+          <input type="date" value={filters.to} disabled={period !== "Custom"} onChange={(e) => setFilter("to", e.target.value)} />
         </label>
         {activeCount > 0 && (
           <button className="chip" onClick={clearFilters}>
@@ -405,6 +451,7 @@ export default function RecordsView(props: Props) {
         .search { display: flex; align-items: center; gap: 9px; }
         .search :global(svg) { flex: 0 0 auto; color: #64748b; }
         .filters { margin-bottom: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel); box-shadow: 0 3px 12px rgba(18, 38, 63, 0.04); align-items: end; }
+        .filters input:disabled { cursor: not-allowed; opacity: 0.55; }
         .crm-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 12px 0; }
         .crm-kpi { position: relative; display: flex; flex-direction: column; min-height: 102px; padding: 14px 16px 12px 20px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--border) 70%, var(--muted)); border-radius: 9px; background: var(--panel); box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12); transition: transform 180ms ease, box-shadow 180ms ease; }
         .crm-kpi::before { position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--kpi-accent); content: ""; }
