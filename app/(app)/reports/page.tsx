@@ -5,16 +5,39 @@ import { useToast } from "@/components/Toast";
 import { useSession } from "next-auth/react";
 
 
-const today = () => new Date().toISOString().slice(0, 10);
-const monthStart = () => today().slice(0, 8) + "01";
+const formatDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+type DateRangePreset = "today" | "week" | "month" | "custom";
+
+function getDateRange(preset: Exclude<DateRangePreset, "custom">) {
+  const end = new Date();
+  const start = new Date(end);
+
+  if (preset === "week") {
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  } else if (preset === "month") {
+    start.setDate(1);
+  }
+
+  return { from: formatDate(start), to: formatDate(end) };
+}
 
 const defaultFilters = {
-  from: monthStart(),
-  to: today(),
+  from: "",
+  to: "",
   activity: "all",
   status: "all",
   userId: "all",
 };
+
+function getReportFilters(filters: typeof defaultFilters, preset: DateRangePreset) {
+  return preset === "custom" ? filters : { ...filters, ...getDateRange(preset) };
+}
 
 interface Row {
   user: string; total: number; closed: number; open: number; pending: number;
@@ -96,6 +119,8 @@ export default function Reports() {
   const toast = useToast();
 
   const [f, setF] = useState(defaultFilters);
+  const [dateRangePreset, setDateRangePreset] = useState<DateRangePreset>("today");
+  const isReportRangeValid = dateRangePreset !== "custom" || Boolean(f.from && f.to && f.from <= f.to);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -117,9 +142,9 @@ export default function Reports() {
   }, [toast]);
 
   useEffect(() => {
-    if (f.from > f.to) return;
-    load(f);
-  }, [load, f]);  
+    if (dateRangePreset === "custom" && (!f.from || !f.to || f.from > f.to)) return;
+    load(getReportFilters(f, dateRangePreset));
+  }, [load, f, dateRangePreset]);
 
 
 const [emailResult, setEmailResult] = useState<{
@@ -141,7 +166,7 @@ async function previewEmail() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        ...f,
+        ...getReportFilters(f, dateRangePreset),
         preview: true,
       }),
     });
@@ -169,7 +194,7 @@ async function sendEmail() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(f),
+      body: JSON.stringify(getReportFilters(f, dateRangePreset)),
     });
 
     const out = await res.json();
@@ -194,18 +219,25 @@ async function sendEmail() {
 
 function clearFilters() {
   setF(defaultFilters);
+  setDateRangePreset("today");
+}
+
+function selectDateRange(preset: DateRangePreset) {
+  setDateRangePreset(preset);
+  if (preset !== "custom" && (f.from || f.to)) {
+    setF({ ...f, from: "", to: "" });
+  }
 }
 
 function exportExcel() {
   const url =
-    `/api/reports/excel?${new URLSearchParams(f)}`;
+    `/api/reports/excel?${new URLSearchParams(getReportFilters(f, dateRangePreset))}`;
 
   window.open(url, "_blank");
 }
 
 const activeFilters =
-  (f.from !== defaultFilters.from ? 1 : 0) +
-  (f.to !== defaultFilters.to ? 1 : 0) +
+  (dateRangePreset !== "today" ? 1 : 0) +
   (f.activity !== "all" ? 1 : 0) +
   (f.status !== "all" ? 1 : 0) +
   (isAdmin && f.userId !== "all" ? 1 : 0);
@@ -232,7 +264,6 @@ const activeFilters =
         .report-page .report-kpi-icon { display:grid; place-items:center; width:30px; height:30px; border-radius:7px; color:var(--kpi-accent); background:color-mix(in srgb,var(--kpi-accent) 11%,transparent); }
         .report-page .report-kpi strong { display:block; margin-top:7px; font-size:27px; line-height:1; letter-spacing:0; }
         .report-page .report-kpi small { display:block; margin-top:auto; padding-top:7px; color:var(--muted); font-size:11px; }
-        .report-page .report-range { display:flex; align-items:center; gap:7px; margin:14px 0; font-size:12px; }
         .report-page .report-history { overflow:hidden; border-radius:9px; box-shadow:0 3px 12px rgba(18,38,63,.04); }
         .report-page .report-history .panelhead { padding:17px 18px; border-bottom:1px solid var(--border); }
         .report-page .report-history .panelhead h3 { margin:0 0 3px; font-size:15px; }
@@ -250,20 +281,28 @@ const activeFilters =
       <div className="report-heading">
         <div>
           <div className="report-eyebrow">Operations intelligence</div>
-          <h1>Reports</h1>
+          <h1>Reporting &amp; Analytics</h1>
           <div className="report-subtitle">Track workload, resolution, and team activity across your selected period.</div>
         </div>
         <div className="report-actions">
-          <button className="secondary" onClick={exportExcel} disabled={!d}>Export Excel</button>
-          <button className="primary" onClick={previewEmail} disabled={!d || sendingPreview}>
+          <button className="secondary" onClick={exportExcel} disabled={!d || !isReportRangeValid}>Export Excel</button>
+          <button className="primary" onClick={previewEmail} disabled={!d || !isReportRangeValid || sendingPreview}>
             {sendingPreview ? "Generating preview..." : "Preview email"}
           </button>
         </div>
       </div>
 
       <div className="filters">
-        <label className="flabel">FROM<input type="date" value={f.from} onChange={(e) => setF({ ...f, from: e.target.value })} /></label>
-        <label className="flabel">TO<input type="date" value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })} /></label>
+        <label className="flabel">PERIOD
+          <select value={dateRangePreset} onChange={(e) => selectDateRange(e.target.value as DateRangePreset)}>
+            <option value="today">Today</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+        <label className="flabel">FROM<input type="date" value={f.from} disabled={dateRangePreset !== "custom"} onChange={(e) => setF({ ...f, from: e.target.value })} /></label>
+        <label className="flabel">TO<input type="date" value={f.to} disabled={dateRangePreset !== "custom"} onChange={(e) => setF({ ...f, to: e.target.value })} /></label>
         <label className="flabel">ACTIVITY
           <select value={f.activity} onChange={(e) => setF({ ...f, activity: e.target.value })}>
             <option value="all">Assistance + Tasks</option>
@@ -317,7 +356,7 @@ const activeFilters =
 
       </div>
 
-      {!d ? <div className="muted">Loading…</div> : (
+      {!isReportRangeValid ? <div className="empty">Choose a valid From and To date to run this report.</div> : !d ? <div className="muted">Loading…</div> : (
         <>
           <div className="report-kpis">
             <div className="report-kpi" style={{ "--kpi-accent": "#237a75" } as React.CSSProperties}>
@@ -336,10 +375,6 @@ const activeFilters =
               <div className="report-kpi-top"><span>Closed</span><span className="report-kpi-icon">✓</span></div>
               <strong>{s.closed}</strong><small>{s.avgPerDay} average completed per day</small>
             </div>
-          </div>
-
-          <div className="muted report-range">
-            <span aria-hidden="true">◷</span>{d.range.from} to {d.range.to}<span>·</span>{d.range.days} calendar day{d.range.days === 1 ? "" : "s"}<span>·</span> Tallied by Assigned To
           </div>
 
           {d.tallies.assistance && (
