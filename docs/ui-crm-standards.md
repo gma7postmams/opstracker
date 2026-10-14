@@ -106,3 +106,5 @@ Keep the email Status Summary with three equally sized cards ordered Open, Close
 ## Table Column Sizing
 
 For Technical Assistance and Other Tasks tables, make Activity / Description the primary content column at approximately 35-40% of the table width. Keep Title first, followed by Description and optional Remarks; clamp Description and Remarks to two lines. Reduce the Date, Priority, Duration, and Status columns, while retaining enough width for Location and Assigned values to remain readable. Use fixed column proportions within the existing horizontally scrollable table wrapper so narrow viewports remain usable without compressing the primary content.
+
+For Technical Assistance, use the existing content column to show Client Name, Problem, optional Resolution, and optional Remarks in that order. Keep the client name strongest, the problem in normal text, and the Resolution and Remarks labels muted with their values in secondary text. Clamp long content without adding table columns or changing table interactions.

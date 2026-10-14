@@ -386,8 +386,18 @@ export default function RecordsView(props: Props) {
                   <td>{r.location}<small>{r.showGroup}</small></td>
                   <td className="crm-activity-cell">
                     <b className="crm-title-clamp">{r[subjectField]}</b>
-                    <small className="crm-description-clamp">{r[bodyField]}</small>
-                    {r.remarks && <small className="crm-remarks-clamp"><strong>Remarks:</strong> {r.remarks}</small>}
+                    {type === "assistance" ? (
+                      <>
+                        <small className="crm-description-clamp"><strong className="crm-content-label">Problem:</strong> {r[bodyField]}</small>
+                        {r.resolution && <small className="crm-description-clamp"><strong className="crm-content-label">Resolution:</strong> {r.resolution}</small>}
+                        {r.remarks && <small className="crm-remarks-clamp"><strong>Remarks:</strong> {r.remarks}</small>}
+                      </>
+                    ) : (
+                      <>
+                        <small className="crm-description-clamp">{r[bodyField]}</small>
+                        {r.remarks && <small className="crm-remarks-clamp"><strong>Remarks:</strong> {r.remarks}</small>}
+                      </>
+                    )}
                   </td>
                   <td><span className={`crm-priority crm-priority-${String(r.priority).toLowerCase()}`}><ArrowDownWideNarrow size={13} aria-hidden="true" />{priorityLabel(r.priority)}</span></td>
                   <td>{r.timeEnded ? `${r.timeStarted} – ${r.timeEnded}` : `Since ${r.timeStarted}`}</td>
@@ -490,7 +500,7 @@ export default function RecordsView(props: Props) {
         .crm-title-clamp { -webkit-line-clamp: 1; line-clamp: 1; }
         .crm-description-clamp { margin-top: 4px; color: #64748b; -webkit-line-clamp: 2; line-clamp: 2; }
         .crm-remarks-clamp { margin-top: 5px; color: #667085; font-size: 11px; -webkit-line-clamp: 2; line-clamp: 2; }
-        .crm-remarks-clamp :global(strong) { color: #475569; }
+        .crm-content-label, .crm-remarks-clamp :global(strong) { color: #475569; }
         .crm-status, .crm-priority { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border: 1px solid transparent; border-radius: 999px; font-size: 11px; font-weight: 650; white-space: nowrap; }
         .crm-status-open, .crm-priority-normal { color: #1d4ed8; border-color: #bfdbfe; background: #eff6ff; }
         .crm-status-close_pending { color: #b45309; border-color: #fde68a; background: #fffbeb; }
