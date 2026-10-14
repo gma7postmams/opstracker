@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -32,7 +32,22 @@ interface Props {
 export default function Shell({ branding, user, children }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [now, setNow] = useState<Date | null>(null);
   const heading = TITLES[pathname] ?? (pathname.startsWith("/records/assistance") ? "Technical Assistance" : pathname.startsWith("/records/tasks") ? "Other Tasks" : branding.title);
+
+  useEffect(() => {
+    const updateClock = () => setNow(new Date());
+    updateClock();
+    const intervalId = window.setInterval(updateClock, 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const date = now
+    ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
+    : "";
+  const time = now
+    ? now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })
+    : "";
 
   return (
     <div className={`app${open ? " navopen" : ""}`}>
@@ -101,9 +116,11 @@ export default function Shell({ branding, user, children }: Props) {
       <main>
         <header>
           <button className="burger" onClick={() => setOpen((v) => !v)} aria-label="Toggle navigation">☰</button>
-          <div>
+          <div style={{ minWidth: 0 }}>
             <h2>{heading}</h2>
-            <span className="muted">{user.name} · {user.role} · {new Date().toISOString().slice(0, 10)}</span>
+            <span className="muted" style={{ display: "block", overflowWrap: "anywhere" }}>
+              {user.name} · {user.role} · {date}{time && ` · ${time}`}
+            </span>
           </div>
           <div className="header-spacer" />
           <ThemeToggle />

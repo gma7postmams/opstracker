@@ -416,7 +416,7 @@ export default function RecordsView(props: Props) {
         .crm-kpi-open { --kpi-accent: #2563eb; --kpi-tint: #eff6ff; }
         .crm-kpi-pending { --kpi-accent: #d97706; --kpi-tint: #fffbeb; }
         .crm-kpi-closed { --kpi-accent: #16a34a; --kpi-tint: #f0fdf4; }
-        .crm-table-wrap { max-height: 70vh; overflow: auto; padding: 0; border: 1px solid #e5eaf0; border-radius: 10px; box-shadow: 0 4px 16px rgba(31, 48, 68, 0.06); }
+        .crm-table-wrap { max-height: 70vh; overflow: auto; padding: 0; border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 4px 16px rgba(31, 48, 68, 0.06); }
         .crm-table-wrap table { width: 100%; min-width: 960px; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
         .crm-col-select { width: 3%; }
         .crm-col-id { width: 8%; }
@@ -428,7 +428,14 @@ export default function RecordsView(props: Props) {
         .crm-col-status { width: 9%; }
         .crm-col-assigned { width: 9%; }
         .crm-table-wrap thead { position: sticky; top: 0; z-index: 2; }
-        .crm-table-wrap thead th { background: #f7f9fc; box-shadow: 0 1px 0 #e5eaf0; }
+        .crm-table-wrap thead th { background: var(--panel); box-shadow: 0 1px 0 var(--border); }
+        .crm-table-wrap .selcol input[type="checkbox"] { appearance: none; display: inline-grid; place-content: center; width: 16px; height: 16px; margin: 0; border: 1px solid color-mix(in srgb, var(--border) 55%, var(--text)); border-radius: 4px; background: color-mix(in srgb, var(--panel) 94%, #237a75); color: #fff; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease; }
+        .crm-table-wrap thead .selcol input[type="checkbox"] { width: 18px; height: 18px; border-width: 1.5px; }
+        .crm-table-wrap .selcol input[type="checkbox"]::before { width: 8px; height: 4px; border: solid currentColor; border-width: 0 0 2px 2px; content: ""; transform: rotate(-45deg) scale(0); }
+        .crm-table-wrap .selcol input[type="checkbox"]:checked { border-color: #237a75; background: #237a75; }
+        .crm-table-wrap .selcol input[type="checkbox"]:checked::before { transform: rotate(-45deg) scale(1); }
+        .crm-table-wrap .selcol input[type="checkbox"]:hover { border-color: #237a75; box-shadow: 0 0 0 3px color-mix(in srgb, #237a75 18%, transparent), 0 0 7px color-mix(in srgb, #237a75 20%, transparent); }
+        .crm-table-wrap .selcol input[type="checkbox"]:focus-visible { outline: 2px solid #237a75; outline-offset: 2px; }
         .crm-table-wrap tbody tr { transition: background-color 180ms ease; }
         .crm-table-wrap tbody tr:hover { background: color-mix(in srgb, #237a75 12%, var(--panel)); }
         .crm-activity-cell { min-width: 0; }
@@ -444,13 +451,14 @@ export default function RecordsView(props: Props) {
         .crm-priority-low { color: #475569; border-color: #e2e8f0; background: #f1f5f9; }
         .crm-priority-high { color: #c2410c; border-color: #fed7aa; background: #fff7ed; }
         .crm-priority-critical { color: #b91c1c; border-color: #fecaca; background: #fef2f2; }
-        .crm-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 12px; padding: 10px 0; border: 1px solid #e5eaf0; border-radius: 9px; background: #fff; color: #64748b; font-size: 12px; }
+        .crm-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 12px; padding: 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--panel); color: var(--text); font-size: 12px; }
         .crm-pagination-total { margin-right: auto; font-weight: 600; }
         .crm-page-size { display: inline-flex; align-items: center; gap: 7px; }
-        .crm-page-size select, .crm-page-button { min-height: 32px; padding: 5px 9px; border: 1px solid #dce3eb; border-radius: 6px; background: #fff; color: #344256; }
+        .crm-page-size select, .crm-page-button { min-height: 32px; padding: 5px 9px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--text); }
         .crm-page-button { cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease; }
-        .crm-page-button:hover:not(:disabled) { border-color: #9db2cc; background: #f5f8fc; }
+        .crm-page-size select:hover, .crm-page-button:hover:not(:disabled) { border-color: #237a75; background: color-mix(in srgb, #237a75 12%, var(--panel)); }
         .crm-page-button:disabled { cursor: not-allowed; opacity: 0.45; }
+        .crm-page-indicator { color: var(--text); font-weight: 600; }
         @media (max-width: 700px) {
           .crm-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
           .crm-kpi { min-height: 88px; padding: 11px 12px 11px 16px; }
