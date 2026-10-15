@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FileUp } from "lucide-react";
 import ImportDialog from "./ImportDialog";
 
 export default function AdminImportPanel({
@@ -13,12 +14,15 @@ export default function AdminImportPanel({
   return (
     <>
       <section className="panel spaced">
-        <div className="panelhead">
-          <div>
-            <h3>Import records</h3>
-            <span className="muted">
-              Load a log on behalf of the whole team
-            </span>
+        <div className="panelhead system-tile-head">
+          <div className="system-tile-heading">
+            <span className="system-tile-icon"><FileUp size={17} aria-hidden="true" /></span>
+            <div>
+              <h3>Import records</h3>
+              <span className="muted">
+                Load a log on behalf of the whole team
+              </span>
+            </div>
           </div>
         </div>
 
