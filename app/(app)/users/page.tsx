@@ -7,7 +7,7 @@ import Avatar from "@/components/Avatar";
 import ImageUpload from "@/components/ImageUpload";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
-import { Eye, EyeOff, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { Eye, EyeOff, Info, Mail, Search, ShieldCheck, UserRound, Users as UsersIcon } from "lucide-react";
 import type { U } from "@/types/user";
 
 export default function Users() {
@@ -16,6 +16,18 @@ export default function Users() {
   const isAdmin = session?.user.role === "ADMIN";
   const [users, setUsers] = useState<U[]>([]);
   const [editing, setEditing] = useState<null | { user?: U }>(null);
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("ALL");
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch = !normalizedSearch || [user.name, user.email, user.username]
+      .some((value) => value.toLowerCase().includes(normalizedSearch));
+    return matchesSearch && (roleFilter === "ALL" || user.role === roleFilter);
+  });
+  const administratorCount = users.filter((user) => user.role === "ADMIN").length;
+  const standardUserCount = users.filter((user) => user.role === "USER").length;
+  const emailReportsCount = users.filter((user) => user.smtpEnabled).length;
 
   const load = useCallback(async () => {
     setUsers(await (await fetch("/api/users")).json());
@@ -24,15 +36,61 @@ export default function Users() {
 
   return (
     <div className="page">
-      {isAdmin && (
-        <div className="toolbar">
-          <button className="primary" onClick={() => setEditing({})}>＋ Add user</button>
-        </div>
-      )}
+      <div className="filters" style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 12, background: "var(--panel)", boxShadow: "0 3px 12px rgba(18,38,63,.04)", display: "flex", flexWrap: "nowrap", alignItems: "end", gap: 12 }}>
+        <label style={{ position: "relative", display: "flex", alignItems: "center", flex: "1 1 0", minWidth: 0 }}>
+          <Search size={17} aria-hidden="true" style={{ position: "absolute", left: 12, color: "var(--muted)" }} />
+          <input
+            type="search"
+            aria-label="Search users"
+            placeholder="Search Users"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            style={{ width: "100%", paddingLeft: 38 }}
+          />
+        </label>
+        <label className="flabel" style={{ width: 180, flex: "0 0 180px" }}>
+          Role Filter
+          <select
+            aria-label="Filter users by role"
+            value={roleFilter}
+            onChange={(event) => setRoleFilter(event.target.value)}
+            style={{ width: "100%" }}
+          >
+            <option value="ALL">All roles</option>
+            <option value="ADMIN">Administrators</option>
+            <option value="USER">Standard users</option>
+          </select>
+        </label>
+        {isAdmin && (
+          <button className="primary" onClick={() => setEditing({})} style={{ flex: "0 0 auto", alignSelf: "end" }}>
+            <UsersIcon size={16} aria-hidden="true" /> Add User
+          </button>
+        )}
+      </div>
 
-      <div className="panel spaced">
-        <b>Data ownership policy</b>
-        <div className="muted spacedtop-sm">
+      <section aria-label="User summary" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 16 }}>
+        {[
+          { label: "Total Users", value: users.length, icon: UsersIcon, accent: "#2563eb" },
+          { label: "Administrators", value: administratorCount, icon: ShieldCheck, accent: "#7c3aed" },
+          { label: "Standard Users", value: standardUserCount, icon: UserRound, accent: "#0891b2" },
+          { label: "Email Reports Enabled", value: emailReportsCount, icon: Mail, accent: "#d97706" },
+        ].map(({ label, value, icon: Icon, accent }) => (
+          <div key={label} className="panel" style={{ padding: 16, borderTop: `3px solid ${accent}`, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9, color: "var(--muted)" }}>
+              <Icon size={17} aria-hidden="true" style={{ color: accent }} />
+              <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
+            </div>
+            <div style={{ marginTop: 10, color: "var(--text)", fontSize: 25, fontWeight: 700, lineHeight: 1.1 }}>
+              {value}
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <div className="panel spaced" role="note" style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", marginTop: 16, background: "var(--hint-bg)", borderLeft: "3px solid var(--accent)", fontSize: 13, lineHeight: 1.4 }}>
+        <Info size={17} aria-hidden="true" style={{ color: "var(--accent)", flex: "none" }} />
+        <div>
+          <b>Data ownership policy</b>{" "}
           Users can edit only records they entered. Admins can edit any record, lock records,
           and manage user accounts. Deleting a user keeps their records, attributed to them.
         </div>
@@ -45,7 +103,7 @@ export default function Users() {
             <th>Records</th><th>Last login</th>{isAdmin && <th>Action</th>}
           </tr></thead>
           <tbody>
-            {users.map((u) => (
+            {filteredUsers.map((u) => (
               <tr key={u.id}>
                 <td>
                   <div className="usercell">
@@ -58,7 +116,21 @@ export default function Users() {
                 </td>
                 <td>{u.email}</td>
                 <td>{u.username}</td>
-                <td>{u.role}</td>
+                <td>
+                  <span style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    padding: "4px 9px",
+                    borderRadius: 999,
+                    background: u.role === "ADMIN" ? "#ede9fe" : "#dbeafe",
+                    color: u.role === "ADMIN" ? "#6d28d9" : "#1d4ed8",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    lineHeight: 1.2,
+                  }}>
+                    {u.role === "ADMIN" ? "Administrator" : "Standard User"}
+                  </span>
+                </td>
                 <td>{u.recordCount}</td>
                 <td>{u.lastLogin ? String(u.lastLogin).slice(0, 10) : "—"}</td>
                 {isAdmin && (
