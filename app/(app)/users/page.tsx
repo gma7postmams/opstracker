@@ -76,11 +76,13 @@ export default function Users() {
           { label: "Email Reports Enabled", value: emailReportsCount, icon: Mail, accent: "#d97706" },
         ].map(({ label, value, icon: Icon, accent }) => (
           <div key={label} className="panel" style={{ padding: 16, borderTop: `3px solid ${accent}`, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 9, color: "var(--muted)" }}>
-              <Icon size={17} aria-hidden="true" style={{ color: accent }} />
-              <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+              <span style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600 }}>{label}</span>
+              <span style={{ display: "grid", placeItems: "center", width: 30, height: 30, flex: "none", borderRadius: 7, color: accent, background: `color-mix(in srgb, ${accent} 15%, var(--panel))` }}>
+                <Icon size={16} aria-hidden="true" />
+              </span>
             </div>
-            <div style={{ marginTop: 10, color: "var(--text)", fontSize: 25, fontWeight: 700, lineHeight: 1.1 }}>
+            <div style={{ marginTop: 7, color: "var(--text)", fontSize: 27, fontWeight: 700, lineHeight: 1 }}>
               {value}
             </div>
           </div>
