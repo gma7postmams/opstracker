@@ -7,12 +7,37 @@ import remarkGfm from "remark-gfm";
 type Message = {
   role: "user" | "assistant";
   content: string;
+  sources?: SourceReference[];
 };
+
+type SourceReference = {
+  source: string;
+  references: string[];
+};
+
+const helperSuggestions = [
+  "Which incidents changed status this week?",
+  "What tasks are overdue, and who owns them?",
+  "Summarize this week's activity by incident status.",
+  "What changes appear in today's audit history?",
+];
+
+const loadingStatuses = [
+  "Searching OpsTracker records...",
+  "Reviewing historical incidents...",
+  "Analyzing task activity...",
+  "Investigating audit history...",
+  "Preparing operational insights...",
+];
 
 export default function MACOPage() {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingStatusIndex, setLoadingStatusIndex] = useState(0);
+  const [typedGreeting, setTypedGreeting] = useState("");
+  const [suggestionIndex, setSuggestionIndex] = useState(0);
+  const [suggestionVisible, setSuggestionVisible] = useState(true);
 
   const [copiedIndex, setCopiedIndex] =
     useState<number | null>(null);  
@@ -31,6 +56,53 @@ export default function MACOPage() {
       : hour < 18
       ? "Good afternoon"
       : "Good evening";
+
+  useEffect(() => {
+    let revealTimer: number | undefined;
+    const rotationTimer = window.setInterval(() => {
+      setSuggestionVisible(false);
+      revealTimer = window.setTimeout(() => {
+        setSuggestionIndex((current) => (current + 1) % helperSuggestions.length);
+        setSuggestionVisible(true);
+      }, 220);
+    }, 5000);
+
+    return () => {
+      window.clearInterval(rotationTimer);
+      if (revealTimer !== undefined) {
+        window.clearTimeout(revealTimer);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!loading) return;
+
+    setLoadingStatusIndex(0);
+    const timer = window.setInterval(() => {
+      setLoadingStatusIndex((current) => (current + 1) % loadingStatuses.length);
+    }, 2500);
+
+    return () => window.clearInterval(timer);
+  }, [loading]);
+
+  useEffect(() => {
+    const fullGreeting = `${greeting}, Eugene 👋`;
+    const characters = Array.from(fullGreeting);
+    const duration = 1200;
+    const startedAt = performance.now();
+
+    const timer = window.setInterval(() => {
+      const progress = Math.min((performance.now() - startedAt) / duration, 1);
+      setTypedGreeting(characters.slice(0, Math.ceil(progress * characters.length)).join(""));
+
+      if (progress === 1) {
+        window.clearInterval(timer);
+      }
+    }, 40);
+
+    return () => window.clearInterval(timer);
+  }, [greeting]);
 
     useEffect(() => {
       async function loadAIStatus() {
@@ -110,6 +182,7 @@ export default function MACOPage() {
           content:
             data.answer ??
             "No response received.",
+          sources: Array.isArray(data.sources) ? data.sources : [],
         },
       ]);
     } catch {
@@ -127,200 +200,28 @@ export default function MACOPage() {
   }
 
   return (
-    <div className="page">
-      <div
-        style={{
-          maxWidth: 1100,
-          margin: "0 auto",
-        }}
-      >
-        <section
-          className="panel"
-          style={{
-            height: "calc(100vh - 180px)",
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-            borderRadius: 24,
-          }}
-        >
-          {/* CHAT AREA */}
-          <div
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              padding: 32,
-            }}
-          >
+    <div className="page maco-page">
+        <section className="maco-workspace">
+          <div className="maco-chat-area">
             {messages.length === 0 ? (
-              <div
-                style={{
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  textAlign: "center",
-                }}
-              >
-              <div
-                style={{
-                  width: 100,
-                  height: 100,
-                  borderRadius: 28,
-                  background:
-                    "linear-gradient(135deg,#2563eb,#7c3aed)",
-                  color: "#fff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 42,
-                  fontWeight: 700,
-                  marginBottom: 24,
-                  boxShadow:
-                    "0 12px 32px rgba(99,102,241,.35)",
-                }}
-              >
-                ✦
-              </div>
-
-                <h1
-                  style={{
-                    margin: 0,
-                    fontSize: 64,
-                    fontWeight: 300,
-                    letterSpacing: "-0.06em",
-                  }}
-                >
-                  MACO
-                </h1>
-
-                <p
-                  className="muted"
-                  style={{
-                    marginTop: 10,
-                    marginBottom: 28,
-                    fontSize: 16,
-                  }}
-                >
+              <div className="maco-welcome">
+                <div className="maco-logo">✦</div>
+                <h1 className="maco-title">MACO</h1>
+                <p className="muted maco-subtitle">
                   MAMS Support Operations Tracker Copilot
                 </p>
-
-                <h2
-                  style={{
-                    margin: 0,
-                    marginBottom: 12,
-                    fontSize: 42,
-                    fontFamily: "var(--font-caveat)",
-                    fontWeight: 600,
-                    color: "#4f46e5",
-                  }}
-                >
-                  {greeting}, Eugene 👋
-                </h2>
-
+                <h2 className="maco-greeting">{typedGreeting}</h2>
                 <p
-                  className="muted"
-                  style={{
-                    maxWidth: 680,
-                    marginBottom: 32,
-                    fontSize: 18,
-                    lineHeight: 1.8,
-                  }}
+                  className={`muted helper-suggestion${suggestionVisible ? "" : " is-hidden"}`}
                 >
+                  {helperSuggestions[suggestionIndex]}
+                </p>
+                <p className="muted maco-intro">
                   Welcome back. I can help you investigate incidents,
                   search historical records, analyze operational data,
                   answer workflow questions, and provide insights from
                   OpsTracker.
                 </p>
-
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 12,
-                    justifyContent: "center",
-                    maxWidth: 700,
-                  }}
-                >
-
-                <button
-                  className="secondary"
-                  style={{
-                    width: 240,
-                    textAlign: "left",
-                    padding: 16,
-                    borderRadius: 16,
-                  }}
-                  onClick={() =>
-                    setQuestion(
-                      "Did we encounter slow publishing before?"
-                    )
-                  }
-                >
-                  <strong>📚 Historical Incidents</strong>
-                  <br />
-                  Search previous support issues
-                </button>
-
-                <button
-                  className="secondary"
-                  style={{
-                    width: 240,
-                    textAlign: "left",
-                    padding: 16,
-                    borderRadius: 16,
-                  }}
-                  onClick={() =>
-                    setQuestion(
-                      "Show Adobe-related incidents."
-                    )
-                  }
-                >
-                  <strong>🎬 Adobe Issues</strong>
-                  <br />
-                  Find Adobe, Premiere, and Media Encoder issues
-                </button>
-
-                <button
-                  className="secondary"
-                  style={{
-                    width: 240,
-                    textAlign: "left",
-                    padding: 16,
-                    borderRadius: 16,
-                  }}
-                  onClick={() =>
-                    setQuestion(
-                      "Summarize support activity this month."
-                    )
-                  }
-                >
-                  <strong>📈 Monthly Summary</strong>
-                  <br />
-                  Review incidents, tasks, and activities
-                </button>
-
-                <button
-                  className="secondary"
-                  style={{
-                    width: 240,
-                    textAlign: "left",
-                    padding: 16,
-                    borderRadius: 16,
-                  }}
-                  onClick={() =>
-                    setQuestion(
-                      "How do I use Administrative Import?"
-                    )
-                  }
-                >
-                  <strong>⚙️ MAMS Workflow</strong>
-                  <br />
-                  Learn workflows and troubleshooting steps
-                </button>
-
-                </div>
               </div>
             ) : (
               <>
@@ -333,65 +234,25 @@ export default function MACOPage() {
                         msg.role === "user"
                           ? "flex-end"
                           : "flex-start",
-                      marginBottom: 24,
+                      marginBottom: 30,
                     }}
                   >
                     {msg.role === "user" ? (
-                      <div
-                        style={{
-                          maxWidth: "75%",
-                          background:
-                            "linear-gradient(135deg,#2563eb,#7c3aed)",
-                          color: "#fff",
-                          padding: "14px 18px",
-                          borderRadius: 20,
-                          lineHeight: 1.7,
-                          boxShadow:
-                            "0 4px 20px rgba(37,99,235,.3)",
-                        }}
-                      >
+                      <div className="maco-user-message">
                         {msg.content}
                       </div>
                     ) : (
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: 12,
-                          alignItems: "flex-start",
-                          maxWidth: "100%",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: "50%",
-                            background:
-                              "linear-gradient(135deg,#2563eb,#7c3aed)",
-                            color: "#fff",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontWeight: 700,
-                            flexShrink: 0,
-                          }}
-                        >
-                          M
-                        </div>
-
+                      <div className="maco-assistant-message">
                         <div
                           className="maco-markdown"
-                          style={{
-                            width: "100%",
-                            padding: 0,
-                            background: "transparent",
-                          }}
                         >
                           <div
-                            style={{
-                              paddingLeft: 12,
-                            }}
+                            className="maco-assistant-content"
                           >
+                            <div className="maco-assistant-label">
+                              <span className="maco-assistant-spark">✦</span>
+                              MACO
+                            </div>
                             <div id={`maco-response-${index}`}>
                               <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
@@ -399,6 +260,17 @@ export default function MACOPage() {
                                 {msg.content}
                               </ReactMarkdown>
                             </div>
+                            {msg.sources?.length ? (
+                              <div className="maco-sources" aria-label="Response sources">
+                                <span className="maco-sources-label">Sources</span>
+                                {msg.sources.map((source) => (
+                                  <span className="maco-source" key={source.source}>
+                                    <strong>{source.source}</strong>
+                                    {source.references.length > 0 && ` · ${source.references.join(", ")}`}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
 
                             <div
                               style={{
@@ -406,7 +278,7 @@ export default function MACOPage() {
                                 justifyContent: "flex-start",
                                 marginTop: 40,
                                 paddingTop: 14,
-                                borderTop: "1px solid rgba(0,0,0,.08)",
+                                borderTop: "1px solid var(--line)",
                               }}
                             >
                               <button
@@ -481,43 +353,18 @@ export default function MACOPage() {
                     style={{
                       display: "flex",
                       justifyContent: "flex-start",
+                      marginBottom: 30,
                     }}
                   >
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 12,
-                        alignItems: "center",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: "50%",
-                          background:
-                            "linear-gradient(135deg,#2563eb,#7c3aed)",
-                          color: "#fff",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontWeight: 700,
-                        }}
-                      >
-                        M
+                    <div className="maco-assistant-message maco-pending">
+                      <div className="maco-assistant-label">
+                        <span className="maco-assistant-spark">✦</span>
+                        MACO
                       </div>
-
-                      <div
-                        style={{
-                          background: "#fff",
-                          padding: "16px 20px",
-                          borderRadius: 20,
-                          border:
-                            "1px solid rgba(0,0,0,.08)",
-                          boxShadow:
-                            "0 4px 20px rgba(0,0,0,.06)",
-                        }}
-                      >
+                      <div className="maco-loading-card">
+                        <p className="maco-loading-status" aria-live="polite">
+                          {loadingStatuses[loadingStatusIndex]}
+                        </p>
                         <div className="typing">
                           <span className="dot" />
                           <span className="dot" />
@@ -532,27 +379,10 @@ export default function MACOPage() {
           </div>
 
           {/* INPUT */}
-          <div
-            style={{
-              padding: 20,
-              borderTop:
-                "1px solid rgba(0,0,0,.08)",
-              background: "#fafafa",
-            }}
-          >
+          <div className="maco-composer-area">
 
           <div
-            style={{
-              maxWidth: 900,
-              margin: "0 auto 10px auto",
-              display: "flex",
-              justifyContent: "flex-end",
-              alignItems: "center",
-              gap: 8,
-              fontSize: 12,
-              color: "#64748b",
-              paddingRight: 150,
-            }}
+              className="maco-status"
           >
 
             <span
@@ -592,12 +422,7 @@ export default function MACOPage() {
 
 
             <div
-              style={{
-                display: "flex",
-                gap: 12,
-                maxWidth: 900,
-                margin: "0 auto",
-              }}
+              className="maco-composer"
             >
               <textarea
                 rows={2}
@@ -615,35 +440,262 @@ export default function MACOPage() {
                   }
                 }}
                 placeholder="Ask MACO anything..."
-                style={{
-                  flex: 1,
-                  resize: "none",
-                  padding: 16,
-                  borderRadius: 18,
-                  border:
-                    "1px solid rgba(0,0,0,.08)",
-                  fontSize: 15,
-                }}
+                className="maco-input"
               />
 
               <button
-                className="primary"
+                className="primary maco-send"
                 onClick={askMACO}
                 disabled={loading}
-                style={{
-                  minWidth: 120,
-                  height: 52,
-                  borderRadius: 16,
-                }}
               >
                 ➜ Send
               </button>
             </div>
           </div>
         </section>
-      </div>
 
       <style jsx>{`
+        .maco-page {
+          padding-top: 20px;
+          padding-bottom: 20px;
+        }
+
+        .maco-workspace {
+          width: 100%;
+          max-width: 1080px;
+          height: calc(100vh - 124px);
+          min-height: 560px;
+          margin: 0 auto;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .maco-chat-area {
+          flex: 1;
+          min-height: 0;
+          overflow-y: auto;
+          padding: 12px 24px 28px;
+        }
+
+        .maco-user-message {
+          max-width: 75%;
+          padding: 13px 17px;
+          border: 1px solid var(--line);
+          border-radius: 18px 18px 4px 18px;
+          background: var(--panel);
+          color: var(--text);
+          line-height: 1.7;
+          overflow-wrap: anywhere;
+        }
+
+        .maco-assistant-message {
+          width: 100%;
+          max-width: 820px;
+          color: var(--text);
+        }
+
+        .maco-assistant-content {
+          padding-left: 2px;
+        }
+
+        .maco-sources {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: baseline;
+          gap: 6px 12px;
+          margin-top: 18px;
+          color: var(--muted);
+          font-size: 12px;
+          line-height: 1.6;
+        }
+
+        .maco-sources-label {
+          color: var(--text);
+          font-weight: 600;
+        }
+
+        .maco-source {
+          overflow-wrap: anywhere;
+        }
+
+        .maco-assistant-label {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          margin: 0 0 12px;
+          color: var(--muted);
+          font-size: 13px;
+          font-weight: 600;
+        }
+
+        .maco-assistant-spark {
+          color: var(--accent);
+        }
+
+        .maco-welcome {
+          min-height: 100%;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          text-align: center;
+          padding: 36px 0 56px;
+        }
+
+        .maco-logo {
+          width: 54px;
+          height: 54px;
+          display: grid;
+          place-items: center;
+          margin-bottom: 28px;
+          border-radius: 17px;
+          background: var(--accent);
+          color: #fff;
+          font-size: 27px;
+          font-weight: 700;
+          animation: breathe 4s ease-in-out infinite;
+        }
+
+        .maco-title {
+          margin: 0;
+          color: var(--text);
+          font-size: 36px;
+          font-weight: 600;
+          line-height: 1.1;
+        }
+
+        .maco-subtitle {
+          margin-top: 8px;
+          margin-bottom: 0;
+          font-size: 14px;
+        }
+
+        .maco-greeting {
+          margin-top: 56px;
+          margin-bottom: 16px;
+          color: var(--text);
+          font-family: Georgia, "Times New Roman", serif;
+          font-size: 34px;
+          font-weight: 400;
+          line-height: 1.2;
+        }
+
+        .helper-suggestion {
+          min-height: 1.5em;
+          margin: 0 0 36px;
+          color: var(--muted);
+          font-size: 15px;
+          transition: opacity 220ms ease;
+        }
+
+        .helper-suggestion.is-hidden {
+          opacity: 0;
+        }
+
+        .maco-intro {
+          max-width: 620px;
+          margin: 0;
+          font-size: 15px;
+          line-height: 1.8;
+        }
+
+        .maco-composer-area {
+          flex: none;
+          padding: 26px 24px 8px;
+        }
+
+        .maco-status {
+          max-width: 820px;
+          margin: 0 auto 9px;
+          display: flex;
+          justify-content: flex-end;
+          align-items: center;
+          gap: 8px;
+          padding-right: 4px;
+          color: var(--muted);
+          font-size: 12px;
+        }
+
+        .maco-composer {
+          max-width: 820px;
+          min-height: 90px;
+          margin: 0 auto;
+          display: flex;
+          align-items: flex-end;
+          gap: 12px;
+          padding: 12px;
+          border: 1px solid var(--line2);
+          border-radius: 20px;
+          background: var(--panel);
+          box-shadow: 0 8px 28px rgba(16, 24, 40, 0.09);
+          transition: border-color 160ms ease, box-shadow 160ms ease;
+        }
+
+        .maco-composer:focus-within {
+          border-color: var(--accent);
+          box-shadow: 0 8px 28px rgba(16, 24, 40, 0.12);
+        }
+
+        .maco-input {
+          flex: 1;
+          min-width: 0;
+          min-height: 62px;
+          resize: none;
+          padding: 12px 10px;
+          border: 0;
+          outline: 0;
+          background: transparent;
+          color: var(--text);
+          font-size: 16px;
+          line-height: 1.55;
+        }
+
+        .maco-input::placeholder {
+          color: var(--muted);
+        }
+
+        .maco-send {
+          min-width: 104px;
+          height: 48px;
+          border-radius: 13px !important;
+        }
+
+        .maco-loading-card {
+          padding: 4px 0;
+          background: transparent;
+        }
+
+        .maco-loading-status {
+          margin: 0 0 10px;
+          color: var(--muted);
+          font-size: 14px;
+        }
+
+        .maco-pending .maco-assistant-label {
+          margin-bottom: 5px;
+        }
+
+        @keyframes breathe {
+          0%,
+          100% {
+            transform: scale(1);
+          }
+
+          50% {
+            transform: scale(1.025);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .maco-logo {
+            animation: none;
+          }
+
+          .helper-suggestion {
+            transition: none;
+          }
+        }
+
         .typing {
           display: flex;
           gap: 6px;
@@ -654,7 +706,7 @@ export default function MACOPage() {
           width: 10px;
           height: 10px;
           border-radius: 50%;
-          background: #6366f1;
+          background: var(--accent);
           animation: bounce 1.4s infinite;
         }
 
@@ -688,8 +740,9 @@ export default function MACOPage() {
         }
 
         .maco-markdown p {
-          line-height: 1.7;
-          margin-bottom: 10px;
+          line-height: 1.75;
+          margin-top: 0;
+          margin-bottom: 14px;
         }
 
         .maco-markdown ul {
@@ -723,14 +776,15 @@ export default function MACOPage() {
 
 
         .maco-markdown code {
-          background: #f3f4f6;
+          background: var(--code-bg);
+          color: var(--text);
           padding: 2px 6px;
           border-radius: 6px;
         }
 
         .maco-markdown pre {
-          background: #111827;
-          color: white;
+          background: var(--code-bg);
+          color: var(--text);
           padding: 16px;
           border-radius: 12px;
           overflow-x: auto;
@@ -738,8 +792,64 @@ export default function MACOPage() {
 
         .maco-markdown {
           max-width: 900px;
-        }        
+          color: var(--text);
+        }
 
+        @media (max-width: 700px) {
+          .maco-page {
+            padding: 14px;
+          }
+
+          .maco-workspace {
+            height: calc(100dvh - 112px);
+            min-height: 520px;
+          }
+
+          .maco-chat-area {
+            padding: 4px 4px 20px;
+          }
+
+          .maco-user-message {
+            max-width: 88%;
+            padding: 11px 14px;
+          }
+
+          .maco-welcome {
+            padding: 28px 4px 44px;
+          }
+
+          .maco-greeting {
+            margin-top: 44px;
+            margin-bottom: 14px;
+            font-size: 30px;
+          }
+
+          .maco-intro {
+            font-size: 14px;
+          }
+
+          .maco-composer-area {
+            padding: 20px 0 2px;
+          }
+
+          .maco-composer {
+            min-height: 78px;
+            gap: 6px;
+            padding: 8px;
+            border-radius: 17px;
+          }
+
+          .maco-input {
+            min-height: 58px;
+            font-size: 15px;
+          }
+
+          .maco-send {
+            min-width: 82px;
+            height: 44px;
+            padding: 8px !important;
+          }
+        }
 
       `}</style>
     </div>
