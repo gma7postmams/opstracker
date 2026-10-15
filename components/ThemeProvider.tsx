@@ -4,13 +4,18 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, R
 
 type Preference = "light" | "dark" | "system";
 type Effective = "light" | "dark";
+type RevealOrigin = { x: number; y: number };
+
+type ViewTransitionDocument = Document & {
+  startViewTransition?: (update: () => void) => { finished: Promise<void> };
+};
 
 const STORAGE_KEY = "opslog-theme";
 
 interface ThemeCtx {
   preference: Preference;
   effective: Effective;
-  setPreference: (p: Preference) => void;
+  setPreference: (p: Preference, origin?: RevealOrigin) => void;
   cycle: () => void;
 }
 
@@ -44,11 +49,42 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setEffective(dark ? "dark" : "light");
   }, []);
 
-  const setPreference = useCallback((pref: Preference) => {
-    localStorage.setItem(STORAGE_KEY, pref);
-    setPreferenceState(pref);
-    apply(pref);
-  }, [apply]);
+  const setPreference = useCallback((pref: Preference, origin?: RevealOrigin) => {
+    const dark = pref === "dark" || (pref === "system" && systemPrefersDark());
+    const nextEffective = dark ? "dark" : "light";
+    const update = () => {
+      localStorage.setItem(STORAGE_KEY, pref);
+      setPreferenceState(pref);
+      apply(pref);
+    };
+
+    const transitionDocument = document as ViewTransitionDocument;
+    if (!origin || nextEffective === effective || !transitionDocument.startViewTransition) {
+      update();
+      return;
+    }
+
+    const root = document.documentElement;
+    const radius = Math.max(
+      Math.hypot(origin.x, origin.y),
+      Math.hypot(window.innerWidth - origin.x, origin.y),
+      Math.hypot(origin.x, window.innerHeight - origin.y),
+      Math.hypot(window.innerWidth - origin.x, window.innerHeight - origin.y),
+    );
+    root.style.setProperty("--theme-reveal-x", `${origin.x}px`);
+    root.style.setProperty("--theme-reveal-y", `${origin.y}px`);
+    root.style.setProperty("--theme-reveal-start-radius", `${radius * 0.05}px`);
+    root.style.setProperty("--theme-reveal-radius", `${radius}px`);
+
+    const transition = transitionDocument.startViewTransition(update);
+    const clearRevealOrigin = () => {
+      root.style.removeProperty("--theme-reveal-x");
+      root.style.removeProperty("--theme-reveal-y");
+      root.style.removeProperty("--theme-reveal-start-radius");
+      root.style.removeProperty("--theme-reveal-radius");
+    };
+    transition.finished.then(clearRevealOrigin, clearRevealOrigin);
+  }, [apply, effective]);
 
   const cycle = useCallback(() => {
     setPreference(preference === "light" ? "dark" : preference === "dark" ? "system" : "light");

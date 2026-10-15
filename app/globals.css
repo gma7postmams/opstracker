@@ -100,6 +100,20 @@ header{min-height:84px;background:var(--panel);border-bottom:1px solid var(--lin
 .theme-opt.active{color:var(--accent);font-weight:600}
 .theme-opt .ic{width:17px;display:grid;place-items:center;flex:none}
 .theme-opt .check{margin-left:auto;font-size:11px}
+::view-transition-old(root){animation:none}
+::view-transition-new(root){
+  clip-path:circle(0 at var(--theme-reveal-x) var(--theme-reveal-y));
+  animation:theme-reveal 2500ms linear both;
+}
+@keyframes theme-reveal{
+  0%{clip-path:circle(0 at var(--theme-reveal-x) var(--theme-reveal-y));opacity:1;
+    animation-timing-function:cubic-bezier(.5,0,.9,.2)}
+  12.5%{clip-path:circle(var(--theme-reveal-start-radius) at var(--theme-reveal-x) var(--theme-reveal-y));
+    animation-timing-function:ease-in-out}
+  87.5%{clip-path:circle(var(--theme-reveal-radius) at var(--theme-reveal-x) var(--theme-reveal-y));opacity:.94;
+    animation-timing-function:ease-in-out}
+  100%{clip-path:circle(var(--theme-reveal-radius) at var(--theme-reveal-x) var(--theme-reveal-y));opacity:1}
+}
 .login-theme{position:fixed;top:18px;right:18px}
 .page{padding:27px 32px; width:100%; max-width:none;}
 

@@ -32,6 +32,7 @@ export default function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
 
   const ref = useRef<HTMLDivElement>(null);
+  const toggleButtonRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -52,6 +53,7 @@ export default function ThemeToggle() {
     return (
     <div className="themetoggle" ref={ref}>
       <button
+        ref={toggleButtonRef}
         className="theme-btn"
         onClick={() => setOpen((v) => !v)}
         aria-label={`Theme: ${preference} (currently ${effective})`}
@@ -68,7 +70,12 @@ export default function ThemeToggle() {
               role="menuitemradio"
               aria-checked={preference === o.value}
               className={`theme-opt${preference === o.value ? " active" : ""}`}
-              onClick={() => { setPreference(o.value); setOpen(false); }}
+              onClick={() => {
+                const bounds = toggleButtonRef.current?.getBoundingClientRect();
+                const origin = bounds ? { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 } : undefined;
+                setPreference(o.value, origin);
+                setOpen(false);
+              }}
             >
               <span className="ic">{o.icon}</span>{o.label}
               {preference === o.value && <span className="check">✓</span>}
