@@ -109,6 +109,21 @@ function UserForm({ user, selfId, onClose, onSaved, onDeleted }: {
 
   const set = (k: string, v: any) => setF((s) => ({ ...s, [k]: v }));
   const err = (k: string) => errors[k] && <span className="fielderr">{errors[k]}</span>;
+  const sectionStyle = {
+    gridColumn: "1 / -1",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    margin: "14px 0 2px",
+    padding: "11px 12px",
+    border: "1px solid #e2e8f0",
+    borderBottom: "2px solid #d7e0e8",
+    borderRadius: "6px",
+    background: "#f8fafc",
+    color: "#243342",
+    fontSize: "13px",
+    fontWeight: 600,
+  };
   
   
 
@@ -156,7 +171,10 @@ function UserForm({ user, selfId, onClose, onSaved, onDeleted }: {
         <form id="userform" onSubmit={submit} className="form">
           {errors._ && <div className="err">{errors._}</div>}
 
-          <div className="sectionlabel"><UserRound size={16} /> Profile Information</div>
+          <div className="sectionlabel" style={{ ...sectionStyle, marginTop: "0" }}>
+            <UserRound size={17} strokeWidth={2} style={{ color: "#0f766e" }} />
+            Profile Information
+          </div>
           <div className="full">
             <ImageUpload kind="avatar" value={f.avatarUrl} round
               hint="PNG, JPG or WebP up to 2 MB. Square images look best."
@@ -170,7 +188,10 @@ function UserForm({ user, selfId, onClose, onSaved, onDeleted }: {
           </label>
           <label className="full">Surname<input value={f.surname} onChange={(e) => set("surname", e.target.value)} required />{err("surname")}</label>
 
-          <div className="sectionlabel"><ShieldCheck size={16} /> Account Information</div>
+          <div className="sectionlabel" style={sectionStyle}>
+            <ShieldCheck size={17} strokeWidth={2} style={{ color: "#2563eb" }} />
+            Account Information
+          </div>
           <label>Email address<input type="email" value={f.email} onChange={(e) => set("email", e.target.value)} required />{err("email")}</label>
           <label>Username
             <input value={f.username} onChange={(e) => set("username", e.target.value.toLowerCase())} required />
@@ -218,7 +239,10 @@ style={{ paddingRight: "40px" }}
 
 
 
-<div className="sectionlabel"><Mail size={16} /> Email Reports</div>
+<div className="sectionlabel" style={sectionStyle}>
+  <Mail size={17} strokeWidth={2} style={{ color: "#b45309" }} />
+  Email Reports
+</div>
 
 
 <label
@@ -227,6 +251,8 @@ style={{ paddingRight: "40px" }}
     display: "flex",
     alignItems: "center",
     gap: "10px",
+    padding: "4px 0 12px",
+    borderBottom: "1px solid #e5e7eb",
   }}
 >
   <input
