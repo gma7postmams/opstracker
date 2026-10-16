@@ -867,9 +867,9 @@ export async function POST(req: NextRequest) {
           addSourceReference("Tasks");
           contextSections.push(`TARGETED TASK RETRIEVAL\n${JSON.stringify({ type: "most completed task types", totalCompleted: count, activityTypes: activityTypes.map((entry) => ({ activityType: entry.activityType, completedCount: entry._count._all })) }, null, 2)}`);
         } else if (asksTopPerformers || asksTaskPerformance) {
-          const performers = await prisma.task.groupBy({ by: ["assigned"], where: { status: "CLOSED", assigned: { not: null }, ...requestedPeriodWhere() }, _count: { _all: true }, orderBy: { _count: { assigned: "desc" } }, take: 10 });
+          const performers = await prisma.task.groupBy({ by: ["assigned"], where: { status: "CLOSED", assigned: { not: "" }, ...requestedPeriodWhere() }, _count: { assigned: true }, orderBy: { _count: { assigned: "desc" } }, take: 10 });
           addSourceReference("Tasks");
-          contextSections.push(`TARGETED TASK RETRIEVAL\n${JSON.stringify({ type: "top performers by completed task count", performers: performers.filter((entry) => entry.assigned?.trim()).map((entry, index) => ({ rank: index + 1, name: entry.assigned, completedTasks: entry._count._all })) }, null, 2)}`);
+          contextSections.push(`TARGETED TASK RETRIEVAL\n${JSON.stringify({ type: "top performers by completed task count", performers: performers.filter((entry) => entry.assigned?.trim()).map((entry, index) => ({ rank: index + 1, name: entry.assigned, completedTasks: entry._count.assigned })) }, null, 2)}`);
         } else {
           const overdue = asksOverdueTasks;
           const where = overdue
@@ -886,9 +886,9 @@ export async function POST(req: NextRequest) {
 
       if (!recordReference && !asksIncidentInvestigation && asksTargetedAssistance && !asksOperationsAnalytics) {
         if (asksAssistancePerformance) {
-          const performers = await prisma.assistance.groupBy({ by: ["assigned"], where: { status: "CLOSED", assigned: { not: null }, ...requestedPeriodWhere() }, _count: { _all: true }, orderBy: { _count: { assigned: "desc" } }, take: 10 });
+          const performers = await prisma.assistance.groupBy({ by: ["assigned"], where: { status: "CLOSED", assigned: { not: "" }, ...requestedPeriodWhere() }, _count: { assigned: true }, orderBy: { _count: { assigned: "desc" } }, take: 10 });
           addSourceReference("Technical Assistance");
-          contextSections.push(`TARGETED ASSISTANCE RETRIEVAL\n${JSON.stringify({ type: "top performers by completed technical assistance count", performers: performers.filter((entry) => entry.assigned?.trim()).map((entry, index) => ({ rank: index + 1, name: entry.assigned, completedRequests: entry._count._all })) }, null, 2)}`);
+          contextSections.push(`TARGETED ASSISTANCE RETRIEVAL\n${JSON.stringify({ type: "top performers by completed technical assistance count", performers: performers.filter((entry) => entry.assigned?.trim()).map((entry, index) => ({ rank: index + 1, name: entry.assigned, completedRequests: entry._count.assigned })) }, null, 2)}`);
         } else if (asksTopIssues) {
           const categories = await prisma.assistance.groupBy({ by: ["category"], _count: { _all: true }, orderBy: { _count: { category: "desc" } }, take: 10 });
           addSourceReference("Technical Assistance");

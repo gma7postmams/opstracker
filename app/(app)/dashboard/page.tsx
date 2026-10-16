@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { priorityLabel } from "@/lib/recordTypes";
 import { useSession } from "next-auth/react";
@@ -28,6 +28,101 @@ export default function Dashboard() {
   const isAdmin = session?.user?.role === "ADMIN";
 
   const [d, setD] = useState<any>(null);
+  const [typedGreeting, setTypedGreeting] = useState("");
+  const [isTypingGreeting, setIsTypingGreeting] = useState(false);
+  const hasAnimatedGreeting = useRef(false);
+  const [quoteIndex, setQuoteIndex] = useState(() => new Date().getDate() % QUOTES.length);
+  const [quoteVisible, setQuoteVisible] = useState(true);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updateMotionPreference = () => setPrefersReducedMotion(motionPreference.matches);
+    let rotationTimeout: number;
+    let swapTimeout: number | undefined;
+
+    updateMotionPreference();
+    motionPreference.addEventListener("change", updateMotionPreference);
+
+    const rotateQuote = () => {
+      if (motionPreference.matches) {
+        setQuoteIndex((current) => (current + 1) % QUOTES.length);
+        rotationTimeout = window.setTimeout(rotateQuote, 18000);
+        return;
+      }
+
+      setQuoteVisible(false);
+      swapTimeout = window.setTimeout(() => {
+        setQuoteIndex((current) => (current + 1) % QUOTES.length);
+        setQuoteVisible(true);
+        rotationTimeout = window.setTimeout(rotateQuote, 18000);
+      }, 350);
+    };
+
+    rotationTimeout = window.setTimeout(rotateQuote, 18000);
+
+    return () => {
+      window.clearTimeout(rotationTimeout);
+      if (swapTimeout !== undefined) window.clearTimeout(swapTimeout);
+      motionPreference.removeEventListener("change", updateMotionPreference);
+    };
+  }, []);
+
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12
+      ? "Good morning"
+      : hour < 18
+        ? "Good afternoon"
+        : "Good evening";
+  const name = session?.user?.name?.trim() ?? "";
+  const givenName = name.includes(",") ? name.slice(name.indexOf(",") + 1).trim() : name;
+  const firstName = givenName.split(/\s+/)[0] ?? "";
+  const formattedFirstName = firstName
+    ? firstName[0].toUpperCase() + firstName.slice(1).toLowerCase()
+    : "";
+  const fullGreeting = `${greeting}, ${formattedFirstName} 👋`;
+  const shouldAnimateGreeting = Boolean(session?.user);
+
+  useEffect(() => {
+    console.log("Dashboard greeting values:", {
+      name: session?.user?.name,
+      firstName,
+      shouldAnimateGreeting,
+    });
+
+    if (!d || !shouldAnimateGreeting || hasAnimatedGreeting.current) return;
+
+    hasAnimatedGreeting.current = true;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setTypedGreeting(fullGreeting);
+      return;
+    }
+
+    setIsTypingGreeting(true);
+    let startedAt: number | undefined;
+    let frame = 0;
+    let completed = false;
+    const typeNextCharacter = (timestamp: number) => {
+      startedAt ??= timestamp;
+      const progress = Math.min((timestamp - startedAt) / 1100, 1);
+      setTypedGreeting(fullGreeting.slice(0, Math.floor(progress * fullGreeting.length)));
+
+      if (progress < 1) {
+        frame = window.requestAnimationFrame(typeNextCharacter);
+      } else {
+        setTypedGreeting(fullGreeting);
+        setIsTypingGreeting(false);
+        completed = true;
+      }
+    };
+
+    frame = window.requestAnimationFrame(typeNextCharacter);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      if (!completed) hasAnimatedGreeting.current = false;
+    };
+  }, [d, firstName, fullGreeting, session?.user?.name, shouldAnimateGreeting]);
 
   useEffect(() => {
     fetch("/api/dashboard")
@@ -59,18 +154,6 @@ export default function Dashboard() {
   const peak = Math.max(1, ...d.trend.map((t: any) => t.count));
   const catMax = Math.max(1, ...d.categories.map((c: any) => c.count));
 
-  const hour = new Date().getHours();
-
-  const greeting =
-    hour < 12
-      ? "Good Morning"
-      : hour < 18
-        ? "Good Afternoon"
-        : "Good Evening";
-
-const quote =
-  QUOTES[new Date().getDate() % QUOTES.length];
-
   const card = (n: number, label: string, tone: string, Icon: LucideIcon) => (
     <div className={`dashboard-kpi ${tone}`} key={label}>
       <div className="dashboard-kpi-head">
@@ -85,24 +168,30 @@ const quote =
     <div className="page">
 
       <div className="panel spaced">
-        <h2>
-          {greeting}, {session?.user?.name?.split(" ")[0]} 👋
+        <h2
+          aria-label={fullGreeting}
+          style={{
+            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontSize: "34px",
+            fontWeight: 400,
+            letterSpacing: "normal",
+            lineHeight: 1.2,
+          }}
+        >
+          {shouldAnimateGreeting ? typedGreeting : fullGreeting}
+          {isTypingGreeting && <span aria-hidden="true">|</span>}
         </h2>
-
-        <p className="muted">
-          {isAdmin
-            ? "Here's your organization-wide operational overview."
-            : "Here's a summary of your current workload and activity."}
-        </p>
 
         <p
           style={{
             marginTop: "12px",
             fontStyle: "italic",
             color: "var(--muted)",
+            opacity: quoteVisible ? 1 : 0,
+            transition: prefersReducedMotion ? "none" : "opacity 350ms ease-in-out",
           }}
         >
-          "{quote}"
+          "{QUOTES[quoteIndex]}"
         </p>
       </div>
 

@@ -66,19 +66,26 @@ aside{width:252px;position:fixed;inset:0 auto 0 0;background:var(--sidebar);colo
 .mark{width:39px;height:39px;border-radius:11px;background:var(--accent);display:grid;
   place-items:center;font-weight:800;flex:none;object-fit:cover;color:#fff}
 .nav{display:grid;gap:4px}
-.nav a{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:9px;
-  color:#aab4c3;text-decoration:none;font-weight:500}
-.nav a:hover,.nav a.active{background:var(--sidebar-hi);color:#fff}
-.ic{width:18px;text-align:center;flex:none}
+.nav a{position:relative;display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:9px;
+  color:#aab4c3;text-decoration:none;font-weight:500;transition:background-color .18s ease,color .18s ease,transform .18s ease}
+.nav a:hover{background:var(--sidebar-hi);color:#fff;transform:translateX(3px)}
+.nav a.active{background:var(--sidebar-hi);color:#fff}
+.nav a.active::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;
+  border-radius:0 3px 3px 0;background:#60a5fa}
+.nav .ic,.logout .ic{width:18px;height:18px;flex:none}
 .side{margin-top:auto;border-top:1px solid #273244;padding-top:13px;padding-bottom:40px;}
 .user{display:flex;gap:9px;align-items:center;padding:8px}
 .user b{font-size:12px;display:block}
 .user small{display:block;color:#98a2b3;font-size:11px}
+.user-avatar-wrap{position:relative;display:block;flex:none}
+.online-indicator{position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;
+  border:2px solid var(--sidebar);border-radius:50%;background:#32d583}
 .avatar{border-radius:50%;background:#344054;color:#fff;display:grid;place-items:center;
   font-weight:700;flex:none;overflow:hidden}
 .logout{width:100%;border:0;background:transparent;color:#aab4c3;padding:10px 12px;
-  border-radius:9px;text-align:left;display:flex;gap:10px;align-items:center;margin-top:12px;}
-.logout:hover{background:var(--sidebar-hi);color:#fff}
+  border-radius:9px;text-align:left;display:flex;gap:10px;align-items:center;margin-top:12px;
+  transition:background-color .18s ease,color .18s ease,transform .18s ease}
+.logout:hover{background:var(--sidebar-hi);color:#fff;transform:translateX(3px)}
 .scrim{display:none}
 main{margin-left:252px;flex:1;min-width:0}
 header{min-height:84px;background:var(--panel);border-bottom:1px solid var(--line);

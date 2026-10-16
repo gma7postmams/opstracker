@@ -4,18 +4,29 @@ import { ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import {
+  ClipboardList,
+  FileText,
+  Headset,
+  LayoutDashboard,
+  ListTodo,
+  LogOut,
+  Settings,
+  Sparkles,
+  UsersRound,
+} from "lucide-react";
 import Avatar from "./Avatar";
 import ThemeToggle from "./ThemeToggle";
 
 const NAV = [
-  { href: "/dashboard", icon: "▦", label: "Dashboard" },
-  { href: "/assistance", icon: "◉", label: "Technical Assistance" },
-  { href: "/tasks", icon: "☷", label: "Other Tasks" },
-  { href: "/maco", icon: "✦", label: "MACO AI" },
-  { href: "/reports", icon: "▤", label: "Reports" },
-  { href: "/users", icon: "◍", label: "Users" },
-  { href: "/admin", icon: "⚙", label: "Administration" },
-  { href: "/audit", icon: "▤", label: "Audit Logs" },
+  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/assistance", icon: Headset, label: "Technical Assistance" },
+  { href: "/tasks", icon: ListTodo, label: "Other Tasks" },
+  { href: "/maco", icon: Sparkles, label: "MACO AI" },
+  { href: "/reports", icon: FileText, label: "Reports" },
+  { href: "/users", icon: UsersRound, label: "Users" },
+  { href: "/admin", icon: Settings, label: "Administration" },
+  { href: "/audit", icon: ClipboardList, label: "Audit Logs" },
 ];
 
 const TITLES: Record<string, string> = {
@@ -33,6 +44,7 @@ export default function Shell({ branding, user, children }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
+  const displayRole = user.role === "ADMIN" ? "Administrator" : user.role;
   const heading = TITLES[pathname] ?? (pathname.startsWith("/records/assistance") ? "Technical Assistance" : pathname.startsWith("/records/tasks") ? "Other Tasks" : branding.title);
 
   useEffect(() => {
@@ -71,21 +83,24 @@ export default function Shell({ branding, user, children }: Props) {
 
             <Link key={n.href} href={n.href} onClick={() => setOpen(false)}
               className={pathname.startsWith(n.href) ? "active" : ""}>
-              <span className="ic" aria-hidden>{n.icon}</span><span>{n.label}</span>
+              <n.icon className="ic" aria-hidden="true" size={18} strokeWidth={1.8} /><span>{n.label}</span>
             </Link>
           ))}
         </nav>
         <div className="side">
           <div className="user">
-            <Avatar url={user.avatarUrl} name={user.name} size={32} />
-            <div><b>{user.name}</b><small>{user.role}</small></div>
+            <span className="user-avatar-wrap">
+              <Avatar url={user.avatarUrl} name={user.name} size={32} />
+              <span className="online-indicator" aria-label="Online" />
+            </span>
+            <div><b>{user.name}</b><small>{displayRole}</small></div>
           </div>
 
 <Link
   href="/profile"
   className="logout"
 >
-  <span className="ic">⚙</span>
+  <Settings className="ic" aria-hidden="true" size={18} strokeWidth={1.8} />
   <span>Account Settings</span>
 </Link>
 
@@ -105,7 +120,7 @@ export default function Shell({ branding, user, children }: Props) {
     });
   }}
 >
-  <span className="ic">⇦</span>
+  <LogOut className="ic" aria-hidden="true" size={18} strokeWidth={1.8} />
   <span>Log out</span>
 </button>
 
