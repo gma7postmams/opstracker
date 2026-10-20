@@ -41,19 +41,47 @@ type DashboardUser = {
   surname: string;
 };
 
+function AnimatedCount({ value, prefersReducedMotion }: { value: number; prefersReducedMotion: boolean }) {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    if (prefersReducedMotion || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setDisplayValue(value);
+      return;
+    }
+
+    setDisplayValue(0);
+    let startedAt: number | undefined;
+    let frame = 0;
+    const animate = (timestamp: number) => {
+      startedAt ??= timestamp;
+      const progress = Math.min((timestamp - startedAt) / 600, 1);
+      setDisplayValue(Math.round(value * progress));
+      if (progress < 1) frame = window.requestAnimationFrame(animate);
+    };
+
+    frame = window.requestAnimationFrame(animate);
+    return () => window.cancelAnimationFrame(frame);
+  }, [prefersReducedMotion, value]);
+
+  return <>{displayValue}</>;
+}
+
 export default function Dashboard() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
 
   const [d, setD] = useState<any>(null);
+  const [dashboardDataRevision, setDashboardDataRevision] = useState(0);
+  const [animateDashboardEntrance, setAnimateDashboardEntrance] = useState(false);
+  const hasRenderedDashboard = useRef(false);
   const [period, setPeriod] = useState<DashboardPeriod>("today");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
   const [users, setUsers] = useState<DashboardUser[]>([]);
   const [typedGreeting, setTypedGreeting] = useState("");
-  const [isTypingGreeting, setIsTypingGreeting] = useState(false);
-  const hasAnimatedGreeting = useRef(false);
+  const [isTypingGreeting, setIsTypingGreeting] = useState(true);
   const [quoteIndex, setQuoteIndex] = useState(() => new Date().getDate() % QUOTES.length);
   const [quoteVisible, setQuoteVisible] = useState(true);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -105,27 +133,18 @@ export default function Dashboard() {
     ? firstName[0].toUpperCase() + firstName.slice(1).toLowerCase()
     : "";
   const fullGreeting = `${greeting}, ${formattedFirstName} 👋`;
-  const shouldAnimateGreeting = Boolean(session?.user);
 
   useEffect(() => {
-    console.log("Dashboard greeting values:", {
-      name: session?.user?.name,
-      firstName,
-      shouldAnimateGreeting,
-    });
-
-    if (!d || !shouldAnimateGreeting || hasAnimatedGreeting.current) return;
-
-    hasAnimatedGreeting.current = true;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (prefersReducedMotion || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setTypedGreeting(fullGreeting);
+      setIsTypingGreeting(false);
       return;
     }
 
+    setTypedGreeting("");
     setIsTypingGreeting(true);
     let startedAt: number | undefined;
     let frame = 0;
-    let completed = false;
     const typeNextCharacter = (timestamp: number) => {
       startedAt ??= timestamp;
       const progress = Math.min((timestamp - startedAt) / 1100, 1);
@@ -136,16 +155,12 @@ export default function Dashboard() {
       } else {
         setTypedGreeting(fullGreeting);
         setIsTypingGreeting(false);
-        completed = true;
       }
     };
 
     frame = window.requestAnimationFrame(typeNextCharacter);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      if (!completed) hasAnimatedGreeting.current = false;
-    };
-  }, [d, firstName, fullGreeting, session?.user?.name, shouldAnimateGreeting]);
+    return () => window.cancelAnimationFrame(frame);
+  }, [fullGreeting, prefersReducedMotion]);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -190,7 +205,12 @@ export default function Dashboard() {
 
         return r.json();
       })
-      .then(setD)
+      .then((result) => {
+        setAnimateDashboardEntrance(!hasRenderedDashboard.current);
+        hasRenderedDashboard.current = true;
+        setD(result);
+        setDashboardDataRevision((revision) => revision + 1);
+      })
       .catch((err) => {
         if (!controller.signal.aborted) console.error("Dashboard load failed:", err);
       });
@@ -240,6 +260,11 @@ export default function Dashboard() {
   });
   const assistancePath = trendPoints.map((point: any, index: number) => `${index ? "L" : "M"}${point.x},${point.assistanceY}`).join(" ");
   const taskPath = trendPoints.map((point: any, index: number) => `${index ? "L" : "M"}${point.x},${point.taskY}`).join(" ");
+  const areaPath = (valueKey: "assistanceY" | "taskY") => trendPoints.length
+    ? `${trendPoints.map((point: any, index: number) => `${index ? "L" : "M"}${point.x},${point[valueKey]}`).join(" ")} L${trendPoints[trendPoints.length - 1].x},${chartBottom} L${trendPoints[0].x},${chartBottom} Z`
+    : "";
+  const assistanceAreaPath = areaPath("assistanceY");
+  const taskAreaPath = areaPath("taskY");
   const hasActiveFilters = period !== "today" || (isAdmin && selectedUserId !== "");
 
   function clearFilters() {
@@ -258,51 +283,51 @@ export default function Dashboard() {
   }
 
   const card = (n: number, label: string, tone: string, Icon: LucideIcon) => (
-    <div className={`dashboard-kpi ${tone}`} key={label}>
+    <div className={`dashboard-kpi dashboard-glass ${tone}`} key={label}>
       <div className="dashboard-kpi-head">
         <span className="dashboard-kpi-icon"><Icon size={16} aria-hidden="true" /></span>
         <span className="dashboard-kpi-label">{label}</span>
       </div>
-      <strong className="dashboard-kpi-value">{n}</strong>
+      <strong className="dashboard-kpi-value"><AnimatedCount key={dashboardDataRevision} value={n} prefersReducedMotion={prefersReducedMotion} /></strong>
     </div>
   );
 
   return (
     <div className="page">
 
-      <div className="panel spaced">
+      <div className="panel spaced dashboard-glass dashboard-enter dashboard-enter-1">
         <div className="dashboard-heading">
           <div>
             <h2
-          aria-label={fullGreeting}
-          style={{
-            fontFamily: 'Georgia, "Times New Roman", serif',
-            fontSize: "34px",
-            fontWeight: 400,
-            letterSpacing: "normal",
-            lineHeight: 1.2,
-          }}
-        >
-          {shouldAnimateGreeting ? typedGreeting : fullGreeting}
-          {isTypingGreeting && <span aria-hidden="true">|</span>}
+              aria-label={fullGreeting}
+              style={{
+                fontFamily: 'Georgia, "Times New Roman", serif',
+                fontSize: "34px",
+                fontWeight: 400,
+                letterSpacing: "normal",
+                lineHeight: 1.2,
+              }}
+            >
+              {typedGreeting}
+              {isTypingGreeting && <span aria-hidden="true">|</span>}
             </h2>
 
             <p
-          style={{
-            marginTop: "12px",
-            fontStyle: "italic",
-            color: "var(--muted)",
-            opacity: quoteVisible ? 1 : 0,
-            transition: prefersReducedMotion ? "none" : "opacity 350ms ease-in-out",
-          }}
-        >
-          "{QUOTES[quoteIndex]}"
+              style={{
+                marginTop: "12px",
+                fontStyle: "italic",
+                color: "var(--muted)",
+                opacity: !isTypingGreeting && quoteVisible ? 1 : 0,
+                transition: prefersReducedMotion ? "none" : "opacity 350ms ease-in-out",
+              }}
+            >
+              "{QUOTES[quoteIndex]}"
             </p>
           </div>
         </div>
       </div>
 
-      <div className="filters dashboard-filter-bar" aria-label="Dashboard filters">
+      <div className="filters dashboard-filter-bar dashboard-glass dashboard-enter dashboard-enter-2" aria-label="Dashboard filters">
         <label className="flabel">
           Period
           <select value={period} onChange={(event) => selectPeriod(event.target.value as DashboardPeriod)}>
@@ -340,7 +365,7 @@ export default function Dashboard() {
       </div>
 
       {d ? <>
-      <div className="dashboard-summaries">
+      <div className={`dashboard-summaries${animateDashboardEntrance ? " dashboard-enter dashboard-enter-3" : ""}`}>
         <section className="dashboard-summary" aria-labelledby="activity-summary-title">
           <h3 id="activity-summary-title">Activity Summary</h3>
           <div className="dashboard-kpis">
@@ -359,7 +384,7 @@ export default function Dashboard() {
         </section>
       </div>
 
-      <section className="panel spaced">
+      <section className={`panel spaced dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-4" : ""}`}>
         <div className="panelhead">
           <div><h3>Status distribution</h3>
             <span className="muted">{total} record{total === 1 ? "" : "s"} across assistance and tasks</span></div>
@@ -379,7 +404,7 @@ export default function Dashboard() {
       </section>
 
       <div className="grid">
-        <section className="panel">
+        <section className={`panel dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-4" : ""}`}>
           <div className="panelhead"><div><h3>Activity trend</h3>
             <span className="muted">{d.trendSubtitle}</span></div></div>
           <div style={{ overflowX: "auto" }}>
@@ -393,9 +418,18 @@ export default function Dashboard() {
                 const y = chartTop + (chartHeight * step) / 3;
                 return <line key={step} x1={chartLeft} x2={chartRight} y1={y} y2={y} stroke="var(--line)" strokeDasharray="3 5" />;
               })}
-              {assistancePath && <path d={assistancePath} fill="none" stroke="#06aed4" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />}
-              {taskPath && <path d={taskPath} fill="none" stroke="#f79009" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />}
-              {trendPoints.map((point: any) => (
+              {assistanceAreaPath && <path key={`assistance-area-${dashboardDataRevision}`} className="dashboard-trend-area dashboard-trend-area-assistance" d={assistanceAreaPath} />}
+              {taskAreaPath && <path key={`task-area-${dashboardDataRevision}`} className="dashboard-trend-area dashboard-trend-area-task" d={taskAreaPath} />}
+              {assistancePath && <>
+                <path key={`assistance-${dashboardDataRevision}`} className="dashboard-trend-line" pathLength="1" d={assistancePath} fill="none" stroke="#06aed4" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+                <path key={`assistance-glow-${dashboardDataRevision}`} className="dashboard-trend-glow" pathLength="1" d={assistancePath} fill="none" stroke="var(--trend-highlight)" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round" />
+              </>}
+              {taskPath && <>
+                <path key={`tasks-${dashboardDataRevision}`} className="dashboard-trend-line" pathLength="1" d={taskPath} fill="none" stroke="#f79009" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+                <path key={`tasks-glow-${dashboardDataRevision}`} className="dashboard-trend-glow" pathLength="1" d={taskPath} fill="none" stroke="var(--trend-highlight)" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round" />
+              </>}
+              <g key={`trend-points-${dashboardDataRevision}`} className="dashboard-trend-points">
+                {trendPoints.map((point: any) => (
                 <g key={point.date}>
                   <title>{`${point.tooltip}: Technical Assistance ${point.assistanceCount}, Other Tasks ${point.taskCount}`}</title>
                   {point.highlighted && <>
@@ -413,7 +447,8 @@ export default function Dashboard() {
                     <text className={point.highlighted ? "trend-label-pulse" : undefined} x={point.x} y="212" textAnchor="middle" fill={point.highlighted ? "var(--trend-highlight)" : "var(--muted)"} fontSize="11" fontWeight={point.highlighted ? 600 : 500}>{point.dayLabel}</text>
                   </> : <text x={point.x} y="204" textAnchor="middle" fill={point.highlighted ? "var(--trend-highlight)" : "var(--muted)"} fontSize="11" fontWeight={point.highlighted ? 600 : 500}>{point.label}</text>}
                 </g>
-              ))}
+                ))}
+              </g>
             </svg>
           </div>
           <div className="trend-legend" aria-label="Activity trend series">
@@ -422,7 +457,7 @@ export default function Dashboard() {
           </div>
         </section>
 
-        <section className="panel">
+        <section className={`panel dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-5" : ""}`}>
           <div className="panelhead"><div><h3>Needs attention</h3>
             <span className="muted">Open and close-pending records</span></div></div>
           {d.attention.length ? d.attention.map((r: any) => (
@@ -438,7 +473,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid">
-        <section className="panel">
+        <section className={`panel dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-5" : ""}`}>
           <div className="panelhead"><div><h3>Assistance by category</h3>
             <span className="muted">{d.assistance.total} record{d.assistance.total === 1 ? "" : "s"}</span></div></div>
           {d.categories.length ? d.categories.map((c: any, i: number) => (
@@ -450,7 +485,7 @@ export default function Dashboard() {
           )) : <div className="empty"><b>No assistance records</b>Log one to see the breakdown.</div>}
         </section>
 
-        <section className="panel">
+        <section className={`panel dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-5" : ""}`}>
           <div className="panelhead"><h3>Quick actions</h3></div>
           <div className="quick">
             <Link href="/assistance">◉ Record technical assistance</Link>
@@ -461,7 +496,7 @@ export default function Dashboard() {
         </section>
       </div>
 
-	<section className="panel spaced">
+  <section className={`panel spaced dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-5" : ""}`}>
 	  <div className="panelhead">
 	    <div>
 	      <h3>Recent Activity</h3>
