@@ -76,7 +76,7 @@ export default function RecordsView(props: Props) {
   const [pageSize, setPageSize] = useState(10);
 
   const [users, setUsers] = useState<any[]>([]);
-  const [userFilter, setUserFilter] = useState(isAdmin ? "all" : String(session?.user?.id ?? ""));
+  const [userFilter, setUserFilter] = useState("all");
 
   useEffect(() => {
     fetch(
@@ -99,8 +99,7 @@ export default function RecordsView(props: Props) {
   const [importing, setImporting] = useState(false);
   const [confirm, setConfirm] = useState<null | { title: string; body: string; onYes: () => void }>(null);
 
-  const defaultUserFilter =
-    isAdmin ? "all" : String(session?.user?.id ?? "");
+  const defaultUserFilter = "all";
 
   const activeCount = useMemo(
     () =>

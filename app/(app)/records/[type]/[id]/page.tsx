@@ -127,12 +127,12 @@ const historyEvents = (r.activityHistory ?? []).flatMap((entry: any) => {
         : `Manager requested additional work.${previousCompletion}`;
     return [{ id: entry.id, time, title, description: `${description}${actor}` }];
   }
-  if (entry.action === "ASSIGNMENT_CHANGE") {
+  if (entry.action === "ENDORSED" || entry.action === "ASSIGNMENT_CHANGE") {
     return [{
       id: entry.id,
       time,
-      title: details.previousAssigned ? "Reassigned" : "Assigned",
-      description: `Assigned to ${details.assigned}${actor}`,
+      title: "Endorsed",
+      description: `Reassigned from ${details.previousAssigned || "unassigned"} to ${details.assigned}${actor}`,
     }];
   }
   if (entry.action === "LOCK" || entry.action === "UNLOCK") {
@@ -199,7 +199,8 @@ if (!historyEvents.some((event: any) => event.title === "Reported")) {
             <section className="detail-section">
               <h4>Ownership</h4>
               <div className="detail-summary">
-                <div className="field"><label>Assigned To</label><b>{r.assigned || "—"}</b></div>
+                <div className="field"><label>Record Owner</label><b>{ownerName}</b></div>
+                <div className="field"><label>Current Assignee</label><b>{r.assigned || "—"}</b></div>
                 <div className="field"><label>Accountable Person</label><b>{r.accountable || "—"}</b></div>
               </div>
             </section>

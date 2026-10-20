@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { promises as fs } from "fs";
 import path from "path";
-import { authOptions } from "@/lib/auth";
+import { authOptions, currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { applyRecordVisibility } from "@/lib/records";
 
 const SETTINGS_FILE = path.join(
   process.cwd(),
@@ -23,6 +24,12 @@ type SourceReference = {
 };
 
 export async function POST(req: NextRequest) {
+
+  const user = await currentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const scopeRecords = (where: any = {}) => applyRecordVisibility(where, user);
 
   console.time("MACO Total");
   
@@ -194,13 +201,13 @@ export async function POST(req: NextRequest) {
       const taskWhere = taskConditions.length ? { OR: taskConditions } : undefined;
       const [assistanceRecords, taskRecords] = await Promise.all([
         prisma.assistance.findMany({
-          where: assistanceWhere as any,
+          where: scopeRecords(assistanceWhere ?? {}),
           select: { refNo: true, startDate: true, category: true, showGroup: true, clientName: true, problem: true, resolution: true, status: true },
           orderBy: { createdAt: "desc" },
           take: 100,
         }),
         prisma.task.findMany({
-          where: taskWhere as any,
+          where: scopeRecords(taskWhere ?? {}),
           select: { refNo: true, startDate: true, activityType: true, showGroup: true, description: true, status: true },
           orderBy: { createdAt: "desc" },
           take: 100,
@@ -340,8 +347,8 @@ export async function POST(req: NextRequest) {
       if (recordReference) {
         const isAssistance = recordReference.startsWith("TA-");
         const record = isAssistance
-          ? await prisma.assistance.findFirst({ where: { refNo: recordReference } })
-          : await prisma.task.findFirst({ where: { refNo: recordReference } });
+          ? await prisma.assistance.findFirst({ where: scopeRecords({ refNo: recordReference }) })
+          : await prisma.task.findFirst({ where: scopeRecords({ refNo: recordReference }) });
         addSourceReference(isAssistance ? "Technical Assistance" : "Tasks", [recordReference]);
         if (!record) {
           contextSections.push(`EXACT RECORD LOOKUP\nNo record found with reference ${recordReference}.`);
@@ -523,12 +530,13 @@ export async function POST(req: NextRequest) {
           ...(asksOpen ? { status: "OPEN" as const } : {}),
           ...(terms.length ? textWhere(["refNo", "problem", "resolution", "remarks", "category", "assigned", "accountable", "location", "shift", "showGroup"]) : {}),
         } as any;
+        const scopedAssistanceWhere = scopeRecords(assistanceWhere);
         const [total, byStatus, records] = await Promise.all([
-          prisma.assistance.count({ where: assistanceWhere }),
-          asksReport || asksOpen ? prisma.assistance.groupBy({ by: ["status"], where: assistanceWhere, _count: { _all: true } }) : Promise.resolve([]),
+          prisma.assistance.count({ where: scopedAssistanceWhere }),
+          asksReport || asksOpen ? prisma.assistance.groupBy({ by: ["status"], where: scopedAssistanceWhere, _count: { _all: true } }) : Promise.resolve([]),
           searchRecordsEnabled && !asksReport && (terms.length > 0 || asksOpen || asks(/\b(latest|recent|last)\b/))
             ? prisma.assistance.findMany({
-                where: assistanceWhere,
+                where: scopedAssistanceWhere,
                 select: { refNo: true, startDate: true, shift: true, location: true, showGroup: true, clientName: true, category: true, problem: true, resolution: true, priority: true, status: true, assigned: true, accountable: true, remarks: true },
                 orderBy: { createdAt: "desc" },
                 take: 5,
@@ -547,12 +555,13 @@ export async function POST(req: NextRequest) {
           ...(asksOpen ? { status: "OPEN" as const } : {}),
           ...(terms.length ? textWhere(["refNo", "activityType", "description", "remarks", "assigned", "accountable", "location", "shift", "showGroup"]) : {}),
         } as any;
+        const scopedTaskWhere = scopeRecords(taskWhere);
         const [total, byStatus, records] = await Promise.all([
-          prisma.task.count({ where: taskWhere }),
-          asksReport || asksOpen ? prisma.task.groupBy({ by: ["status"], where: taskWhere, _count: { _all: true } }) : Promise.resolve([]),
+          prisma.task.count({ where: scopedTaskWhere }),
+          asksReport || asksOpen ? prisma.task.groupBy({ by: ["status"], where: scopedTaskWhere, _count: { _all: true } }) : Promise.resolve([]),
           searchRecordsEnabled && !asksReport && (terms.length > 0 || asksOpen || asks(/\b(latest|recent|last)\b/))
             ? prisma.task.findMany({
-                where: taskWhere,
+                where: scopedTaskWhere,
                 select: { refNo: true, startDate: true, shift: true, location: true, showGroup: true, activityType: true, description: true, priority: true, status: true, assigned: true, accountable: true, remarks: true },
                 orderBy: { createdAt: "desc" },
                 take: 5,
@@ -568,10 +577,10 @@ export async function POST(req: NextRequest) {
 
       if (!recordReference && !asksOperationsAnalytics && asksReport && !asksUsers && !asksAdmin) {
         const [assistanceTotal, taskTotal, assistanceByStatus, tasksByStatus] = await Promise.all([
-          prisma.assistance.count(),
-          prisma.task.count(),
-          prisma.assistance.groupBy({ by: ["status"], _count: { _all: true } }),
-          prisma.task.groupBy({ by: ["status"], _count: { _all: true } }),
+          prisma.assistance.count({ where: scopeRecords() }),
+          prisma.task.count({ where: scopeRecords() }),
+          prisma.assistance.groupBy({ by: ["status"], where: scopeRecords(), _count: { _all: true } }),
+          prisma.task.groupBy({ by: ["status"], where: scopeRecords(), _count: { _all: true } }),
         ]);
         addSourceReference("Technical Assistance");
         addSourceReference("Tasks");
@@ -623,8 +632,8 @@ export async function POST(req: NextRequest) {
           ? { createdAt: { gte: periodStart, lt: periodEnd } }
           : undefined;
         const [assistanceRecords, taskRecords, auditLogs] = await Promise.all([
-          prisma.assistance.findMany({ where: periodWhere, orderBy: { createdAt: "desc" }, take: 1000 }),
-          prisma.task.findMany({ where: periodWhere, orderBy: { createdAt: "desc" }, take: 1000 }),
+          prisma.assistance.findMany({ where: scopeRecords(periodWhere ?? {}), orderBy: { createdAt: "desc" }, take: 1000 }),
+          prisma.task.findMany({ where: scopeRecords(periodWhere ?? {}), orderBy: { createdAt: "desc" }, take: 1000 }),
           prisma.auditLog.findMany({ where: logWhere, orderBy: { createdAt: "desc" }, take: 1000 }),
         ]);
         const records = [
@@ -787,10 +796,11 @@ export async function POST(req: NextRequest) {
         const periodWhere = { startDate: { gte: periodStart, lt: periodEnd } };
         const comparisonWhere = { startDate: { gte: comparisonStart, lt: periodStart } };
         const usePeriodFilter = periodWasRequested || asksExecutiveSummary || asksTrend || asksTopUsers || asksWorkload || (asksTopCategories && !asksTopIssues);
-        const aggregateWhere = usePeriodFilter ? periodWhere : undefined;
-        const assignmentWhere = asksWorkload && !periodWasRequested && !asksExecutiveSummary && !asksTrend
+        const aggregateWhere = scopeRecords(usePeriodFilter ? periodWhere : {});
+        const assignmentWhere = scopeRecords(asksWorkload && !periodWasRequested && !asksExecutiveSummary && !asksTrend
           ? { status: { not: "CLOSED" as const } }
-          : aggregateWhere;
+          : usePeriodFilter ? periodWhere : {});
+        const scopedComparisonWhere = scopeRecords(comparisonWhere);
         const [
           assistanceTotal,
           taskTotal,
@@ -810,11 +820,11 @@ export async function POST(req: NextRequest) {
           prisma.task.groupBy({ by: ["status"], where: aggregateWhere, _count: { _all: true } }),
           prisma.assistance.groupBy({ by: ["category"], where: aggregateWhere, _count: { _all: true } }),
           prisma.task.groupBy({ by: ["activityType"], where: aggregateWhere, _count: { _all: true } }),
-          prisma.assistance.groupBy({ by: ["problem"], where: { ...aggregateWhere, problem: { not: "" } }, _count: { _all: true }, orderBy: { _count: { problem: "desc" } }, take: 5 }),
+          prisma.assistance.groupBy({ by: ["problem"], where: scopeRecords({ ...(usePeriodFilter ? periodWhere : {}), problem: { not: "" } }), _count: { _all: true }, orderBy: { _count: { problem: "desc" } }, take: 5 }),
           prisma.assistance.groupBy({ by: ["assigned"], where: assignmentWhere, _count: { _all: true } }),
           prisma.task.groupBy({ by: ["assigned"], where: assignmentWhere, _count: { _all: true } }),
-          prisma.assistance.count({ where: comparisonWhere }),
-          prisma.task.count({ where: comparisonWhere }),
+          prisma.assistance.count({ where: scopedComparisonWhere }),
+          prisma.task.count({ where: scopedComparisonWhere }),
         ]);
         addSourceReference("Technical Assistance");
         addSourceReference("Tasks");
@@ -861,13 +871,13 @@ export async function POST(req: NextRequest) {
         today.setHours(0, 0, 0, 0);
         if (asksMostCompletedTasks) {
           const [count, activityTypes] = await Promise.all([
-            prisma.task.count({ where: { status: "CLOSED" } }),
-            prisma.task.groupBy({ by: ["activityType"], where: { status: "CLOSED" }, _count: { _all: true }, orderBy: { _count: { activityType: "desc" } }, take: 10 }),
+            prisma.task.count({ where: scopeRecords({ status: "CLOSED" }) }),
+            prisma.task.groupBy({ by: ["activityType"], where: scopeRecords({ status: "CLOSED" }), _count: { _all: true }, orderBy: { _count: { activityType: "desc" } }, take: 10 }),
           ]);
           addSourceReference("Tasks");
           contextSections.push(`TARGETED TASK RETRIEVAL\n${JSON.stringify({ type: "most completed task types", totalCompleted: count, activityTypes: activityTypes.map((entry) => ({ activityType: entry.activityType, completedCount: entry._count._all })) }, null, 2)}`);
         } else if (asksTopPerformers || asksTaskPerformance) {
-          const performers = await prisma.task.groupBy({ by: ["assigned"], where: { status: "CLOSED", assigned: { not: "" }, ...requestedPeriodWhere() }, _count: { assigned: true }, orderBy: { _count: { assigned: "desc" } }, take: 10 });
+          const performers = await prisma.task.groupBy({ by: ["assigned"], where: scopeRecords({ status: "CLOSED", assigned: { not: "" }, ...requestedPeriodWhere() }), _count: { assigned: true }, orderBy: { _count: { assigned: "desc" } }, take: 10 });
           addSourceReference("Tasks");
           contextSections.push(`TARGETED TASK RETRIEVAL\n${JSON.stringify({ type: "top performers by completed task count", performers: performers.filter((entry) => entry.assigned?.trim()).map((entry, index) => ({ rank: index + 1, name: entry.assigned, completedTasks: entry._count.assigned })) }, null, 2)}`);
         } else {
@@ -875,9 +885,10 @@ export async function POST(req: NextRequest) {
           const where = overdue
             ? { status: { not: "CLOSED" as const }, startDate: { lt: today } }
             : { status: "OPEN" as const };
+          const visibleWhere = scopeRecords(where);
           const [count, tasks] = await Promise.all([
-            prisma.task.count({ where }),
-            prisma.task.findMany({ where, select: { refNo: true, startDate: true, activityType: true, description: true, status: true, assigned: true, accountable: true }, orderBy: { startDate: overdue ? "asc" : "desc" }, take: 5 }),
+            prisma.task.count({ where: visibleWhere }),
+            prisma.task.findMany({ where: visibleWhere, select: { refNo: true, startDate: true, activityType: true, description: true, status: true, assigned: true, accountable: true }, orderBy: { startDate: overdue ? "asc" : "desc" }, take: 5 }),
           ]);
           addSourceReference("Tasks", tasks.map((task) => task.refNo));
           contextSections.push(`TARGETED TASK RETRIEVAL\n${JSON.stringify({ type: overdue ? "overdue tasks (scheduled date before today and not closed)" : "open tasks", count, tasks: tasks.map((task) => ({ refNo: task.refNo, date: task.startDate, activityType: task.activityType, status: task.status, assigned: task.assigned, accountable: task.accountable, description: shorten(task.description, asksDetailedRecords ? 500 : 140) })) }, null, 2)}`);
@@ -886,11 +897,11 @@ export async function POST(req: NextRequest) {
 
       if (!recordReference && !asksIncidentInvestigation && asksTargetedAssistance && !asksOperationsAnalytics) {
         if (asksAssistancePerformance) {
-          const performers = await prisma.assistance.groupBy({ by: ["assigned"], where: { status: "CLOSED", assigned: { not: "" }, ...requestedPeriodWhere() }, _count: { assigned: true }, orderBy: { _count: { assigned: "desc" } }, take: 10 });
+          const performers = await prisma.assistance.groupBy({ by: ["assigned"], where: scopeRecords({ status: "CLOSED", assigned: { not: "" }, ...requestedPeriodWhere() }), _count: { assigned: true }, orderBy: { _count: { assigned: "desc" } }, take: 10 });
           addSourceReference("Technical Assistance");
           contextSections.push(`TARGETED ASSISTANCE RETRIEVAL\n${JSON.stringify({ type: "top performers by completed technical assistance count", performers: performers.filter((entry) => entry.assigned?.trim()).map((entry, index) => ({ rank: index + 1, name: entry.assigned, completedRequests: entry._count.assigned })) }, null, 2)}`);
         } else if (asksTopIssues) {
-          const categories = await prisma.assistance.groupBy({ by: ["category"], _count: { _all: true }, orderBy: { _count: { category: "desc" } }, take: 10 });
+          const categories = await prisma.assistance.groupBy({ by: ["category"], where: scopeRecords(), _count: { _all: true }, orderBy: { _count: { category: "desc" } }, take: 10 });
           addSourceReference("Technical Assistance");
           contextSections.push(`TARGETED ASSISTANCE RETRIEVAL\n${JSON.stringify({ type: "most reported issue categories", issues: categories.map((entry) => ({ category: entry.category, count: entry._count._all })) }, null, 2)}`);
         } else {
@@ -901,9 +912,10 @@ export async function POST(req: NextRequest) {
                 { clientName: { contains: "Adobe", mode: "insensitive" as const } },
               ] }
             : { status: "OPEN" as const };
+          const visibleWhere = scopeRecords(where);
           const [count, incidents] = await Promise.all([
-            prisma.assistance.count({ where }),
-            prisma.assistance.findMany({ where, select: { refNo: true, startDate: true, category: true, problem: true, resolution: true, status: true, assigned: true, location: true }, orderBy: { createdAt: "desc" }, take: 5 }),
+            prisma.assistance.count({ where: visibleWhere }),
+            prisma.assistance.findMany({ where: visibleWhere, select: { refNo: true, startDate: true, category: true, problem: true, resolution: true, status: true, assigned: true, location: true }, orderBy: { createdAt: "desc" }, take: 5 }),
           ]);
           addSourceReference("Technical Assistance", incidents.map((incident) => incident.refNo));
           contextSections.push(`TARGETED ASSISTANCE RETRIEVAL\n${JSON.stringify({ type: asksAdobeIncidents ? "Adobe incidents" : "open incidents", count, incidents: incidents.map((incident) => ({ refNo: incident.refNo, date: incident.startDate, category: incident.category, status: incident.status, assigned: incident.assigned, location: incident.location, problem: shorten(incident.problem, asksDetailedRecords ? 500 : 140), ...(asksDetailedRecords ? { resolution: shorten(incident.resolution, 300) } : {}) })) }, null, 2)}`);
@@ -934,7 +946,9 @@ export async function POST(req: NextRequest) {
           end.setDate(end.getDate() + 1);
           auditFilters.push({ createdAt: { gte: start, lt: end } });
         }
-        const where = auditFilters.length ? { AND: auditFilters } : undefined;
+        const where = user.role === "ADMIN"
+          ? auditFilters.length ? { AND: auditFilters } : {}
+          : { AND: [...auditFilters, { userId: user.id }] };
         const [auditCount, auditLogs] = await Promise.all([
           prisma.auditLog.count({ where }),
           prisma.auditLog.findMany({
@@ -954,7 +968,10 @@ export async function POST(req: NextRequest) {
       }
 
       if (!recordReference && asksAudit && !asksTargetedAudit) {
-        const where = terms.length ? textWhere(["action", "entityType", "entityId"]) as any : undefined;
+        const auditSearch = terms.length ? textWhere(["action", "entityType", "entityId"]) as any : {};
+        const where = user.role === "ADMIN"
+          ? auditSearch
+          : { AND: [auditSearch, { userId: user.id }] };
         const [auditCount, auditLogs] = await Promise.all([
           prisma.auditLog.count({ where }),
           prisma.auditLog.findMany({
@@ -1000,13 +1017,13 @@ export async function POST(req: NextRequest) {
       if (!contextSections.length && searchRecordsEnabled && terms.length) {
         const [assistanceRecords, taskRecords] = await Promise.all([
           prisma.assistance.findMany({
-            where: textWhere(["refNo", "problem", "resolution", "remarks", "category", "assigned", "accountable", "location", "shift", "showGroup"]) as any,
+            where: scopeRecords(textWhere(["refNo", "problem", "resolution", "remarks", "category", "assigned", "accountable", "location", "shift", "showGroup"]) as any),
             select: { refNo: true, problem: true, resolution: true, status: true, category: true, location: true },
             orderBy: { createdAt: "desc" },
             take: 3,
           }),
           prisma.task.findMany({
-            where: textWhere(["refNo", "activityType", "description", "remarks", "assigned", "accountable", "location", "shift", "showGroup"]) as any,
+            where: scopeRecords(textWhere(["refNo", "activityType", "description", "remarks", "assigned", "accountable", "location", "shift", "showGroup"]) as any),
             select: { refNo: true, activityType: true, description: true, status: true, location: true },
             orderBy: { createdAt: "desc" },
             take: 3,
@@ -1024,8 +1041,8 @@ export async function POST(req: NextRequest) {
 
       if (!contextSections.length && asksOpen) {
         const [openTasks, openAssistance] = await Promise.all([
-          prisma.task.count({ where: { status: "OPEN" } }),
-          prisma.assistance.count({ where: { status: "OPEN" } }),
+          prisma.task.count({ where: scopeRecords({ status: "OPEN" }) }),
+          prisma.assistance.count({ where: scopeRecords({ status: "OPEN" }) }),
         ]);
         addSourceReference("Tasks");
         addSourceReference("Technical Assistance");

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { applyReportScope, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
 
 export async function GET(req: NextRequest) {
   const user = await currentUser();
@@ -24,6 +25,7 @@ export async function GET(req: NextRequest) {
 
   const activity = s.get("activity") || "all";
   const status = s.get("status") || "all";
+  const scope = resolveReportScope(s.get("scope"), user);
 
   if (from > to) {
     return NextResponse.json(
@@ -42,12 +44,13 @@ export async function GET(req: NextRequest) {
   if (status !== "all") {
     where.status = status;
   }
+  const reportWhere = applyReportScope(where, user, scope);
 
   const assistance =
     activity === "tasks"
       ? []
       : await prisma.assistance.findMany({
-          where,
+          where: reportWhere,
           orderBy: [
             { startDate: "desc" },
             { refNo: "desc" },
@@ -66,6 +69,7 @@ export async function GET(req: NextRequest) {
             status: true,
             timeStarted: true,
             timeEnded: true,
+            owner: { select: reportOwnerSelect },
             assigned: true,
             accountable: true,
             remarks: true,
@@ -76,7 +80,7 @@ export async function GET(req: NextRequest) {
     activity === "assistance"
       ? []
       : await prisma.task.findMany({
-          where,
+          where: reportWhere,
           orderBy: [
             { startDate: "desc" },
             { refNo: "desc" },
@@ -93,6 +97,7 @@ export async function GET(req: NextRequest) {
             status: true,
             timeStarted: true,
             timeEnded: true,
+            owner: { select: reportOwnerSelect },
             assigned: true,
             accountable: true,
             remarks: true,

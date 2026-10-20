@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { formatReportOwner } from "@/lib/reports";
 
 function styleHeader(row: ExcelJS.Row) {
   row.eachCell((cell) => {
@@ -169,6 +170,7 @@ export async function buildReportWorkbook(data: {
     "Resolution",
     "Priority",
     "Status",
+    "Owner",
     "Assigned",
     "Accountable",
     "Remarks",
@@ -178,7 +180,7 @@ export async function buildReportWorkbook(data: {
 
   ta.autoFilter = {
     from: "A1",
-    to: "N1",
+    to: "O1",
   };
 
   data.assistance.forEach((r) => {
@@ -194,6 +196,7 @@ export async function buildReportWorkbook(data: {
       r.resolution,
       r.priority,
       r.status,
+      formatReportOwner(r.owner),
       r.assigned,
       r.accountable,
       r.remarks,
@@ -225,6 +228,7 @@ export async function buildReportWorkbook(data: {
     "Description",
     "Priority",
     "Status",
+    "Owner",
     "Assigned",
     "Accountable",
     "Remarks",
@@ -234,7 +238,7 @@ export async function buildReportWorkbook(data: {
 
   taskSheet.autoFilter = {
     from: "A1",
-    to: "L1",
+    to: "M1",
   };
 
   data.tasks.forEach((r) => {
@@ -248,6 +252,7 @@ export async function buildReportWorkbook(data: {
       r.description,
       r.priority,
       r.status,
+      formatReportOwner(r.owner),
       r.assigned,
       r.accountable,
       r.remarks,
@@ -276,6 +281,7 @@ export async function buildReportWorkbook(data: {
     "Status",
     "Priority",
     "Location",
+    "Owner",
     "Assigned",
     "Description",
   ]);
@@ -290,6 +296,7 @@ export async function buildReportWorkbook(data: {
       r.status,
       r.priority,
       r.location,
+      formatReportOwner(r.owner),
       r.assigned,
       r.problem,
     ]);
@@ -303,6 +310,7 @@ export async function buildReportWorkbook(data: {
       r.status,
       r.priority,
       r.location,
+      formatReportOwner(r.owner),
       r.assigned,
       r.description,
     ]);
@@ -310,7 +318,7 @@ export async function buildReportWorkbook(data: {
 
   combined.autoFilter = {
     from: "A1",
-    to: "H1",
+    to: "I1",
   };
 
   colorStatusColumn(combined, 4, 2);

@@ -5,6 +5,7 @@ import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildReportWorkbook } from "@/lib/reportExcel";
 import { logAudit } from "@/lib/audit";
+import { applyReportScope, formatReportOwner, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
 
 export async function POST(req: NextRequest) {
   const actor = await currentUser();
@@ -23,6 +24,7 @@ export async function POST(req: NextRequest) {
   const to = body.to;
   const activity = body.activity || "all";
   const status = body.status || "all";
+  const scope = resolveReportScope(body.scope, actor);
 
   const sender = await prisma.user.findUnique({
     where: { id: actor.id },
@@ -57,30 +59,27 @@ export async function POST(req: NextRequest) {
     },
   };
 
-  if (actor.role !== "ADMIN") {
-    where.ownerId = actor.id;
-  }
-
-
-
   if (status !== "all") {
     where.status = status;
   }
+  const reportWhere = applyReportScope(where, actor, scope);
 
   const assistance =
     activity === "tasks"
       ? []
       : await prisma.assistance.findMany({
-          where,
+          where: reportWhere,
           orderBy: [{ startDate: "desc" }],
+          include: { owner: { select: reportOwnerSelect } },
         });
 
   const tasks =
     activity === "assistance"
       ? []
       : await prisma.task.findMany({
-          where,
+          where: reportWhere,
           orderBy: [{ startDate: "desc" }],
+          include: { owner: { select: reportOwnerSelect } },
         });
 
   const workbook = await buildReportWorkbook({
@@ -136,9 +135,10 @@ const assistanceRows = assistance.length
           ${secondaryDetail("Remarks", row.remarks)}
         </td>
         <td style="${cellStyle}text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.status)}</td>
-        <td style="${cellStyle}text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.assigned)}</td>
+          <td style="${cellStyle}">${escapeHtml(formatReportOwner(row.owner))}</td>
+          <td style="${cellStyle}text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.assigned)}</td>
       </tr>`).join("")
-  : `<tr><td colspan="5" style="${cellStyle}color:#6b7785;text-align:center;padding:18px;">No technical assistance records in this period.</td></tr>`;
+        : `<tr><td colspan="6" style="${cellStyle}color:#6b7785;text-align:center;padding:18px;">No technical assistance records in this period.</td></tr>`;
 
 const taskRows = tasks.length
   ? tasks.map((row) => `
@@ -150,9 +150,10 @@ const taskRows = tasks.length
           ${secondaryDetail("Remarks", row.remarks)}
         </td>
         <td style="${cellStyle}text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.status === "CLOSE_PENDING" ? "Close pending" : row.status)}</td>
-        <td style="${cellStyle}text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.assigned)}</td>
+          <td style="${cellStyle}">${escapeHtml(formatReportOwner(row.owner))}</td>
+          <td style="${cellStyle}text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.assigned)}</td>
       </tr>`).join("")
-  : `<tr><td colspan="5" style="${cellStyle}color:#6b7785;text-align:center;padding:18px;">No other task records in this period.</td></tr>`;
+        : `<tr><td colspan="6" style="${cellStyle}color:#6b7785;text-align:center;padding:18px;">No other task records in this period.</td></tr>`;
 
 const generatedAt = new Date().toLocaleString("en-PH", {
   year: "numeric",
@@ -215,15 +216,15 @@ const emailHtml = `
             <tr>${summaryCard("Open", statusCounts.open, "#c74646", "&#9675;")}${summaryCard("Close Pending", statusCounts.pending, "#b77914", "&#9684;")}${summaryCard("Closed", statusCounts.closed, "#34845e", "&#10003;")}</tr>
           </table>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${tableStyle}margin-top:22px;">
-            <colgroup><col width="14%"><col width="16%"><col width="45%"><col width="10%"><col width="15%"></colgroup>
-            <tr><td colspan="5" style="padding:0 0 9px;color:#165d59;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Technical assistance details</td></tr>
-            ${tableHead(["Ref No", "Client", "Problem", "Status", "Assigned"])}
+            <colgroup><col width="12%"><col width="14%"><col width="38%"><col width="9%"><col width="13%"><col width="14%"></colgroup>
+            <tr><td colspan="6" style="padding:0 0 9px;color:#165d59;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Technical assistance details</td></tr>
+            ${tableHead(["Ref No", "Client", "Problem", "Status", "Owner", "Assigned"])}
             ${assistanceRows}
           </table>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${tableStyle}margin-top:22px;">
-            <colgroup><col width="14%"><col width="16%"><col width="45%"><col width="10%"><col width="15%"></colgroup>
-            <tr><td colspan="5" style="padding:0 0 9px;color:#165d59;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Other task details</td></tr>
-            ${tableHead(["Ref No", "Activity type", "Description", "Status", "Assigned"])}
+            <colgroup><col width="12%"><col width="14%"><col width="38%"><col width="9%"><col width="13%"><col width="14%"></colgroup>
+            <tr><td colspan="6" style="padding:0 0 9px;color:#165d59;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Other task details</td></tr>
+            ${tableHead(["Ref No", "Activity type", "Description", "Status", "Owner", "Assigned"])}
             ${taskRows}
           </table>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin-top:22px;border-top:1px solid #e3e8ee;border-collapse:collapse;">

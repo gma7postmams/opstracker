@@ -6,16 +6,19 @@ export interface SessionUser {
 
 interface OwnableRecord {
   ownerId: number | null;
+  ownerRole?: "ADMIN" | "USER" | null;
+  assigned?: string | null;
   locked: boolean;
 }
 
-/**
- * The core rule: you may edit what you entered, unless an admin has locked it.
- * Admins are exempt from both halves.
- */
+export function canView(user: SessionUser, record: OwnableRecord): boolean {
+  if (user.role === "ADMIN") return true;
+  return record.ownerRole === "USER" || record.assigned === user.name;
+}
+
 export function canEdit(user: SessionUser, record: OwnableRecord): boolean {
   if (user.role === "ADMIN") return true;
-  return record.ownerId === user.id && !record.locked;
+  return (record.ownerId === user.id || record.assigned === user.name) && !record.locked;
 }
 
 export function isAdmin(user: SessionUser): boolean {
@@ -26,7 +29,7 @@ export function isAdmin(user: SessionUser): boolean {
 export function editBlockedReason(user: SessionUser, record: OwnableRecord): string | null {
   if (canEdit(user, record)) return null;
   if (record.locked) return "This record is locked by an administrator";
-  return "Only the person who entered this record can edit it";
+  return "Only the record owner or current assignee can edit it";
 }
 
 /** Admins may not strip their own admin rights or delete themselves. */

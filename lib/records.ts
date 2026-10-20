@@ -77,46 +77,27 @@ export function buildOrderBy(type: RecordType, sort: SortKey = "date", dir: "asc
   return [{ [sort]: dir }];
 }
 
+export function recordVisibilityWhere(user: SessionUser) {
+  if (user.role === "ADMIN") return {};
+  return {
+    OR: [
+      { owner: { is: { role: "USER" } } },
+      { assigned: user.name },
+    ],
+  };
+}
+
+export function applyRecordVisibility<T extends Record<string, any>>(where: T, user: SessionUser) {
+  const visibility = recordVisibilityWhere(user);
+  return Object.keys(visibility).length ? { AND: [where, visibility] } : where;
+}
+
 export async function listRecords(type: RecordType, query: ListQuery, user?: any) {
   const d = delegateFor(type);
-  const where = buildWhere(type, query);
-
-  if (user?.role === "ADMIN") {
-
-    // Admin selected a specific user
-    if (query.userId && query.userId !== "all") {
-      where.ownerId = Number(query.userId);
-    }
-
-  } else {
-
-    // Non-admin users
-
-    if ((query.userId as any) === "all") {
-
-      where.owner = {
-        role: {
-          not: "ADMIN",
-        },
-      };
-
-    } else if (query.userId) {
-
-      where.ownerId = Number(query.userId);
-
-      where.owner = {
-        role: {
-          not: "ADMIN",
-        },
-      };
-
-    } else {
-
-      where.ownerId = user.id;
-
-    }
-
-  }
+  const filters = buildWhere(type, query);
+  if (query.userId && query.userId !== "all") filters.ownerId = Number(query.userId);
+  const where = user ? applyRecordVisibility(filters, user) : filters;
+  const unfilteredWhere = user ? recordVisibilityWhere(user) : {};
 
 
   const perPage = Math.min(query.perPage ?? 50, 200);
@@ -131,7 +112,7 @@ export async function listRecords(type: RecordType, query: ListQuery, user?: any
       include: { owner: { select: { id: true, firstName: true, middleInitial: true, surname: true } } },
     }),
     d.count({ where }),
-    d.count(),
+    d.count({ where: unfilteredWhere }),
   ]);
 
   return { rows, total, unfiltered, page, perPage, pages: Math.ceil(total / perPage) || 1 };
@@ -141,7 +122,7 @@ export async function getRecord(type: RecordType, id: number) {
   return delegateFor(type).findUnique({
     where: { id },
     include: {
-      owner: { select: { id: true, firstName: true, middleInitial: true, surname: true, avatarUrl: true } },
+      owner: { select: { id: true, firstName: true, middleInitial: true, surname: true, avatarUrl: true, role: true } },
       lockedBy: { select: { id: true, firstName: true, surname: true } },
     },
   });
@@ -176,7 +157,7 @@ export async function partitionByPermission(type: RecordType, ids: number[], use
   const d = delegateFor(type);
   const rows = await d.findMany({
     where: { id: { in: ids } },
-    select: { id: true, refNo: true, ownerId: true, locked: true },
+    select: { id: true, refNo: true, ownerId: true, assigned: true, locked: true },
   });
   const allowed: number[] = [];
   const skippedRefs: string[] = [];

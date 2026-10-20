@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildReportWorkbook } from "@/lib/reportExcel";
+import { applyReportScope, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
 
 export async function GET(req: NextRequest) {
   const user = await currentUser();
@@ -25,6 +26,7 @@ export async function GET(req: NextRequest) {
 
   const activity = s.get("activity") || "all";
   const status = s.get("status") || "all";
+  const scope = resolveReportScope(s.get("scope"), user);
 
   const where: any = {
     startDate: {
@@ -36,27 +38,30 @@ export async function GET(req: NextRequest) {
   if (status !== "all") {
     where.status = status;
   }
+  const reportWhere = applyReportScope(where, user, scope);
 
   const assistance =
     activity === "tasks"
       ? []
       : await prisma.assistance.findMany({
-          where,
+          where: reportWhere,
           orderBy: [
             { startDate: "desc" },
             { refNo: "desc" },
           ],
+          include: { owner: { select: reportOwnerSelect } },
         });
 
   const tasks =
     activity === "assistance"
       ? []
       : await prisma.task.findMany({
-          where,
+          where: reportWhere,
           orderBy: [
             { startDate: "desc" },
             { refNo: "desc" },
           ],
+          include: { owner: { select: reportOwnerSelect } },
         });
 
   const workbook = await buildReportWorkbook({

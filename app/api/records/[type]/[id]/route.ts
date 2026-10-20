@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { isRecordType } from "@/lib/recordTypes";
 import { getRecord, normalizeTimes, delegateFor } from "@/lib/records";
-import { canEdit, editBlockedReason, isAdmin } from "@/lib/permissions";
+import { canEdit, canView, editBlockedReason, isAdmin } from "@/lib/permissions";
 import { schemaFor, flatten } from "@/lib/validation";
 import { prisma } from "@/lib/prisma";
 
@@ -23,6 +23,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ typ
   const found = await load(p.type, p.id);
   if (!found) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const { type, record } = found;
+  if (!canView(user, { ...record, ownerRole: record.owner?.role })) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   const activityHistory = await prisma.auditLog.findMany({
     where: { entityType: type, entityId: record.refNo },
     orderBy: { createdAt: "asc" },
@@ -137,7 +140,7 @@ if (statusChanged) {
 }
 if (assignmentChanged) {
   await logAudit({
-    action: "ASSIGNMENT_CHANGE",
+    action: "ENDORSED",
     entityType: type,
     entityId: updated.refNo,
     userId: user.id,

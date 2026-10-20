@@ -14,6 +14,7 @@ const formatDate = (date: Date) => {
 };
 
 type DateRangePreset = "today" | "week" | "month" | "custom";
+type ReportScope = "mine" | "all";
 
 function getDateRange(preset: Exclude<DateRangePreset, "custom">) {
   const end = new Date();
@@ -36,12 +37,12 @@ const defaultFilters = {
   userId: "all",
 };
 
-function getReportFilters(filters: typeof defaultFilters, preset: DateRangePreset) {
-  return preset === "custom" ? filters : { ...filters, ...getDateRange(preset) };
+function getReportFilters(filters: typeof defaultFilters, preset: DateRangePreset, scope: ReportScope) {
+  return { ...(preset === "custom" ? filters : { ...filters, ...getDateRange(preset) }), scope };
 }
 
 interface Row {
-  user: string; total: number; closed: number; open: number; pending: number;
+  owner: string; assigned: string; total: number; closed: number; open: number; pending: number;
   avgPerDay: string; avgMinutes: number | null;
 }
 
@@ -63,7 +64,8 @@ function Tally({ title, note, rows, accent, days }: {
         {rows.length ? (
           <table>
             <thead><tr>
-		<th>User</th>
+		<th>Owner</th>
+		<th>Assigned</th>
 		<th>Total</th>
 		<th className="statuscol">Completed</th>
 		<th className="statuscol">Open</th>
@@ -73,8 +75,9 @@ function Tally({ title, note, rows, accent, days }: {
             </tr></thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.user}>
-                  <td><b>{r.user}</b></td>
+                <tr key={`${r.owner}-${r.assigned}`}>
+                  <td><b>{r.owner}</b></td>
+                  <td><b>{r.assigned}</b></td>
                   <td><b>{r.total}</b></td>
 
 <td className="statuscol">
@@ -96,7 +99,7 @@ function Tally({ title, note, rows, accent, days }: {
               ))}
             </tbody>
             <tfoot><tr>
-		<td><b>All users</b></td>
+		<td colSpan={2}><b>All records</b></td>
 		<td><b>{sum.total}</b></td>
 
 		<td className="statuscol"><b>{sum.closed}</b></td>
@@ -116,6 +119,8 @@ export default function Reports() {
 
   const { data: session } = useSession();
   const isAdmin = session?.user.role === "ADMIN";
+  const [selectedScope, setSelectedScope] = useState<ReportScope | null>(null);
+  const scope = selectedScope ?? (isAdmin ? "all" : "mine");
 
   const toast = useToast();
 
@@ -144,8 +149,8 @@ export default function Reports() {
 
   useEffect(() => {
     if (dateRangePreset === "custom" && (!f.from || !f.to || f.from > f.to)) return;
-    load(getReportFilters(f, dateRangePreset));
-  }, [load, f, dateRangePreset]);
+    load(getReportFilters(f, dateRangePreset, scope));
+  }, [load, f, dateRangePreset, scope]);
 
 
 const [emailResult, setEmailResult] = useState<{
@@ -167,7 +172,7 @@ async function previewEmail() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        ...getReportFilters(f, dateRangePreset),
+        ...getReportFilters(f, dateRangePreset, scope),
         preview: true,
       }),
     });
@@ -195,7 +200,7 @@ async function sendEmail() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(getReportFilters(f, dateRangePreset)),
+      body: JSON.stringify(getReportFilters(f, dateRangePreset, scope)),
     });
 
     const out = await res.json();
@@ -221,6 +226,7 @@ async function sendEmail() {
 function clearFilters() {
   setF(defaultFilters);
   setDateRangePreset("today");
+  setSelectedScope(null);
 }
 
 function selectDateRange(preset: DateRangePreset) {
@@ -232,7 +238,7 @@ function selectDateRange(preset: DateRangePreset) {
 
 function exportExcel() {
   const url =
-    `/api/reports/excel?${new URLSearchParams(getReportFilters(f, dateRangePreset))}`;
+    `/api/reports/excel?${new URLSearchParams(getReportFilters(f, dateRangePreset, scope))}`;
 
   window.open(url, "_blank");
 }
@@ -241,6 +247,7 @@ const activeFilters =
   (dateRangePreset !== "today" ? 1 : 0) +
   (f.activity !== "all" ? 1 : 0) +
   (f.status !== "all" ? 1 : 0) +
+  (scope !== (isAdmin ? "all" : "mine") ? 1 : 0) +
   (isAdmin && f.userId !== "all" ? 1 : 0);
 
   const s = d?.summary;
@@ -306,6 +313,14 @@ const activeFilters =
             <option value="CLOSED">Closed</option>
           </select>
         </label>
+        {isAdmin && (
+          <label className="flabel">REPORT SCOPE
+            <select value={scope} onChange={(e) => setSelectedScope(e.target.value as ReportScope)}>
+              <option value="mine">My Records</option>
+              <option value="all">All Records</option>
+            </select>
+          </label>
+        )}
 
         {isAdmin && (
           <label className="flabel">
@@ -373,15 +388,15 @@ const activeFilters =
           </div>
 
           {d.tallies.assistance && (
-            <Tally title="Technical Assistance tally" note="Per-user assistance workload"
+            <Tally title="Technical Assistance tally" note="By record owner and assignee"
               rows={d.tallies.assistance} accent="#3b82f6" days={d.range.days} />
           )}
           {d.tallies.tasks && (
-            <Tally title="Other Task tally" note="Per-user task workload"
+            <Tally title="Other Task tally" note="By record owner and assignee"
               rows={d.tallies.tasks} accent="#7f56d9" days={d.range.days} />
           )}
           {d.tallies.combined && (
-            <Tally title="Combined tally" note="Assistance and tasks together"
+            <Tally title="Combined tally" note="Assistance and tasks by owner and assignee"
               rows={d.tallies.combined} accent="#06aed4" days={d.range.days} />
           )}
         </>
