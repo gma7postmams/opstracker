@@ -22,12 +22,35 @@ const QUOTES = [
   "Quality means doing it right when no one is looking.",
 ];
 
+const PERIOD_OPTIONS = [
+  { value: "today", label: "Today" },
+  { value: "yesterday", label: "Yesterday" },
+  { value: "thisWeek", label: "This Week" },
+  { value: "thisMonth", label: "This Month" },
+  { value: "thisYear", label: "This Year" },
+  { value: "all", label: "All Records" },
+  { value: "custom", label: "Custom" },
+] as const;
+
+type DashboardPeriod = (typeof PERIOD_OPTIONS)[number]["value"];
+
+type DashboardUser = {
+  id: number;
+  firstName: string;
+  middleInitial: string | null;
+  surname: string;
+};
 
 export default function Dashboard() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
 
   const [d, setD] = useState<any>(null);
+  const [period, setPeriod] = useState<DashboardPeriod>("today");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [users, setUsers] = useState<DashboardUser[]>([]);
   const [typedGreeting, setTypedGreeting] = useState("");
   const [isTypingGreeting, setIsTypingGreeting] = useState(false);
   const hasAnimatedGreeting = useRef(false);
@@ -125,7 +148,41 @@ export default function Dashboard() {
   }, [d, firstName, fullGreeting, session?.user?.name, shouldAnimateGreeting]);
 
   useEffect(() => {
-    fetch("/api/dashboard")
+    if (!isAdmin) {
+      setUsers([]);
+      setSelectedUserId("");
+      return;
+    }
+
+    const controller = new AbortController();
+    fetch("/api/users/report-filter", { signal: controller.signal })
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`User filter API failed: ${r.status}`);
+        return r.json();
+      })
+      .then((result: DashboardUser[]) => setUsers(result))
+      .catch((err) => {
+        if (!controller.signal.aborted) console.error("Dashboard user filter load failed:", err);
+      });
+
+    return () => controller.abort();
+  }, [isAdmin]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    if (period === "custom" && (!fromDate || !toDate || fromDate > toDate)) {
+      setD(null);
+      return () => controller.abort();
+    }
+
+    const params = new URLSearchParams({ period });
+    if (period === "custom") {
+      params.set("from", fromDate);
+      params.set("to", toDate);
+    }
+    if (isAdmin && selectedUserId) params.set("userId", selectedUserId);
+
+    fetch(`/api/dashboard?${params}`, { signal: controller.signal })
       .then(async (r) => {
         if (!r.ok) {
           throw new Error(`Dashboard API failed: ${r.status}`);
@@ -135,24 +192,70 @@ export default function Dashboard() {
       })
       .then(setD)
       .catch((err) => {
-        console.error("Dashboard load failed:", err);
+        if (!controller.signal.aborted) console.error("Dashboard load failed:", err);
       });
-  }, []);
+    return () => controller.abort();
+  }, [fromDate, isAdmin, period, selectedUserId, toDate]);
 
-  if (!d) {
-    return (
-      <div className="page">
-        <div className="muted">Loading…</div>
-      </div>
-    );
-  }  
-
-  const open = d.assistance.OPEN + d.tasks.OPEN;
-  const pending = d.assistance.CLOSE_PENDING + d.tasks.CLOSE_PENDING;
-  const closed = d.assistance.CLOSED + d.tasks.CLOSED;
+  const open = d ? d.assistance.OPEN + d.tasks.OPEN : 0;
+  const pending = d ? d.assistance.CLOSE_PENDING + d.tasks.CLOSE_PENDING : 0;
+  const closed = d ? d.assistance.CLOSED + d.tasks.CLOSED : 0;
   const total = open + pending + closed;
-  const peak = Math.max(1, ...d.trend.map((t: any) => t.count));
-  const catMax = Math.max(1, ...d.categories.map((c: any) => c.count));
+  const catMax = Math.max(1, ...(d?.categories ?? []).map((c: any) => c.count));
+  const trendData = d?.trend ?? [];
+  const showDailyLabels = period === "today" || period === "yesterday" || period === "thisWeek";
+  const showHistoricalValueLabels = showDailyLabels || period === "thisMonth" || period === "custom";
+  const todayDate = new Date().toISOString().slice(0, 10);
+  const peak = Math.max(1, ...trendData.flatMap((point: any) => [point.assistanceCount, point.taskCount]));
+  const chartWidth = Math.max(700, trendData.length * 56);
+  const chartLeft = 42;
+  const chartRight = chartWidth - 22;
+  const chartTop = 20;
+  const chartBottom = 166;
+  const chartHeight = chartBottom - chartTop;
+  const trendPoints = trendData.map((point: any, index: number) => {
+    const x = trendData.length === 1
+      ? (chartLeft + chartRight) / 2
+      : chartLeft + (index * (chartRight - chartLeft)) / (trendData.length - 1);
+    const assistanceVisual = peak === 1 && point.assistanceCount === 0 ? 4 / chartHeight : point.assistanceCount / peak;
+    const taskVisual = peak === 1 && point.taskCount === 0 ? 4 / chartHeight : point.taskCount / peak;
+    const valuesAreClose = Math.abs(assistanceVisual - taskVisual) * chartHeight < 22;
+    const assistanceValueY = Math.max(14, Math.min(188, chartBottom - assistanceVisual * chartHeight + (valuesAreClose && assistanceVisual < taskVisual ? 17 : -8)));
+    const taskValueY = Math.max(14, Math.min(188, chartBottom - taskVisual * chartHeight + (valuesAreClose && taskVisual <= assistanceVisual ? 17 : -8)));
+    return {
+      ...point,
+      x,
+      showValueLabels: showHistoricalValueLabels ? point.date <= todayDate : point.highlighted,
+      valueLabelX: trendData.length === 1 ? x : index === trendData.length - 1 ? x - 9 : x + 9,
+      valueLabelAnchor: trendData.length === 1 ? "middle" : index === trendData.length - 1 ? "end" : "start",
+      weekdayLabel: showDailyLabels
+        ? new Date(`${point.date}T00:00:00Z`).toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" })
+        : "",
+      dayLabel: showDailyLabels ? new Date(`${point.date}T00:00:00Z`).getUTCDate() : "",
+      assistanceY: chartBottom - assistanceVisual * chartHeight,
+      taskY: chartBottom - taskVisual * chartHeight,
+      assistanceValueY,
+      taskValueY,
+    };
+  });
+  const assistancePath = trendPoints.map((point: any, index: number) => `${index ? "L" : "M"}${point.x},${point.assistanceY}`).join(" ");
+  const taskPath = trendPoints.map((point: any, index: number) => `${index ? "L" : "M"}${point.x},${point.taskY}`).join(" ");
+  const hasActiveFilters = period !== "today" || (isAdmin && selectedUserId !== "");
+
+  function clearFilters() {
+    setPeriod("today");
+    setSelectedUserId("");
+    setFromDate("");
+    setToDate("");
+  }
+
+  function selectPeriod(nextPeriod: DashboardPeriod) {
+    setPeriod(nextPeriod);
+    if (nextPeriod !== "custom") {
+      setFromDate("");
+      setToDate("");
+    }
+  }
 
   const card = (n: number, label: string, tone: string, Icon: LucideIcon) => (
     <div className={`dashboard-kpi ${tone}`} key={label}>
@@ -168,7 +271,9 @@ export default function Dashboard() {
     <div className="page">
 
       <div className="panel spaced">
-        <h2
+        <div className="dashboard-heading">
+          <div>
+            <h2
           aria-label={fullGreeting}
           style={{
             fontFamily: 'Georgia, "Times New Roman", serif',
@@ -180,9 +285,9 @@ export default function Dashboard() {
         >
           {shouldAnimateGreeting ? typedGreeting : fullGreeting}
           {isTypingGreeting && <span aria-hidden="true">|</span>}
-        </h2>
+            </h2>
 
-        <p
+            <p
           style={{
             marginTop: "12px",
             fontStyle: "italic",
@@ -192,9 +297,49 @@ export default function Dashboard() {
           }}
         >
           "{QUOTES[quoteIndex]}"
-        </p>
+            </p>
+          </div>
+        </div>
       </div>
 
+      <div className="filters dashboard-filter-bar" aria-label="Dashboard filters">
+        <label className="flabel">
+          Period
+          <select value={period} onChange={(event) => selectPeriod(event.target.value as DashboardPeriod)}>
+            {PERIOD_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+        {period === "custom" && (
+          <>
+            <label className="flabel">
+              From
+              <input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} />
+            </label>
+            <label className="flabel">
+              To
+              <input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} />
+            </label>
+          </>
+        )}
+        {isAdmin && (
+          <label className="flabel">
+            User
+            <select value={selectedUserId} onChange={(event) => setSelectedUserId(event.target.value)}>
+              <option value="">All Users</option>
+              {users.map((dashboardUser) => (
+                <option key={dashboardUser.id} value={dashboardUser.id}>
+                  {[dashboardUser.firstName, dashboardUser.middleInitial, dashboardUser.surname].filter(Boolean).join(" ")}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {hasActiveFilters && <button className="chip dashboard-clear" type="button" onClick={clearFilters}>Clear</button>}
+      </div>
+
+      {d ? <>
       <div className="dashboard-summaries">
         <section className="dashboard-summary" aria-labelledby="activity-summary-title">
           <h3 id="activity-summary-title">Activity Summary</h3>
@@ -236,24 +381,44 @@ export default function Dashboard() {
       <div className="grid">
         <section className="panel">
           <div className="panelhead"><div><h3>Activity trend</h3>
-            <span className="muted">Records logged, last 7 days</span></div></div>
-          <div className="trend">
-            {d.trend.map((t: any) => (
-              <div className="col" key={t.date}>
-                <b>{t.count}</b>
-                <i style={{
-                  height: `${Math.round((t.count / peak) * 100)}%`,
-                  background: t.count === peak && t.count > 0 ? "#7f56d9" : "#3b82f6",
-                }} />
-
-		<div>
-		  <small>{t.date.slice(5)}</small>
-		  <br />
-		  <small>{t.label}</small>
-		</div>
-
-              </div>
-            ))}
+            <span className="muted">{d.trendSubtitle}</span></div></div>
+          <div style={{ overflowX: "auto" }}>
+            <svg
+              role="img"
+              aria-label={`Activity trend: ${d.trendSubtitle}`}
+              viewBox={`0 0 ${chartWidth} 230`}
+              style={{ display: "block", width: "100%", minWidth: `${chartWidth}px`, height: "230px" }}
+            >
+              {[0, 1, 2, 3].map((step) => {
+                const y = chartTop + (chartHeight * step) / 3;
+                return <line key={step} x1={chartLeft} x2={chartRight} y1={y} y2={y} stroke="var(--line)" strokeDasharray="3 5" />;
+              })}
+              {assistancePath && <path d={assistancePath} fill="none" stroke="#06aed4" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />}
+              {taskPath && <path d={taskPath} fill="none" stroke="#f79009" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />}
+              {trendPoints.map((point: any) => (
+                <g key={point.date}>
+                  <title>{`${point.tooltip}: Technical Assistance ${point.assistanceCount}, Other Tasks ${point.taskCount}`}</title>
+                  {point.highlighted && <>
+                    <circle className="trend-point-pulse" cx={point.x} cy={point.assistanceY} r="5" fill="none" stroke="var(--trend-highlight)" strokeWidth="2" />
+                    <circle className="trend-point-pulse" cx={point.x} cy={point.taskY} r="5" fill="none" stroke="var(--trend-highlight)" strokeWidth="2" />
+                  </>}
+                  <circle cx={point.x} cy={point.assistanceY} r={point.highlighted ? 5.5 : 3.5} fill={point.highlighted ? "var(--trend-highlight)" : "var(--panel)"} stroke="#06aed4" strokeWidth="2" />
+                  <circle cx={point.x} cy={point.taskY} r={point.highlighted ? 5.5 : 3.5} fill={point.highlighted ? "var(--trend-highlight)" : "var(--panel)"} stroke="#f79009" strokeWidth="2" />
+                  {point.showValueLabels && <>
+                    <text className="trend-value trend-value-assistance" x={point.valueLabelX} y={point.assistanceValueY} textAnchor={point.valueLabelAnchor}>{point.assistanceCount}</text>
+                    <text className="trend-value trend-value-task" x={point.valueLabelX} y={point.taskValueY} textAnchor={point.valueLabelAnchor}>{point.taskCount}</text>
+                  </>}
+                  {showDailyLabels ? <>
+                    <text className={point.highlighted ? "trend-label-pulse" : undefined} x={point.x} y="196" textAnchor="middle" fill={point.highlighted ? "var(--trend-highlight)" : "var(--muted)"} fontSize="11" fontWeight={point.highlighted ? 600 : 500}>{point.weekdayLabel}</text>
+                    <text className={point.highlighted ? "trend-label-pulse" : undefined} x={point.x} y="212" textAnchor="middle" fill={point.highlighted ? "var(--trend-highlight)" : "var(--muted)"} fontSize="11" fontWeight={point.highlighted ? 600 : 500}>{point.dayLabel}</text>
+                  </> : <text x={point.x} y="204" textAnchor="middle" fill={point.highlighted ? "var(--trend-highlight)" : "var(--muted)"} fontSize="11" fontWeight={point.highlighted ? 600 : 500}>{point.label}</text>}
+                </g>
+              ))}
+            </svg>
+          </div>
+          <div className="trend-legend" aria-label="Activity trend series">
+            <span><i style={{ background: "#06aed4" }} />Technical Assistance</span>
+            <span><i style={{ background: "#f79009" }} />Other Tasks</span>
           </div>
         </section>
 
@@ -327,6 +492,13 @@ export default function Dashboard() {
 	  )}
 	</section>
 
+      </> : (
+        <div className="muted dashboard-load-state">
+          {period === "custom" && (!fromDate || !toDate || fromDate > toDate)
+            ? "Choose a valid From and To date to view dashboard data."
+            : "Loading…"}
+        </div>
+      )}
     </div>
   );
 }
