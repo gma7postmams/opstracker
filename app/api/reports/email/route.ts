@@ -114,6 +114,12 @@ const escapeHtml = (value: unknown) =>
     "'": "&#39;",
   })[character]!);
 
+const formatStatusLabel = (value: string) => ({
+  OPEN: "Open",
+  CLOSED: "Closed",
+  CLOSE_PENDING: "Close Pending",
+}[value] ?? value);
+
 const cellStyle = "padding:9px 8px;border-bottom:1px solid #e3e8ee;color:#273444;font-family:Arial,sans-serif;font-size:12px;line-height:17px;word-break:break-word;";
 const tableStyle = "width:100%;border-collapse:collapse;table-layout:fixed;";
 const headerCellStyle = "padding:10px 8px;background:#edf3f4;border-bottom:1px solid #d7e0e5;color:#435564;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;letter-spacing:.04em;text-align:left;white-space:nowrap;";
@@ -134,8 +140,8 @@ const assistanceRows = assistance.length
           ${secondaryDetail("Resolution", row.resolution)}
           ${secondaryDetail("Remarks", row.remarks)}
         </td>
-        <td style="${cellStyle}text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.status)}</td>
-          <td style="${cellStyle}">${escapeHtml(formatReportOwner(row.owner))}</td>
+        <td style="${cellStyle}width:120px;text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(formatStatusLabel(row.status))}</td>
+          <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;">${escapeHtml(formatReportOwner(row.owner))}</td>
           <td style="${cellStyle}text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.assigned)}</td>
       </tr>`).join("")
         : `<tr><td colspan="6" style="${cellStyle}color:#6b7785;text-align:center;padding:18px;">No technical assistance records in this period.</td></tr>`;
@@ -149,8 +155,8 @@ const taskRows = tasks.length
           <div>${escapeHtml(row.description)}</div>
           ${secondaryDetail("Remarks", row.remarks)}
         </td>
-        <td style="${cellStyle}text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.status === "CLOSE_PENDING" ? "Close pending" : row.status)}</td>
-          <td style="${cellStyle}">${escapeHtml(formatReportOwner(row.owner))}</td>
+        <td style="${cellStyle}width:120px;text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(formatStatusLabel(row.status))}</td>
+          <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;">${escapeHtml(formatReportOwner(row.owner))}</td>
           <td style="${cellStyle}text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.assigned)}</td>
       </tr>`).join("")
         : `<tr><td colspan="6" style="${cellStyle}color:#6b7785;text-align:center;padding:18px;">No other task records in this period.</td></tr>`;
@@ -192,7 +198,7 @@ const summaryCard = (label: string, value: number, color: string, icon: string) 
     </table>
   </td>`;
 
-const emailWidth = 900;
+const emailWidth = 1100;
 
 const emailHtml = `
 <!doctype html>
@@ -201,7 +207,7 @@ const emailHtml = `
 <body style="margin:0;padding:0;background-color:#f1f4f5;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f1f4f5" style="width:100%;background-color:#f1f4f5;border-collapse:collapse;">
     <tr><td align="center" style="padding:20px 10px;">
-      <table role="presentation" width="${emailWidth}" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:100%;max-width:${emailWidth}px;background-color:#ffffff;border-collapse:collapse;font-family:Arial,sans-serif;">
+      <table role="presentation" width="${emailWidth}" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:95%;max-width:${emailWidth}px;background-color:#ffffff;border-collapse:collapse;font-family:Arial,sans-serif;">
         <tr><td bgcolor="#165d59" style="padding:24px 22px;background-color:#165d59;color:#ffffff;">
           <div style="font-family:Arial,sans-serif;font-size:23px;line-height:29px;font-weight:bold;">MAMS Support Activity Report</div>
           <div style="padding-top:9px;font-family:Arial,sans-serif;font-size:13px;line-height:20px;color:#e2f1ef;">Reporting period: ${escapeHtml(reportingPeriod)}</div>
@@ -216,13 +222,13 @@ const emailHtml = `
             <tr>${summaryCard("Open", statusCounts.open, "#c74646", "&#9675;")}${summaryCard("Close Pending", statusCounts.pending, "#b77914", "&#9684;")}${summaryCard("Closed", statusCounts.closed, "#34845e", "&#10003;")}</tr>
           </table>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${tableStyle}margin-top:22px;">
-            <colgroup><col width="12%"><col width="14%"><col width="38%"><col width="9%"><col width="13%"><col width="14%"></colgroup>
+            <colgroup><col width="12%"><col width="14%"><col width="38%"><col width="120"><col width="13%"><col width="14%"></colgroup>
             <tr><td colspan="6" style="padding:0 0 9px;color:#165d59;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Technical assistance details</td></tr>
             ${tableHead(["Ref No", "Client", "Problem", "Status", "Owner", "Assigned"])}
             ${assistanceRows}
           </table>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${tableStyle}margin-top:22px;">
-            <colgroup><col width="12%"><col width="14%"><col width="38%"><col width="9%"><col width="13%"><col width="14%"></colgroup>
+            <colgroup><col width="12%"><col width="14%"><col width="38%"><col width="120"><col width="13%"><col width="14%"></colgroup>
             <tr><td colspan="6" style="padding:0 0 9px;color:#165d59;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Other task details</td></tr>
             ${tableHead(["Ref No", "Activity type", "Description", "Status", "Owner", "Assigned"])}
             ${taskRows}
