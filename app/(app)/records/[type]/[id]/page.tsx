@@ -163,14 +163,14 @@ const duration = (() => {
 	)}
 
           <hr />
-          <div className="field">
+          <div className="field record-copy">
             <label>{isAssistance ? "Problem" : "Description"}</label>
             <b>{isAssistance ? r.problem : r.description}</b>
           </div>
           {isAssistance && (
-            <div className="field spacedtop"><label>Resolution</label><b>{r.resolution || "—"}</b></div>
+            <div className="field record-copy spacedtop"><label>Resolution</label><b>{r.resolution || "—"}</b></div>
           )}
-          <div className="field spacedtop"><label>Remarks</label><b>{r.remarks || "—"}</b></div>
+          <div className="field record-copy spacedtop"><label>Remarks</label><b>{r.remarks || "—"}</b></div>
 
 
 <hr />

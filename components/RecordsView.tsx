@@ -394,7 +394,7 @@ export default function RecordsView(props: Props) {
                       </>
                     ) : (
                       <>
-                        <small className="crm-description-clamp">{r[bodyField]}</small>
+                        <small className="crm-description-clamp"><strong className="crm-content-label">Description:</strong> {r[bodyField]}</small>
                         {r.remarks && <small className="crm-remarks-clamp"><strong>Remarks:</strong> {r.remarks}</small>}
                       </>
                     )}
@@ -497,10 +497,10 @@ export default function RecordsView(props: Props) {
         .crm-table-wrap tbody tr:hover { background: color-mix(in srgb, #237a75 12%, var(--panel)); }
         .crm-activity-cell { min-width: 0; }
         .crm-title-clamp, .crm-description-clamp, .crm-remarks-clamp { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; }
-        .crm-title-clamp { -webkit-line-clamp: 1; line-clamp: 1; }
-        .crm-description-clamp { margin-top: 4px; color: #64748b; -webkit-line-clamp: 2; line-clamp: 2; }
-        .crm-remarks-clamp { margin-top: 5px; color: #667085; font-size: 11px; -webkit-line-clamp: 2; line-clamp: 2; }
-        .crm-content-label, .crm-remarks-clamp :global(strong) { color: #475569; }
+        .crm-title-clamp { color: var(--text); font-size: 14px; font-weight: 650; line-height: 1.35; -webkit-line-clamp: 1; line-clamp: 1; }
+        .crm-description-clamp { margin-top: 4px; color: var(--record-content); font-size: 13px; line-height: 1.4; -webkit-line-clamp: 2; line-clamp: 2; }
+        .crm-remarks-clamp { margin-top: 5px; color: var(--record-content); font-size: 13px; line-height: 1.4; -webkit-line-clamp: 2; line-clamp: 2; }
+        .crm-content-label, .crm-remarks-clamp :global(strong) { color: var(--record-label); font-weight: 650; }
         .crm-status, .crm-priority { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border: 1px solid transparent; border-radius: 999px; font-size: 11px; font-weight: 650; white-space: nowrap; }
         .crm-status-open, .crm-priority-normal { color: #1d4ed8; border-color: #bfdbfe; background: #eff6ff; }
         .crm-status-close_pending { color: #b45309; border-color: #fde68a; background: #fffbeb; }
