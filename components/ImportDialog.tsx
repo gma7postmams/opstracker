@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Modal from "./Modal";
 import { useToast } from "./Toast";
+import { formatTime12Hour } from "@/lib/format";
 
 interface Props {
   /** "self" forces every row onto the importer; "admin" honours the people columns. */
@@ -165,7 +166,7 @@ export default function ImportDialog({ scope, fixedType, onClose, onDone }: Prop
               <tbody>
                 {preview.sample.map((r: any, i: number) => (
                   <tr key={i}>
-                    <td>{r.date}</td><td>{r.location}</td><td>{r.timeStarted}</td>
+                    <td>{r.date}</td><td>{r.location}</td><td>{formatTime12Hour(r.timeStarted)}</td>
                     <td>{r.status}</td><td>{r.assigned}</td>
                   </tr>
                 ))}

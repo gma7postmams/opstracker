@@ -9,6 +9,7 @@ import ImportDialog from "./ImportDialog";
 import ConfirmDialog from "./ConfirmDialog";
 import { useToast } from "./Toast";
 import { statusLabel, priorityLabel } from "@/lib/recordTypes";
+import { formatTime12Hour } from "@/lib/format";
 import {
   Activity,
   ArrowDownWideNarrow,
@@ -400,7 +401,7 @@ export default function RecordsView(props: Props) {
                     )}
                   </td>
                   <td><span className={`crm-priority crm-priority-${String(r.priority).toLowerCase()}`}><ArrowDownWideNarrow size={13} aria-hidden="true" />{priorityLabel(r.priority)}</span></td>
-                  <td>{r.timeEnded ? `${r.timeStarted} – ${r.timeEnded}` : `Since ${r.timeStarted}`}</td>
+                  <td>{r.timeEnded ? `${formatTime12Hour(r.timeStarted)} – ${formatTime12Hour(r.timeEnded)}` : `Since ${formatTime12Hour(r.timeStarted)}`}</td>
                   <td><span className={`crm-status crm-status-${String(r.status).toLowerCase()}`}><CircleDot size={13} aria-hidden="true" />{statusLabel(r.status)}</span></td>
                   <td>{r.assigned}</td>
                 </tr>

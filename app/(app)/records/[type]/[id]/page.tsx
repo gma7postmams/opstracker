@@ -8,6 +8,7 @@ import RecordForm from "@/components/RecordForm";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 import { statusLabel, priorityLabel } from "@/lib/recordTypes";
+import { formatTime12Hour } from "@/lib/format";
 
 export default function RecordDetail() {
   const { type, id } = useParams<{ type: string; id: string }>();
@@ -83,9 +84,9 @@ const isOngoing = r.status === "OPEN" && !recordedEndAt;
 const displayDate = (date: Date) => new Intl.DateTimeFormat(undefined, {
   month: "short", day: "numeric", year: "numeric",
 }).format(date);
-const displayTime = (date: Date) => new Intl.DateTimeFormat(undefined, {
-  hour: "2-digit", minute: "2-digit", hourCycle: "h23",
-}).format(date);
+const displayTime = (date: Date) => formatTime12Hour(
+  `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`,
+);
 const duration = startAt && endAt
   ? (() => {
       const totalMinutes = Math.max(0, Math.floor((endAt.getTime() - startAt.getTime()) / 60000));
@@ -117,8 +118,8 @@ const historyEvents = (r.activityHistory ?? []).flatMap((entry: any) => {
         ? "Closed"
         : "Reopened";
     const previousCompletion = details.previousEndDate && details.previousTimeEnded
-      ? ` Previous completion: ${String(details.previousEndDate).slice(0, 10)} ${details.previousTimeEnded}.`
-      : details.previousTimeEnded ? ` Previous completion time: ${details.previousTimeEnded}.` : "";
+      ? ` Previous completion: ${String(details.previousEndDate).slice(0, 10)} ${formatTime12Hour(details.previousTimeEnded)}.`
+      : details.previousTimeEnded ? ` Previous completion time: ${formatTime12Hour(details.previousTimeEnded)}.` : "";
     const description = title === "Close Pending"
       ? "Work completed and awaiting approval"
       : title === "Closed"
@@ -148,7 +149,7 @@ const historyEvents = (r.activityHistory ?? []).flatMap((entry: any) => {
 if (!historyEvents.some((event: any) => event.title === "Reported")) {
   historyEvents.unshift({
     id: "reported-fallback",
-    time: r.timeStarted,
+    time: formatTime12Hour(r.timeStarted),
     title: "Reported",
     description: `Record created by ${ownerName}`,
   });
@@ -189,8 +190,8 @@ if (!historyEvents.some((event: any) => event.title === "Reported")) {
             <section className="detail-section">
               <h4>Work Summary</h4>
               <div className="detail-summary">
-                <div className="field"><label>Started</label><b>{startAt ? `${displayDate(startAt)} • ${r.timeStarted}` : "—"}</b></div>
-                <div className="field"><label>Ended</label><b>{endAt ? `${displayDate(endAt)} • ${recordedEndAt ? r.timeEnded : displayTime(endAt)}${isOngoing ? " (ongoing)" : ""}` : "—"}</b></div>
+                <div className="field"><label>Started</label><b>{startAt ? `${displayDate(startAt)} • ${formatTime12Hour(r.timeStarted)}` : "—"}</b></div>
+                <div className="field"><label>Ended</label><b>{endAt ? `${displayDate(endAt)} • ${recordedEndAt ? formatTime12Hour(r.timeEnded) : displayTime(endAt)}${isOngoing ? " (ongoing)" : ""}` : "—"}</b></div>
                 <div className="field"><label>Duration</label><b>{duration}{isOngoing && duration !== "—" ? " (ongoing)" : ""}</b></div>
               </div>
             </section>
