@@ -4,9 +4,11 @@ const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 const statusEnum = z.enum(["OPEN", "CLOSE_PENDING", "CLOSED"]);
 const priorityEnum = z.enum(["LOW", "NORMAL", "HIGH", "CRITICAL"]);
+const dateValue = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a YYYY-MM-DD date");
 
 const shared = {
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a YYYY-MM-DD date"),
+  startDate: dateValue,
+  endDate: z.union([dateValue, z.literal(""), z.null()]).optional(),
   shift: z.string().min(1, "Shift is required"),
   location: z.string().min(1, "Location is required"),
   showGroup: z.string().optional().nullable(),
@@ -26,15 +28,15 @@ const shared = {
 const timeRules = (v: any, ctx: z.RefinementCtx) => {
   
 	if (
-	  (v.status === "CLOSED" ||
-	   v.status === "CLOSE_PENDING") &&
-	  !v.timeEnded
+    (v.status === "CLOSED" ||
+     v.status === "CLOSE_PENDING") &&
+    (!v.endDate || !v.timeEnded)
 	) {
 	  ctx.addIssue({
 	    code: "custom",
-	    path: ["timeEnded"],
+      path: [!v.endDate ? "endDate" : "timeEnded"],
 	    message:
-	      "A closed or close pending record needs a time ended"
+        "A closed or close pending record needs an end date and time"
 	  });
 	}
 

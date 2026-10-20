@@ -358,7 +358,7 @@ export default function RecordsView(props: Props) {
                   <input type="checkbox" checked={allOn} onChange={toggleAll} aria-label="Select all visible records" />
                 </th>
                 {th("refNo", "ID")}
-                {th("date", "Date")}
+                {th("date", "Start Date")}
                 {th("location", "Location")}
                 {th("subject", subjectHeader)}
                 {th("priority", "Priority")}
@@ -382,7 +382,7 @@ export default function RecordsView(props: Props) {
                     <b><Link href={`/records/${type}/${r.id}`}>{r.refNo}</Link></b>
                     {r.locked && <small>🔒 Locked</small>}
                   </td>
-                  <td>{String(r.date).slice(0, 10)}<small>{r.shift}</small></td>
+                  <td>{String(r.startDate).slice(0, 10)}<small>{r.shift}</small></td>
                   <td>{r.location}<small>{r.showGroup}</small></td>
                   <td className="crm-activity-cell">
                     <b className="crm-title-clamp">{r[subjectField]}</b>

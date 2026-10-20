@@ -5,6 +5,7 @@ import { isRecordType } from "@/lib/recordTypes";
 import { getRecord, normalizeTimes, delegateFor } from "@/lib/records";
 import { canEdit, editBlockedReason, isAdmin } from "@/lib/permissions";
 import { schemaFor, flatten } from "@/lib/validation";
+import { prisma } from "@/lib/prisma";
 
 /** Resolves the route params into a narrowed type plus the record itself. */
 async function load(type: string, id: string) {
@@ -22,7 +23,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ typ
   const found = await load(p.type, p.id);
   if (!found) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const { type, record } = found;
-  return NextResponse.json({ ...record, canEdit: canEdit(user, record) });
+  const activityHistory = await prisma.auditLog.findMany({
+    where: { entityType: type, entityId: record.refNo },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, action: true, details: true, createdAt: true },
+  });
+  return NextResponse.json({ ...record, activityHistory, canEdit: canEdit(user, record) });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ type: string; id: string }> }) {
@@ -34,6 +40,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ty
   const { type, record } = found;
 
   const body = await req.json();
+
+  if (typeof body.status === "string" && body.status !== record.status) {
+    const allowedTransitions: Record<string, string[]> = {
+      OPEN: ["CLOSE_PENDING"],
+      CLOSE_PENDING: ["CLOSED", "OPEN"],
+      CLOSED: ["OPEN"],
+    };
+    if (!allowedTransitions[record.status]?.includes(body.status)) {
+      return NextResponse.json({ error: "That status transition is not allowed" }, { status: 400 });
+    }
+  }
 
   // Lock toggling is a separate, admin-only concern from editing content.
   if (typeof body.locked === "boolean" && Object.keys(body).length === 1) {
@@ -70,33 +87,76 @@ return NextResponse.json(updated);
 
   // Partial updates still need the cross-field time rules, so merge with the
   // stored row before validating rather than checking the patch in isolation.
-  const merged = {
+  const merged = normalizeTimes({
     ...record,
     ...body,
-    date: (body.date ?? record.date.toISOString().slice(0, 10)).slice(0, 10),
-  };
+    startDate: (body.startDate ?? record.startDate.toISOString().slice(0, 10)).slice(0, 10),
+    endDate: body.endDate === undefined
+      ? record.endDate?.toISOString().slice(0, 10) ?? null
+      : body.endDate,
+  });
   const parsed = schemaFor(type).safeParse(merged);
   if (!parsed.success) {
     return NextResponse.json({ error: "Validation failed", fields: flatten(parsed.error) }, { status: 400 });
   }
 
-const data = normalizeTimes({ ...parsed.data, date: new Date(parsed.data.date) });
+const normalized = normalizeTimes(parsed.data);
+if (record.status !== "OPEN" && normalized.status === "OPEN") {
+  normalized.endDate = null;
+  normalized.timeEnded = null;
+}
+const data = {
+  ...normalized,
+  startDate: new Date(normalized.startDate),
+  endDate: normalized.endDate ? new Date(normalized.endDate) : null,
+};
 
 const updated = await delegateFor(type).update({
   where: { id: record.id },
   data,
 });
 
-await logAudit({
-  action: "UPDATE",
-  entityType: type,
-  entityId: updated.refNo,
-  userId: user.id,
-  details: {
-    recordId: record.id,
-    name: user.name,
-  },
-});
+const statusChanged = updated.status !== record.status;
+const assignmentChanged = updated.assigned !== record.assigned;
+if (statusChanged) {
+  await logAudit({
+    action: "STATUS_CHANGE",
+    entityType: type,
+    entityId: updated.refNo,
+    userId: user.id,
+    details: {
+      name: user.name,
+      previousStatus: record.status,
+      nextStatus: updated.status,
+      previousEndDate: record.endDate?.toISOString().slice(0, 10) ?? null,
+      previousTimeEnded: record.timeEnded,
+      endDate: updated.endDate,
+      timeEnded: updated.timeEnded,
+    },
+  });
+}
+if (assignmentChanged) {
+  await logAudit({
+    action: "ASSIGNMENT_CHANGE",
+    entityType: type,
+    entityId: updated.refNo,
+    userId: user.id,
+    details: {
+      name: user.name,
+      previousAssigned: record.assigned,
+      assigned: updated.assigned,
+    },
+  });
+}
+if (!statusChanged && !assignmentChanged) {
+  await logAudit({
+    action: "UPDATE",
+    entityType: type,
+    entityId: updated.refNo,
+    userId: user.id,
+    details: { recordId: record.id, name: user.name },
+  });
+}
 
 return NextResponse.json(updated);
 

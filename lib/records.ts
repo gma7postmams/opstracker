@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { logAudit } from "./audit";
 import { RecordType, TYPES, SortKey } from "./recordTypes";
 import { SessionUser, canEdit } from "./permissions";
 
@@ -50,9 +51,9 @@ export function buildWhere(type: RecordType, query: ListQuery) {
   if (query.location && query.location !== "all") where.location = query.location;
   if (query.shift && query.shift !== "all") where.shift = query.shift;
   if (query.from || query.to) {
-    where.date = {};
-    if (query.from) where.date.gte = new Date(query.from);
-    if (query.to) where.date.lte = new Date(query.to);
+    where.startDate = {};
+    if (query.from) where.startDate.gte = new Date(query.from);
+    if (query.to) where.startDate.lte = new Date(query.to);
   }
 
   const q = query.q?.trim();
@@ -72,7 +73,7 @@ export function buildWhere(type: RecordType, query: ListQuery) {
 export function buildOrderBy(type: RecordType, sort: SortKey = "date", dir: "asc" | "desc" = "desc") {
   const cfg = TYPES[type];
   if (sort === "subject") return [{ [cfg.subjectField]: dir }];
-  if (sort === "date") return [{ date: dir }, { timeStarted: dir }];
+  if (sort === "date") return [{ startDate: dir }, { timeStarted: dir }];
   return [{ [sort]: dir }];
 }
 
@@ -146,9 +147,19 @@ export async function getRecord(type: RecordType, id: number) {
   });
 }
 
-/** Closing a record implies an end time; reopening one clears it. */
+/** Closing pending fills any missing part of its end timestamp. */
 export function normalizeTimes(data: any) {
-  return data;
+  const normalized = { ...data };
+  if (normalized.status === "CLOSE_PENDING") {
+    const now = new Date();
+    if (!normalized.endDate) {
+      normalized.endDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    }
+    if (!normalized.timeEnded) {
+      normalized.timeEnded = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    }
+  }
+  return normalized;
 }
 
 export interface BatchResult {
@@ -186,12 +197,49 @@ export async function batchUpdate(
   // Status/time coupling is per-row, so a plain updateMany would get it wrong
   // for records with differing start times.
   if (patch.status) {
-    const rows = await d.findMany({ where: { id: { in: allowed } }, select: { id: true, timeStarted: true } });
-    await prisma.$transaction(
-      rows.map((r: any) =>
-        d.update({ where: { id: r.id }, data: normalizeTimes({ ...patch, timeStarted: r.timeStarted }) })
-      )
-    );
+    const rows = await d.findMany({
+      where: { id: { in: allowed } },
+      select: { id: true, refNo: true, status: true, endDate: true, timeEnded: true },
+    });
+    const changed = await prisma.$transaction(async (tx) => {
+      const txDelegate = (type === "assistance" ? tx.assistance : tx.task) as any;
+      return Promise.all(rows.map(async (row: any) => {
+        const normalized = normalizeTimes({
+          ...patch,
+          endDate: patch.endDate ?? row.endDate?.toISOString().slice(0, 10) ?? null,
+          timeEnded: patch.timeEnded ?? row.timeEnded,
+        });
+        if (patch.status === "OPEN" && row.status !== "OPEN") {
+          normalized.endDate = null;
+          normalized.timeEnded = null;
+        }
+        const updated = await txDelegate.update({
+          where: { id: row.id },
+          data: {
+            ...normalized,
+            endDate: normalized.endDate ? new Date(normalized.endDate) : null,
+          } as any,
+        });
+        return { previous: row, updated };
+      }));
+    });
+    await Promise.all(changed
+      .filter(({ previous, updated }) => previous.status !== updated.status)
+      .map(({ previous, updated }) => logAudit({
+        action: "STATUS_CHANGE",
+        entityType: type,
+        entityId: updated.refNo,
+        userId: user.id,
+        details: {
+          name: user.name,
+          previousStatus: previous.status,
+          nextStatus: updated.status,
+          previousEndDate: previous.endDate?.toISOString().slice(0, 10) ?? null,
+          previousTimeEnded: previous.timeEnded,
+          endDate: updated.endDate,
+          timeEnded: updated.timeEnded,
+        },
+      })));
   } else {
     await d.updateMany({ where: { id: { in: allowed } }, data: patch });
   }

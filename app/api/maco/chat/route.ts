@@ -195,13 +195,13 @@ export async function POST(req: NextRequest) {
       const [assistanceRecords, taskRecords] = await Promise.all([
         prisma.assistance.findMany({
           where: assistanceWhere as any,
-          select: { refNo: true, date: true, category: true, showGroup: true, clientName: true, problem: true, resolution: true, status: true },
+          select: { refNo: true, startDate: true, category: true, showGroup: true, clientName: true, problem: true, resolution: true, status: true },
           orderBy: { createdAt: "desc" },
           take: 100,
         }),
         prisma.task.findMany({
           where: taskWhere as any,
-          select: { refNo: true, date: true, activityType: true, showGroup: true, description: true, status: true },
+          select: { refNo: true, startDate: true, activityType: true, showGroup: true, description: true, status: true },
           orderBy: { createdAt: "desc" },
           take: 100,
         }),
@@ -210,7 +210,7 @@ export async function POST(req: NextRequest) {
         ...assistanceRecords.map((record) => ({
           type: "Technical Assistance",
           refNo: record.refNo,
-          date: record.date,
+          date: record.startDate,
           category: record.category,
           showGroup: record.showGroup,
           client: record.clientName,
@@ -221,7 +221,7 @@ export async function POST(req: NextRequest) {
         ...taskRecords.map((record) => ({
           type: "Other Tasks",
           refNo: record.refNo,
-          date: record.date,
+          date: record.startDate,
           category: record.activityType,
           showGroup: record.showGroup,
           client: null,
@@ -331,7 +331,7 @@ export async function POST(req: NextRequest) {
       const end = new Date(start);
       if (periodUnit === "month") end.setMonth(end.getMonth() + 1);
       else end.setDate(end.getDate() + 7);
-      return { date: { gte: start, lt: end } };
+      return { startDate: { gte: start, lt: end } };
     };
 
     if (!simpleQuestion) {
@@ -389,7 +389,7 @@ export async function POST(req: NextRequest) {
               category: recordData.category ?? recordData.activityType ?? null,
               assignee: recordData.assigned ?? null,
               creator,
-              date: recordData.date ?? recordData.createdAt ?? null,
+              date: recordData.startDate ?? recordData.createdAt ?? null,
               summary: shorten(
                 String(recordData.problem ?? recordData.description ?? ""),
                 asksDetailedRecords ? 1000 : 240
@@ -529,7 +529,7 @@ export async function POST(req: NextRequest) {
           searchRecordsEnabled && !asksReport && (terms.length > 0 || asksOpen || asks(/\b(latest|recent|last)\b/))
             ? prisma.assistance.findMany({
                 where: assistanceWhere,
-                select: { refNo: true, date: true, shift: true, location: true, showGroup: true, clientName: true, category: true, problem: true, resolution: true, priority: true, status: true, assigned: true, accountable: true, remarks: true },
+                select: { refNo: true, startDate: true, shift: true, location: true, showGroup: true, clientName: true, category: true, problem: true, resolution: true, priority: true, status: true, assigned: true, accountable: true, remarks: true },
                 orderBy: { createdAt: "desc" },
                 take: 5,
               })
@@ -538,7 +538,7 @@ export async function POST(req: NextRequest) {
           addSourceReference("Technical Assistance", records.map((record) => record.refNo));
         contextSections.push(`TECHNICAL ASSISTANCE\nTotal records: ${total}${byStatus.length ? `; status counts: ${byStatus.map((entry) => `${entry.status} ${entry._count._all}`).join(", ")}` : ""}.`);
         if (records.length) {
-          contextSections.push(`MATCHING TECHNICAL ASSISTANCE (maximum 5)\n${records.map((record) => `Ref ${record.refNo}; ${formatDate(record.date)}; ${record.shift}; ${record.location}; ${record.showGroup ?? "No group"}; category ${record.category}; ${record.priority}; ${record.status}; assigned ${record.assigned}; accountable ${record.accountable}; problem: ${shorten(record.problem, asksDetailedRecords ? 320 : 140)}${asksDetailedRecords ? `; resolution: ${shorten(record.resolution, 200)}; remarks: ${shorten(record.remarks, 120)}` : ""}`).join("\n")}`);
+          contextSections.push(`MATCHING TECHNICAL ASSISTANCE (maximum 5)\n${records.map((record) => `Ref ${record.refNo}; ${formatDate(record.startDate)}; ${record.shift}; ${record.location}; ${record.showGroup ?? "No group"}; category ${record.category}; ${record.priority}; ${record.status}; assigned ${record.assigned}; accountable ${record.accountable}; problem: ${shorten(record.problem, asksDetailedRecords ? 320 : 140)}${asksDetailedRecords ? `; resolution: ${shorten(record.resolution, 200)}; remarks: ${shorten(record.remarks, 120)}` : ""}`).join("\n")}`);
         }
       }
 
@@ -553,7 +553,7 @@ export async function POST(req: NextRequest) {
           searchRecordsEnabled && !asksReport && (terms.length > 0 || asksOpen || asks(/\b(latest|recent|last)\b/))
             ? prisma.task.findMany({
                 where: taskWhere,
-                select: { refNo: true, date: true, shift: true, location: true, showGroup: true, activityType: true, description: true, priority: true, status: true, assigned: true, accountable: true, remarks: true },
+                select: { refNo: true, startDate: true, shift: true, location: true, showGroup: true, activityType: true, description: true, priority: true, status: true, assigned: true, accountable: true, remarks: true },
                 orderBy: { createdAt: "desc" },
                 take: 5,
               })
@@ -562,7 +562,7 @@ export async function POST(req: NextRequest) {
           addSourceReference("Tasks", records.map((record) => record.refNo));
         contextSections.push(`OTHER TASKS\nTotal records: ${total}${byStatus.length ? `; status counts: ${byStatus.map((entry) => `${entry.status} ${entry._count._all}`).join(", ")}` : ""}.`);
         if (records.length) {
-          contextSections.push(`MATCHING OTHER TASKS (maximum 5)\n${records.map((record) => `Ref ${record.refNo}; ${formatDate(record.date)}; ${record.shift}; ${record.location}; ${record.showGroup ?? "No group"}; activity ${record.activityType}; ${record.priority}; ${record.status}; assigned ${record.assigned}; accountable ${record.accountable}; description: ${shorten(record.description, asksDetailedRecords ? 320 : 140)}${asksDetailedRecords ? `; remarks: ${shorten(record.remarks, 120)}` : ""}`).join("\n")}`);
+          contextSections.push(`MATCHING OTHER TASKS (maximum 5)\n${records.map((record) => `Ref ${record.refNo}; ${formatDate(record.startDate)}; ${record.shift}; ${record.location}; ${record.showGroup ?? "No group"}; activity ${record.activityType}; ${record.priority}; ${record.status}; assigned ${record.assigned}; accountable ${record.accountable}; description: ${shorten(record.description, asksDetailedRecords ? 320 : 140)}${asksDetailedRecords ? `; remarks: ${shorten(record.remarks, 120)}` : ""}`).join("\n")}`);
         }
       }
 
@@ -617,7 +617,7 @@ export async function POST(req: NextRequest) {
           ? currentUserName
           : namedPerson;
         const periodWhere = periodStart && periodEnd
-          ? { date: { gte: periodStart, lt: periodEnd } }
+          ? { startDate: { gte: periodStart, lt: periodEnd } }
           : undefined;
         const logWhere = periodStart && periodEnd
           ? { createdAt: { gte: periodStart, lt: periodEnd } }
@@ -784,8 +784,8 @@ export async function POST(req: NextRequest) {
         const comparisonStart = new Date(periodStart);
         if (periodUnit === "month") comparisonStart.setMonth(comparisonStart.getMonth() - 1);
         else comparisonStart.setDate(comparisonStart.getDate() - (periodUnit === "week" ? 7 : 1));
-        const periodWhere = { date: { gte: periodStart, lt: periodEnd } };
-        const comparisonWhere = { date: { gte: comparisonStart, lt: periodStart } };
+        const periodWhere = { startDate: { gte: periodStart, lt: periodEnd } };
+        const comparisonWhere = { startDate: { gte: comparisonStart, lt: periodStart } };
         const usePeriodFilter = periodWasRequested || asksExecutiveSummary || asksTrend || asksTopUsers || asksWorkload || (asksTopCategories && !asksTopIssues);
         const aggregateWhere = usePeriodFilter ? periodWhere : undefined;
         const assignmentWhere = asksWorkload && !periodWasRequested && !asksExecutiveSummary && !asksTrend
@@ -873,14 +873,14 @@ export async function POST(req: NextRequest) {
         } else {
           const overdue = asksOverdueTasks;
           const where = overdue
-            ? { status: { not: "CLOSED" as const }, date: { lt: today } }
+            ? { status: { not: "CLOSED" as const }, startDate: { lt: today } }
             : { status: "OPEN" as const };
           const [count, tasks] = await Promise.all([
             prisma.task.count({ where }),
-            prisma.task.findMany({ where, select: { refNo: true, date: true, activityType: true, description: true, status: true, assigned: true, accountable: true }, orderBy: { date: overdue ? "asc" : "desc" }, take: 5 }),
+            prisma.task.findMany({ where, select: { refNo: true, startDate: true, activityType: true, description: true, status: true, assigned: true, accountable: true }, orderBy: { startDate: overdue ? "asc" : "desc" }, take: 5 }),
           ]);
           addSourceReference("Tasks", tasks.map((task) => task.refNo));
-          contextSections.push(`TARGETED TASK RETRIEVAL\n${JSON.stringify({ type: overdue ? "overdue tasks (scheduled date before today and not closed)" : "open tasks", count, tasks: tasks.map((task) => ({ refNo: task.refNo, date: task.date, activityType: task.activityType, status: task.status, assigned: task.assigned, accountable: task.accountable, description: shorten(task.description, asksDetailedRecords ? 500 : 140) })) }, null, 2)}`);
+          contextSections.push(`TARGETED TASK RETRIEVAL\n${JSON.stringify({ type: overdue ? "overdue tasks (scheduled date before today and not closed)" : "open tasks", count, tasks: tasks.map((task) => ({ refNo: task.refNo, date: task.startDate, activityType: task.activityType, status: task.status, assigned: task.assigned, accountable: task.accountable, description: shorten(task.description, asksDetailedRecords ? 500 : 140) })) }, null, 2)}`);
         }
       }
 
@@ -903,10 +903,10 @@ export async function POST(req: NextRequest) {
             : { status: "OPEN" as const };
           const [count, incidents] = await Promise.all([
             prisma.assistance.count({ where }),
-            prisma.assistance.findMany({ where, select: { refNo: true, date: true, category: true, problem: true, resolution: true, status: true, assigned: true, location: true }, orderBy: { createdAt: "desc" }, take: 5 }),
+            prisma.assistance.findMany({ where, select: { refNo: true, startDate: true, category: true, problem: true, resolution: true, status: true, assigned: true, location: true }, orderBy: { createdAt: "desc" }, take: 5 }),
           ]);
           addSourceReference("Technical Assistance", incidents.map((incident) => incident.refNo));
-          contextSections.push(`TARGETED ASSISTANCE RETRIEVAL\n${JSON.stringify({ type: asksAdobeIncidents ? "Adobe incidents" : "open incidents", count, incidents: incidents.map((incident) => ({ refNo: incident.refNo, date: incident.date, category: incident.category, status: incident.status, assigned: incident.assigned, location: incident.location, problem: shorten(incident.problem, asksDetailedRecords ? 500 : 140), ...(asksDetailedRecords ? { resolution: shorten(incident.resolution, 300) } : {}) })) }, null, 2)}`);
+          contextSections.push(`TARGETED ASSISTANCE RETRIEVAL\n${JSON.stringify({ type: asksAdobeIncidents ? "Adobe incidents" : "open incidents", count, incidents: incidents.map((incident) => ({ refNo: incident.refNo, date: incident.startDate, category: incident.category, status: incident.status, assigned: incident.assigned, location: incident.location, problem: shorten(incident.problem, asksDetailedRecords ? 500 : 140), ...(asksDetailedRecords ? { resolution: shorten(incident.resolution, 300) } : {}) })) }, null, 2)}`);
         }
       }
 

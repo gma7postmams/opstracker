@@ -13,7 +13,7 @@ export const runtime = "nodejs";
 
 /** Legacy sheet headers vary; map the ones seen in the exports to our fields. */
 const ALIASES: Record<string, string> = {
-  date: "date", shift: "shift",
+  date: "startDate", startdate: "startDate", enddate: "endDate", shift: "shift",
   location: "location", locations: "location",
   showgroup: "showGroup", show: "showGroup", group: "showGroup",
   clientname: "clientName", client: "clientName",
@@ -166,9 +166,10 @@ if (type === "both") {
           raw[field] = (cells[i] ?? "").trim();
       });
 
-      const candidate = {
+      const candidate = normalizeTimes({
         ...raw,
-        date: normalizeDate(raw.date),
+        startDate: normalizeDate(raw.startDate),
+        endDate: normalizeDate(raw.endDate) || "",
         timeStarted: normalizeTime(raw.timeStarted),
         timeEnded:
           normalizeTime(raw.timeEnded) || "",
@@ -187,7 +188,7 @@ if (type === "both") {
             ? user.name
             : raw.accountable || user.name,
         resolution: raw.resolution || null,
-      };
+      });
 
       const parsed =
         schemaFor("assistance").safeParse(
@@ -203,10 +204,9 @@ if (type === "both") {
 
       await tx.assistance.create({
         data: {
-          ...normalizeTimes({
-            ...parsed.data,
-            date: new Date(parsed.data.date),
-          }),
+          ...(parsed.data as any),
+          startDate: new Date(parsed.data.startDate),
+          endDate: parsed.data.endDate ? new Date(parsed.data.endDate) : null,
           refNo,
           ownerId: user.id,
         },
@@ -234,9 +234,10 @@ if (type === "both") {
           raw[field] = (cells[i] ?? "").trim();
       });
 
-      const candidate = {
+      const candidate = normalizeTimes({
         ...raw,
-        date: normalizeDate(raw.date),
+        startDate: normalizeDate(raw.startDate),
+        endDate: normalizeDate(raw.endDate) || "",
         timeStarted: normalizeTime(raw.timeStarted),
         timeEnded:
           normalizeTime(raw.timeEnded) || "",
@@ -254,7 +255,7 @@ if (type === "both") {
           scope === "self"
             ? user.name
             : raw.accountable || user.name,
-      };
+      });
 
       const parsed =
         schemaFor("tasks").safeParse(
@@ -270,10 +271,9 @@ if (type === "both") {
 
       await tx.task.create({
         data: {
-          ...normalizeTimes({
-            ...parsed.data,
-            date: new Date(parsed.data.date),
-          }),
+          ...(parsed.data as any),
+          startDate: new Date(parsed.data.startDate),
+          endDate: parsed.data.endDate ? new Date(parsed.data.endDate) : null,
           refNo,
           ownerId: user.id,
         },
@@ -366,9 +366,10 @@ const schema =
       if (field) raw[field] = (cells[i] ?? "").trim();
     });
 
-    const candidate = {
+    const candidate = normalizeTimes({
       ...raw,
-      date: normalizeDate(raw.date),
+      startDate: normalizeDate(raw.startDate),
+      endDate: normalizeDate(raw.endDate) || "",
       timeStarted: normalizeTime(raw.timeStarted),
       timeEnded: normalizeTime(raw.timeEnded) || "",
       status: normalizeStatus(raw.status),
@@ -378,10 +379,10 @@ const schema =
       assigned: scope === "self" ? user.name : (raw.assigned || user.name),
       accountable: scope === "self" ? user.name : (raw.accountable || user.name),
       ...(type === "assistance" ? { resolution: raw.resolution || null } : {}),
-    };
+    });
 
     const parsed = schema.safeParse(candidate);
-    if (parsed.success) valid.push(parsed.data);
+    if (parsed.success) valid.push(normalizeTimes(parsed.data));
     else {
       const first = parsed.error.issues[0];
       errors.push({ row: idx + 2, message: `${first.path.join(".") || "row"}: ${first.message}` });
@@ -405,7 +406,13 @@ const schema =
     for (const row of valid) {
       const refNo = await nextRefNo(type as "assistance" | "tasks", tx);
       await d.create({
-        data: { ...normalizeTimes({ ...row, date: new Date(row.date) }), refNo, ownerId: user.id },
+        data: {
+          ...row,
+          startDate: new Date(row.startDate),
+          endDate: row.endDate ? new Date(row.endDate) : null,
+          refNo,
+          ownerId: user.id,
+        },
       });
       imported++;
     }

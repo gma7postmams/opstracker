@@ -229,7 +229,7 @@ export async function GET(request: Request) {
   today.setUTCHours(0, 0, 0, 0);
 
   const recordWhere = {
-    ...(range ? { date: { gte: range.start, lt: range.end } } : {}),
+    ...(range ? { startDate: { gte: range.start, lt: range.end } } : {}),
     ...(user.role === "ADMIN"
       ? filterUserId === null ? {} : { ownerId: filterUserId }
       : { ownerId: user.id }),
@@ -237,7 +237,7 @@ export async function GET(request: Request) {
 
   const trendConfig = buildTrendConfig(period, new Date(), range);
   const trendWhere = {
-    date: { gte: trendConfig.start, lt: trendConfig.end },
+    startDate: { gte: trendConfig.start, lt: trendConfig.end },
     ...(user.role === "ADMIN"
       ? filterUserId === null ? {} : { ownerId: filterUserId }
       : { ownerId: user.id }),
@@ -257,7 +257,7 @@ export async function GET(request: Request) {
         ...recordWhere,
         status: { not: "CLOSED" },
       },
-      orderBy: [{ priority: "desc" }, { date: "desc" }],
+      orderBy: [{ priority: "desc" }, { startDate: "desc" }],
       take: 6,
       select: { id: true, refNo: true, clientName: true, problem: true, priority: true, status: true },
     }),
@@ -266,18 +266,18 @@ export async function GET(request: Request) {
         ...recordWhere,
         status: { not: "CLOSED" },
       },
-      orderBy: [{ priority: "desc" }, { date: "desc" }],
+      orderBy: [{ priority: "desc" }, { startDate: "desc" }],
       take: 6,
       select: { id: true, refNo: true, activityType: true, description: true, priority: true, status: true },
     }),
-    prisma.assistance.groupBy({ by: ["date"], _count: true, where: trendWhere }),
-    prisma.task.groupBy({ by: ["date"], _count: true, where: trendWhere }),
+    prisma.assistance.groupBy({ by: ["startDate"], _count: true, where: trendWhere }),
+    prisma.task.groupBy({ by: ["startDate"], _count: true, where: trendWhere }),
 
   prisma.assistance.count({
     where: {
       ...recordWhere,
       status: { not: "CLOSED" },
-      date: { ...(recordWhere.date ?? {}), lt: today },
+      startDate: { ...(recordWhere.startDate ?? {}), lt: today },
     },
   }),
 
@@ -285,7 +285,7 @@ prisma.task.count({
   where: {
     ...recordWhere,
     status: { not: "CLOSED" },
-    date: { ...(recordWhere.date ?? {}), lt: today },
+    startDate: { ...(recordWhere.startDate ?? {}), lt: today },
   },
 }),
 
@@ -296,10 +296,10 @@ prisma.auditLog.findMany({
 
   ]);
 
-  const getTrendCounts = (rows: { date: Date; _count: number }[]) => {
+  const getTrendCounts = (rows: { startDate: Date; _count: number }[]) => {
     const counts = new Map<string, number>();
     rows.forEach((row) => {
-      const dateKey = ymd(row.date);
+      const dateKey = ymd(row.startDate);
       const date = new Date(`${dateKey}T00:00:00.000Z`);
       const key = trendConfig.granularity === "day"
         ? dateKey

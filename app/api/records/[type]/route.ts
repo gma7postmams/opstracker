@@ -49,7 +49,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ typ
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!isRecordType(p.type)) return NextResponse.json({ error: "Unknown record type" }, { status: 404 });
 
-  const parsed = schemaFor(p.type).safeParse(await req.json());
+  const body = normalizeTimes(await req.json());
+  const parsed = schemaFor(p.type).safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Validation failed", fields: flatten(parsed.error) }, { status: 400 });
   }
@@ -58,7 +59,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ typ
 
 const record = await prisma.$transaction(async (tx) => {
   const refNo = await nextRefNo(type, tx);
-  const data = normalizeTimes({ ...parsed.data, date: new Date(parsed.data.date) });
+  const normalized = normalizeTimes(parsed.data);
+  const data = {
+    ...normalized,
+    startDate: new Date(normalized.startDate),
+    endDate: normalized.endDate ? new Date(normalized.endDate) : null,
+  };
   const d = (type === "assistance" ? tx.assistance : tx.task) as any;
   return d.create({ data: { ...data, refNo, ownerId: user.id } });
 });
@@ -70,6 +76,7 @@ await logAudit({
   userId: user.id,
   details: {
     name: user.name,
+    assigned: record.assigned,
   },
 });
 

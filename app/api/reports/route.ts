@@ -21,7 +21,7 @@ function tally(rows: any[], days: number): Row[] {
     .map(([user, rs]) => {
       const closed = rs.filter((r) => r.status === "CLOSED");
       const durations = closed
-        .map((r) => minutesBetween(r.timeStarted, r.timeEnded))
+        .map((r) => minutesBetween(r.startDate, r.timeStarted, r.endDate, r.timeEnded))
         .filter((m): m is number => m !== null);
       return {
         user,
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
   const days = Math.max(1, Math.round((+new Date(to) - +new Date(from)) / 864e5) + 1);
 
   const where: any = {
-    date: {
+    startDate: {
       gte: new Date(from),
       lte: new Date(to),
     },
@@ -77,7 +77,8 @@ export async function GET(req: NextRequest) {
   if (status !== "all") where.status = status;
 
   const select = {
-    assigned: true, status: true, timeStarted: true, timeEnded: true, priority: true,
+    assigned: true, status: true, startDate: true, endDate: true,
+    timeStarted: true, timeEnded: true, priority: true,
   };
   const [assistance, tasks] = await Promise.all([
     activity === "tasks" ? [] : prisma.assistance.findMany({ where, select }),

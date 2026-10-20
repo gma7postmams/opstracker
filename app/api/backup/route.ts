@@ -144,12 +144,16 @@ if (dryRun) {
   });
 }
 
-  const dates = (r: any) => ({
-    ...r,
-    date: new Date(r.date),
-    createdAt: r.createdAt ? new Date(r.createdAt) : undefined,
-    updatedAt: r.updatedAt ? new Date(r.updatedAt) : undefined,
-  });
+  const dates = (r: any) => {
+    const { date, ...fields } = r;
+    return {
+      ...fields,
+      startDate: new Date(r.startDate ?? date),
+      endDate: r.endDate ? new Date(r.endDate) : null,
+      createdAt: r.createdAt ? new Date(r.createdAt) : undefined,
+      updatedAt: r.updatedAt ? new Date(r.updatedAt) : undefined,
+    };
+  };
 
   const result = await prisma.$transaction(async (tx) => {
     if (mode === "replace") {

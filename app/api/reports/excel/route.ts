@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   const status = s.get("status") || "all";
 
   const where: any = {
-    date: {
+    startDate: {
       gte: new Date(from),
       lte: new Date(to),
     },
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
       : await prisma.assistance.findMany({
           where,
           orderBy: [
-            { date: "desc" },
+            { startDate: "desc" },
             { refNo: "desc" },
           ],
         });
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
       : await prisma.task.findMany({
           where,
           orderBy: [
-            { date: "desc" },
+            { startDate: "desc" },
             { refNo: "desc" },
           ],
         });

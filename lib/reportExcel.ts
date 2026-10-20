@@ -184,7 +184,7 @@ export async function buildReportWorkbook(data: {
   data.assistance.forEach((r) => {
     ta.addRow([
       r.refNo,
-      new Date(r.date).toLocaleDateString(),
+      new Date(r.startDate).toLocaleDateString(),
       r.shift,
       r.location,
       r.showGroup,
@@ -240,7 +240,7 @@ export async function buildReportWorkbook(data: {
   data.tasks.forEach((r) => {
     taskSheet.addRow([
       r.refNo,
-      new Date(r.date).toLocaleDateString(),
+      new Date(r.startDate).toLocaleDateString(),
       r.shift,
       r.location,
       r.showGroup,
@@ -286,7 +286,7 @@ export async function buildReportWorkbook(data: {
     combined.addRow([
       r.refNo,
       "Technical Assistance",
-      new Date(r.date).toLocaleDateString(),
+      new Date(r.startDate).toLocaleDateString(),
       r.status,
       r.priority,
       r.location,
@@ -299,7 +299,7 @@ export async function buildReportWorkbook(data: {
     combined.addRow([
       r.refNo,
       "Other Task",
-      new Date(r.date).toLocaleDateString(),
+      new Date(r.startDate).toLocaleDateString(),
       r.status,
       r.priority,
       r.location,

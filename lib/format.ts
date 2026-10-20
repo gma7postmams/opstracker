@@ -12,11 +12,9 @@ export function ymd(d: Date | string) {
 export function duration(start: string, end?: string | null) {
   return end ? `${start} – ${end}` : `Since ${start}`;
 }
-export function minutesBetween(start: string, end?: string | null) {
-  if (!end) return null;
-  const [sh, sm] = start.split(":").map(Number);
-  const [eh, em] = end.split(":").map(Number);
-  let mins = eh * 60 + em - (sh * 60 + sm);
-  if (mins < 0) mins += 24 * 60; // overnight shift
-  return mins;
+export function minutesBetween(startDate: Date | string, startTime: string, endDate?: Date | string | null, endTime?: string | null) {
+  if (!endDate || !endTime) return null;
+  const start = new Date(`${ymd(startDate)}T${startTime}:00`);
+  const end = new Date(`${ymd(endDate)}T${endTime}:00`);
+  return Math.max(0, Math.floor((end.getTime() - start.getTime()) / 60000));
 }

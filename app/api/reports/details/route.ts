@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   }
 
   const where: any = {
-    date: {
+    startDate: {
       gte: new Date(from),
       lte: new Date(to),
     },
@@ -49,12 +49,12 @@ export async function GET(req: NextRequest) {
       : await prisma.assistance.findMany({
           where,
           orderBy: [
-            { date: "desc" },
+            { startDate: "desc" },
             { refNo: "desc" },
           ],
           select: {
             refNo: true,
-            date: true,
+            startDate: true,
             shift: true,
             location: true,
             showGroup: true,
@@ -78,12 +78,12 @@ export async function GET(req: NextRequest) {
       : await prisma.task.findMany({
           where,
           orderBy: [
-            { date: "desc" },
+            { startDate: "desc" },
             { refNo: "desc" },
           ],
           select: {
             refNo: true,
-            date: true,
+            startDate: true,
             shift: true,
             location: true,
             showGroup: true,

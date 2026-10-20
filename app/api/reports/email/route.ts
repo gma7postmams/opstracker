@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
 
   const where: any = {
-    date: {
+    startDate: {
       gte: new Date(from),
       lte: new Date(to),
     },
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       ? []
       : await prisma.assistance.findMany({
           where,
-          orderBy: [{ date: "desc" }],
+          orderBy: [{ startDate: "desc" }],
         });
 
   const tasks =
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
       ? []
       : await prisma.task.findMany({
           where,
-          orderBy: [{ date: "desc" }],
+          orderBy: [{ startDate: "desc" }],
         });
 
   const workbook = await buildReportWorkbook({

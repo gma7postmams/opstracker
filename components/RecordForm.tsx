@@ -8,6 +8,11 @@ const nowHHMM = () => {
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 };
 
+const todayLocal = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+};
+
 const PRIORITIES = ["LOW", "NORMAL", "HIGH", "CRITICAL"];
 const STATUSES = [
   ["OPEN", "Open"], ["CLOSE_PENDING", "Close Pending"], ["CLOSED", "Closed"],
@@ -43,7 +48,10 @@ const [descriptionSuggestion, setDescriptionSuggestion] = useState("");
 
 
   const [form, setForm] = useState<any>(() => ({
-    date: record?.date ? String(record.date).slice(0, 10) : new Date().toISOString().slice(0, 10),
+    startDate: record?.startDate
+      ? String(record.startDate).slice(0, 10)
+      : record?.date ? String(record.date).slice(0, 10) : todayLocal(),
+    endDate: record?.endDate ? String(record.endDate).slice(0, 10) : "",
     shift: record?.shift ?? "",
     location: record?.location ?? "",
     showGroup: record?.showGroup ?? "",
@@ -129,6 +137,19 @@ useEffect(() => {
     .then((r) => r.json())
     .then((u) => setPeople(u.map((x: any) => x.name)));
 
+  fetch("/api/users/me")
+    .then((r) => r.json())
+    .then((data) => {
+      const name = data.currentUser?.name ?? "";
+      if (!record && name) {
+        setForm((f: any) => ({
+          ...f,
+          assigned: f.assigned || name,
+          accountable: f.accountable || name,
+        }));
+      }
+    });
+
   fetch("/api/admin/ai")
     .then((r) => r.json())
     .then((cfg) => {
@@ -139,14 +160,41 @@ useEffect(() => {
   // Defaults come from master data once it loads, so a new record opens with
   // the first valid option selected rather than an empty required field.
   useEffect(() => {
+    if (record) return;
+    let rememberedShift = "";
+    try {
+      rememberedShift = window.localStorage.getItem("record-form-last-shift") ?? "";
+    } catch {}
+    const shiftDefault = master.SHIFT?.includes(rememberedShift)
+      ? rememberedShift
+      : master.SHIFT?.[0] || "";
     setForm((f: any) => ({
       ...f,
-      shift: f.shift || master.SHIFT?.[0] || "",
-      location: f.location || master.LOCATION?.[0] || "",
+      shift: f.shift || shiftDefault,
       category: f.category || master.CATEGORY?.[0] || "",
       activityType: f.activityType || master.ACTIVITY_TYPE?.[0] || "",
     }));
-  }, [master]);
+  }, [master, record]);
+
+  const startAt = form.startDate && form.timeStarted
+    ? new Date(`${form.startDate}T${form.timeStarted}:00`)
+    : null;
+  const endAt = form.endDate && form.timeEnded
+    ? new Date(`${form.endDate}T${form.timeEnded}:00`)
+    : null;
+  const durationMinutes = startAt && endAt
+    ? Math.max(0, Math.floor((endAt.getTime() - startAt.getTime()) / 60000))
+    : null;
+  const durationText = durationMinutes === null
+    ? "Not ended"
+    : durationMinutes < 60
+      ? `${durationMinutes} ${durationMinutes === 1 ? "minute" : "minutes"}`
+      : `${Math.floor(durationMinutes / 60)}h${durationMinutes % 60 ? ` ${durationMinutes % 60}m` : ""}`;
+  const setCurrentTime = (field: "timeStarted" | "timeEnded") => {
+    const now = new Date();
+    set(field, `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
+    if (field === "timeEnded" && !form.endDate) set("endDate", todayLocal());
+  };
 
 
   async function submit(e: React.FormEvent) {
@@ -154,9 +202,12 @@ useEffect(() => {
     setSaving(true);
     setErrors({});
 
-	console.log("FORM BEFORE SAVE", form);
-
-    const payload = { ...form, timeEnded: form.timeEnded || null, showGroup: form.showGroup || null };
+	const payload = {
+      ...form,
+      endDate: form.endDate || null,
+      timeEnded: form.timeEnded || null,
+      showGroup: form.showGroup || null,
+    };
     const url = record ? `/api/records/${type}/${record.id}` : `/api/records/${type}`;
     const res = await fetch(url, {
       method: record ? "PATCH" : "POST",
@@ -190,14 +241,20 @@ useEffect(() => {
         {errors._ && <div className="err">{errors._}</div>}
 
         <div className="sectionlabel">Activity details</div>
-        <label>Date<input type="date" value={form.date} onChange={(e) => set("date", e.target.value)} required />{err("date")}</label>
         <label>Shift
-          <select value={form.shift} onChange={(e) => set("shift", e.target.value)}>
+          <select value={form.shift} onChange={(e) => {
+            set("shift", e.target.value);
+            if (!record) {
+              try { window.localStorage.setItem("record-form-last-shift", e.target.value); } catch {}
+            }
+          }}>
+            <option value="">Select a shift</option>
             {(master.SHIFT ?? []).map((v) => <option key={v}>{v}</option>)}
           </select>{err("shift")}
         </label>
         <label>Location
           <select value={form.location} onChange={(e) => set("location", e.target.value)}>
+            <option value="">Select a location</option>
             {(master.LOCATION ?? []).map((v) => <option key={v}>{v}</option>)}
           </select>{err("location")}
         </label>
@@ -501,9 +558,39 @@ useEffect(() => {
     )}
 </label>
 
-        <div className="sectionlabel">Time &amp; assignment</div>
-        <label>Time started<input type="time" value={form.timeStarted} onChange={(e) => set("timeStarted", e.target.value)} required />{err("timeStarted")}</label>
-        <label>Time ended<input type="time" value={form.timeEnded ?? ""} onChange={(e) => set("timeEnded", e.target.value)} />{err("timeEnded")}</label>
+        <div className="sectionlabel">Work timeline &amp; assignment</div>
+        <label>Start Date
+          <input type="date" value={form.startDate} onChange={(e) => set("startDate", e.target.value)} required />
+          {err("startDate")}
+        </label>
+        <label>Start Time
+          <span className="time-control">
+            <input type="time" value={form.timeStarted} onChange={(e) => set("timeStarted", e.target.value)} required />
+            <button type="button" className="secondary time-now" onClick={() => setCurrentTime("timeStarted")}>Now</button>
+          </span>
+          {err("timeStarted")}
+        </label>
+        <label>End Date
+          <input type="date" value={form.endDate ?? ""} onChange={(e) => set("endDate", e.target.value)} />
+          {err("endDate")}
+        </label>
+        <label>End Time
+          <span className="time-control">
+            <input type="time" value={form.timeEnded ?? ""} onChange={(e) => set("timeEnded", e.target.value)} />
+            <button type="button" className="secondary time-now" onClick={() => setCurrentTime("timeEnded")}>Now</button>
+          </span>
+          {err("timeEnded")}
+        </label>
+        <div className="duration-display" aria-live="polite">
+          <div className="duration-heading">🕒 Duration</div>
+          <strong className="duration-value">{durationText}</strong>
+          {durationMinutes !== null && durationMinutes > 12 * 60 && (
+            <div className="duration-warning" role="status">
+              <strong>⚠ Unusually long duration detected.</strong>
+              <span>Please verify the start and end dates and times.</span>
+            </div>
+          )}
+        </div>
         <label>Priority
           <select value={form.priority} onChange={(e) => set("priority", e.target.value)}>
             {PRIORITIES.map((p) => <option key={p} value={p}>{p[0] + p.slice(1).toLowerCase()}</option>)}
@@ -529,14 +616,21 @@ useEffect(() => {
 	</label>
 
         <label>Assigned to
-          <input list="people" value={form.assigned} onChange={(e) => set("assigned", e.target.value)} required />
+          <select value={form.assigned} onChange={(e) => set("assigned", e.target.value)} required>
+            <option value="">Select a user</option>
+            {form.assigned && !people.includes(form.assigned) && <option value={form.assigned}>{form.assigned}</option>}
+            {people.map((person) => <option key={person} value={person}>{person}</option>)}
+          </select>
           {err("assigned")}
         </label>
         <label>Accountable person
-          <input list="people" value={form.accountable} onChange={(e) => set("accountable", e.target.value)} required />
+          <select value={form.accountable} onChange={(e) => set("accountable", e.target.value)} required>
+            <option value="">Select a user</option>
+            {form.accountable && !people.includes(form.accountable) && <option value={form.accountable}>{form.accountable}</option>}
+            {people.map((person) => <option key={person} value={person}>{person}</option>)}
+          </select>
           {err("accountable")}
         </label>
-        <datalist id="people">{people.map((p) => <option key={p} value={p} />)}</datalist>
       </form>
     </Modal>
   );

@@ -9,8 +9,6 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 import { statusLabel, priorityLabel } from "@/lib/recordTypes";
 
-const STATUSES = ["OPEN", "CLOSE_PENDING", "CLOSED"];
-
 export default function RecordDetail() {
   const { type, id } = useParams<{ type: string; id: string }>();
   const router = useRouter();
@@ -22,9 +20,6 @@ export default function RecordDetail() {
   const [master, setMaster] = useState<Record<string, string[]>>({});
   const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState(false);
-
-  const [closeConfirm, setCloseConfirm] =
-    useState<{ status: string } | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/records/${type}/${id}`);
@@ -59,6 +54,10 @@ export default function RecordDetail() {
     router.push(type === "assistance" ? "/assistance" : "/tasks");
   }
 
+  function closeActions(event: { currentTarget: HTMLButtonElement }) {
+    event.currentTarget.closest("details")?.removeAttribute("open");
+  }
+
 const ownerName = r.owner
   ? [
       r.owner.firstName,
@@ -71,68 +70,98 @@ const ownerName = r.owner
       .join(" ")
   : "a deleted user";  
 
-const duration = (() => {
-  if (!r.timeStarted) return "—";
+const startDateText = String(r.startDate).slice(0, 10);
+const startAt = r.timeStarted
+  ? new Date(`${startDateText}T${r.timeStarted}:00`)
+  : null;
+const endDateText = r.endDate ? String(r.endDate).slice(0, 10) : null;
+const recordedEndAt = r.timeEnded
+  ? endDateText ? new Date(`${endDateText}T${r.timeEnded}:00`) : null
+  : null;
+const endAt = recordedEndAt ?? (r.status === "OPEN" ? new Date() : null);
+const isOngoing = r.status === "OPEN" && !recordedEndAt;
+const displayDate = (date: Date) => new Intl.DateTimeFormat(undefined, {
+  month: "short", day: "numeric", year: "numeric",
+}).format(date);
+const displayTime = (date: Date) => new Intl.DateTimeFormat(undefined, {
+  hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+}).format(date);
+const duration = startAt && endAt
+  ? (() => {
+      const totalMinutes = Math.max(0, Math.floor((endAt.getTime() - startAt.getTime()) / 60000));
+      const days = Math.floor(totalMinutes / 1440);
+      const hours = Math.floor((totalMinutes % 1440) / 60);
+      const minutes = totalMinutes % 60;
+      if (days) return `${days}d ${hours}h ${minutes}m`;
+      if (hours) return `${hours}h ${minutes}m`;
+      return `${minutes}m`;
+    })()
+  : "—";
 
-  const start = new Date(
-    `${String(r.date).slice(0, 10)}T${r.timeStarted}`
-  );
+const historyEvents = (r.activityHistory ?? []).flatMap((entry: any) => {
+  const details = entry.details ?? {};
+  const at = new Date(entry.createdAt);
+  const time = displayTime(at);
+  const actor = details.name ? ` by ${details.name}` : "";
 
-  const end =
-    r.status === "OPEN"
-      ? new Date()
-      : new Date(
-          `${String(r.date).slice(0, 10)}T${r.timeEnded}`
-        );
-
-  let diff = end.getTime() - start.getTime();
-
-  if (diff < 0) {
-    diff += 24 * 60 * 60 * 1000;
+  if (entry.action === "CREATE") {
+    return [
+      { id: `${entry.id}-reported`, time, title: "Reported", description: `Record created by ${details.name ?? ownerName}` },
+      { id: `${entry.id}-assigned`, time, title: "Assigned", description: `Assigned to ${details.assigned ?? r.assigned}` },
+    ];
   }
-
-  const days = Math.floor(
-    diff / (1000 * 60 * 60 * 24)
-  );
-
-  const hours = Math.floor(
-    (diff % (1000 * 60 * 60 * 24)) /
-      (1000 * 60 * 60)
-  );
-
-  const minutes = Math.floor(
-    (diff % (1000 * 60 * 60)) /
-      (1000 * 60)
-  );
-
-  if (days > 0) {
-    return `${days}d ${hours}h ${minutes}m`;
+  if (entry.action === "STATUS_CHANGE") {
+    const title = details.nextStatus === "CLOSE_PENDING"
+      ? "Close Pending"
+      : details.nextStatus === "CLOSED"
+        ? "Closed"
+        : "Reopened";
+    const previousCompletion = details.previousEndDate && details.previousTimeEnded
+      ? ` Previous completion: ${String(details.previousEndDate).slice(0, 10)} ${details.previousTimeEnded}.`
+      : details.previousTimeEnded ? ` Previous completion time: ${details.previousTimeEnded}.` : "";
+    const description = title === "Close Pending"
+      ? "Work completed and awaiting approval"
+      : title === "Closed"
+        ? "Approved and closed"
+        : `Manager requested additional work.${previousCompletion}`;
+    return [{ id: entry.id, time, title, description: `${description}${actor}` }];
   }
-
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
+  if (entry.action === "ASSIGNMENT_CHANGE") {
+    return [{
+      id: entry.id,
+      time,
+      title: details.previousAssigned ? "Reassigned" : "Assigned",
+      description: `Assigned to ${details.assigned}${actor}`,
+    }];
   }
+  if (entry.action === "LOCK" || entry.action === "UNLOCK") {
+    return [{
+      id: entry.id,
+      time,
+      title: entry.action === "LOCK" ? "Locked" : "Unlocked",
+      description: entry.action === "LOCK" ? "Record edits disabled" : "Record edits enabled",
+    }];
+  }
+  return [{ id: entry.id, time, title: "Updated", description: `Record details updated${actor}` }];
+});
 
-  return `${minutes}m`;
-})();
+if (!historyEvents.some((event: any) => event.title === "Reported")) {
+  historyEvents.unshift({
+    id: "reported-fallback",
+    time: r.timeStarted,
+    title: "Reported",
+    description: `Record created by ${ownerName}`,
+  });
+}
 
   const fields: [string, any][] = [
-    ["Date", String(r.date).slice(0, 10)],
+    ["Start Date", startDateText],
     ["Shift", r.shift],
     ["Location", r.location],
     ["Show / Group", r.showGroup],
     isAssistance ? ["Client", r.clientName] : ["Activity type", r.activityType],
     isAssistance ? ["Category", r.category] : ["Priority", priorityLabel(r.priority)],
     ...(isAssistance ? [["Priority", priorityLabel(r.priority)] as [string, any]] : []),
-    ["Assigned to", r.assigned],
-    ["Accountable", r.accountable],
-    ["Time", r.timeEnded ? `${r.timeStarted} – ${r.timeEnded}` : `${r.timeStarted} – ongoing`],
-    [
-      "Duration",
-      r.status === "OPEN"
-        ? `🟢 ${duration} (ongoing)`
-        : duration,
-    ],
   ];
 
 
@@ -156,11 +185,24 @@ const duration = (() => {
             ))}
           </div>
 
-	{r.status === "OPEN" && r.timeEnded && (
-	  <div className="warning-hint spacedtop">
-	    ⚠ This record was reopened after work had previously been completed at {r.timeEnded}.
-	  </div>
-	)}
+          <div className="detail-sections spacedtop">
+            <section className="detail-section">
+              <h4>Work Summary</h4>
+              <div className="detail-summary">
+                <div className="field"><label>Started</label><b>{startAt ? `${displayDate(startAt)} • ${r.timeStarted}` : "—"}</b></div>
+                <div className="field"><label>Ended</label><b>{endAt ? `${displayDate(endAt)} • ${recordedEndAt ? r.timeEnded : displayTime(endAt)}${isOngoing ? " (ongoing)" : ""}` : "—"}</b></div>
+                <div className="field"><label>Duration</label><b>{duration}{isOngoing && duration !== "—" ? " (ongoing)" : ""}</b></div>
+              </div>
+            </section>
+
+            <section className="detail-section">
+              <h4>Ownership</h4>
+              <div className="detail-summary">
+                <div className="field"><label>Assigned To</label><b>{r.assigned || "—"}</b></div>
+                <div className="field"><label>Accountable Person</label><b>{r.accountable || "—"}</b></div>
+              </div>
+            </section>
+          </div>
 
           <hr />
           <div className="field record-copy">
@@ -175,126 +217,122 @@ const duration = (() => {
 
 <hr />
 
-<div className="toolbar flat">
-
-  <div style={{ width: "100%" }}>
-    <h4
-      style={{
-        marginBottom: 12,
-        color: "var(--muted)",
-      }}
-    >
-      Quick Actions
-    </h4>
-
-{r.status === "OPEN" && !r.timeEnded && (
-  <div
-    className="warning-hint"
-    style={{ marginBottom: 10 }}
-  >
-    ⚠ Time Ended is required before setting this record to
-    Close Pending or Closed.
-  </div>
-)}
-
+<div className="toolbar flat quick-actions">
+  <div className="quick-actions-info">
+    <h4>Quick Actions</h4>
   </div>
 
+  <details className="actions-dropdown">
+    <summary className="secondary action-control actions-trigger">
+      Actions <span aria-hidden="true">▼</span>
+    </summary>
+    <div className="actions-menu">
+      {r.status === "OPEN" && (
+        <button
+          className="actions-menu-item"
+          disabled={!r.canEdit}
+          onClick={(event) => {
+            closeActions(event);
+            patch({ status: "CLOSE_PENDING" }, "Status set to Close Pending");
+          }}
+        >
+          Move to Close Pending
+        </button>
+      )}
+      {r.status === "CLOSE_PENDING" && <>
+        <button
+          className="actions-menu-item"
+          disabled={!r.canEdit}
+          onClick={(event) => {
+            closeActions(event);
+            patch({ status: "CLOSED" }, "Record approved and closed");
+          }}
+        >
+          Approve &amp; Close
+        </button>
+        <button
+          className="actions-menu-item"
+          disabled={!r.canEdit}
+          onClick={(event) => {
+            closeActions(event);
+            patch({ status: "OPEN" }, "Record reopened");
+          }}
+        >
+          Reopen
+        </button>
+      </>}
+      {r.status === "CLOSED" && (
+        <button
+          className="actions-menu-item"
+          disabled={!r.canEdit}
+          onClick={(event) => {
+            closeActions(event);
+            patch({ status: "OPEN" }, "Record reopened");
+          }}
+        >
+          Reopen
+        </button>
+      )}
 
-  <label className="flabel">
-    STATUS
+      <div className="actions-menu-divider" />
+      <button
+        className="actions-menu-item"
+        disabled={!r.canEdit}
+        title={r.canEdit ? "" : r.locked
+          ? "This record is locked by an administrator"
+          : "Only the person who entered this record can edit it"}
+        onClick={(event) => {
+          closeActions(event);
+          setEditing(true);
+        }}
+      >
+        Edit Record
+      </button>
 
-    <select
-      value={r.status}
-      className="action-control"
-      disabled={!r.canEdit}
-      onChange={(e) => {
-        const status = e.target.value;
+      {isAdmin && (
+        <button
+          className="actions-menu-item"
+          onClick={(event) => {
+            closeActions(event);
+            patch(
+              { locked: !r.locked },
+              r.locked ? "Record unlocked" : "Record locked"
+            );
+          }}
+        >
+          {r.locked ? "Unlock Record" : "Lock Record"}
+        </button>
+      )}
 
-      if (
-        (status === "CLOSED" ||
-          status === "CLOSE_PENDING") &&
-        !r.timeEnded
-      ) {
-        setCloseConfirm({ status });
-        return;
-      }
-
-        patch(
-          { status },
-          `Status set to ${statusLabel(status)}`
-        );
-      }}
-    >
-      {STATUSES.map((s) => (
-        <option key={s} value={s}>
-          {statusLabel(s)}
-        </option>
-      ))}
-    </select>
-
-  </label>
-
-  <button
-    className="secondary alignend action-control"
-    disabled={!r.canEdit}
-    title={
-      r.canEdit
-        ? ""
-        : r.locked
-        ? "This record is locked by an administrator"
-        : "Only the person who entered this record can edit it"
-    }
-    onClick={() => setEditing(true)}
-  >
-    {r.canEdit ? "✏ Edit Record" : "🔒 Edit locked"}
-  </button>
-
-  {isAdmin && (
-    <button
-      className="secondary alignend action-control"
-      onClick={() =>
-        patch(
-          { locked: !r.locked },
-          r.locked
-            ? "Record unlocked"
-            : "Record locked"
-        )
-      }
-    >
-      {r.locked
-        ? "🔓 Unlock Record"
-        : "🔒 Lock Record"}
-    </button>
-  )}
-
-  <button
-    className="secondary alignend action-control"
-    disabled={!r.canEdit}
-    onClick={() => setConfirm(true)}
-  >
-    🗑 Delete Record
-  </button>
-
+      <button
+        className="actions-menu-item destructive-text"
+        disabled={!r.canEdit}
+        onClick={(event) => {
+          closeActions(event);
+          setConfirm(true);
+        }}
+      >
+        Delete Record
+      </button>
+    </div>
+  </details>
 </div>
 
         </section>
 
         <section className="panel">
-          <div className="panelhead"><h3>Activity history</h3></div>
+          <div className="panelhead"><h3>Activity History</h3></div>
           <div className="timeline">
-            <div className="event"><b>{r.timeStarted} · Reported</b>
-              <small>Record created by {ownerName}.</small></div>
-            <div className="event"><b>Assigned</b><small>Assigned to {r.assigned}.</small></div>
-            {r.timeEnded && (
-              <div className="event"><b>{r.timeEnded} · Work completed</b>
-                <small>Work activity completed.</small></div>
-            )}
-            {r.locked && (
+            {historyEvents.map((event: any) => (
+              <div className="event" key={event.id}>
+                <b>{event.time} · {event.title}</b>
+                <small>{event.description}</small>
+              </div>
+            ))}
+            {r.locked && !historyEvents.some((event: any) => event.title === "Locked") && (
               <div className="event"><b>Locked</b>
                 <small>Locked by {r.lockedBy ? `${r.lockedBy.firstName} ${r.lockedBy.surname}` : "an administrator"} — edits disabled.</small></div>
             )}
-            <div className="event"><b>Current · {statusLabel(r.status)}</b>
-              <small>Last updated {String(r.updatedAt).slice(0, 10)}.</small></div>
           </div>
         </section>
       </div>
@@ -311,40 +349,6 @@ const duration = (() => {
         <ConfirmDialog title={`Delete ${r.refNo}?`} body="This cannot be undone."
           onCancel={() => setConfirm(false)} onYes={() => { setConfirm(false); remove(); }} />
       )}
-
-      {closeConfirm && (
-        <ConfirmDialog
-          title="⏱ Complete Record"
-          body={`No Time Ended has been entered.
-
-      The current time (${new Date()
-            .toTimeString()
-            .slice(0, 5)}) will be saved as the completion time and the status will be changed to:
-
-      ${statusLabel(closeConfirm.status)}`}
-          yesText="Apply Changes"
-          noText="Cancel"
-          onCancel={() => setCloseConfirm(null)}
-          onYes={() => {
-            const currentTime = new Date()
-              .toTimeString()
-              .slice(0, 5);
-
-            patch(
-              {
-                status: closeConfirm.status,
-                timeEnded: currentTime,
-              },
-              `Status set to ${statusLabel(
-                closeConfirm.status
-              )}`
-            );
-
-            setCloseConfirm(null);
-          }}
-        />
-      )}
-
 
     </div>
   );

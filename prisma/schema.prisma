@@ -67,7 +67,8 @@ model User {
 model Assistance {
   id          Int      @id @default(autoincrement())
   refNo       String   @unique @map("ref_no")
-  date        DateTime @db.Date
+  startDate   DateTime @map("date") @db.Date
+  endDate     DateTime? @map("end_date") @db.Date
   shift       String
   location    String
   showGroup   String?  @map("show_group")
@@ -92,7 +93,7 @@ model Assistance {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  @@index([date])
+  @@index([startDate])
   @@index([status])
   @@index([assigned])
   @@map("assistance")
@@ -101,7 +102,8 @@ model Assistance {
 model Task {
   id           Int      @id @default(autoincrement())
   refNo        String   @unique @map("ref_no")
-  date         DateTime @db.Date
+  startDate    DateTime @map("date") @db.Date
+  endDate      DateTime? @map("end_date") @db.Date
   shift        String
   location     String
   showGroup    String?  @map("show_group")
@@ -124,7 +126,7 @@ model Task {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  @@index([date])
+  @@index([startDate])
   @@index([status])
   @@index([assigned])
   @@map("tasks")
