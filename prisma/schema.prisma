@@ -33,6 +33,12 @@ enum MasterKind {
   ACTIVITY_TYPE
 }
 
+enum WorkLogType {
+  RESOLUTION
+  REMARK
+  INVESTIGATION
+}
+
 
 model User {
   id            Int          @id @default(autoincrement())
@@ -58,6 +64,7 @@ model User {
   assistanceLocked Assistance[] @relation("AssistanceLocker")
   tasksOwned       Task[]       @relation("TaskOwner")
   tasksLocked      Task[]       @relation("TaskLocker")
+  workLogs         WorkLog[]
 
   @@map("users")
 }
@@ -92,6 +99,7 @@ model Assistance {
 
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
+  workLogs    WorkLog[]
 
   @@index([startDate])
   @@index([status])
@@ -125,6 +133,7 @@ model Task {
 
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
+  workLogs     WorkLog[]
 
   @@index([startDate])
   @@index([status])
@@ -178,4 +187,22 @@ model AuditLog {
   @@index([entityType])
 
   @@map("audit_logs")
+}
+
+model WorkLog {
+  id            Int         @id @default(autoincrement())
+  assistanceId  Int?        @map("assistance_id")
+  assistance    Assistance? @relation(fields: [assistanceId], references: [id], onDelete: Restrict)
+  taskId        Int?        @map("task_id")
+  task          Task?       @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  type          WorkLogType
+  message       String      @db.Text
+  createdById   Int?        @map("created_by_id")
+  createdByName String      @map("created_by_name")
+  createdBy     User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@index([assistanceId, createdAt])
+  @@index([taskId, createdAt])
+  @@map("work_logs")
 }

@@ -31,7 +31,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ typ
     orderBy: { createdAt: "asc" },
     select: { id: true, action: true, details: true, createdAt: true },
   });
-  return NextResponse.json({ ...record, activityHistory, canEdit: canEdit(user, record) });
+  return NextResponse.json({
+    ...record,
+    activityHistory,
+    canEdit: canEdit(user, record),
+    canEditOriginal: canEdit(user, record) && (isAdmin(user) || record.ownerId === user.id),
+  });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ type: string; id: string }> }) {
@@ -88,6 +93,29 @@ return NextResponse.json(updated);
     return NextResponse.json({ error: editBlockedReason(user, record) }, { status: 403 });
   }
 
+  const canEditOriginal = isAdmin(user) || record.ownerId === user.id;
+  const editableFields = canEditOriginal
+    ? new Set([
+        "startDate", "endDate", "shift", "location", "showGroup", "priority",
+        "timeStarted", "timeEnded", "status", "assigned", "accountable", "remarks",
+        ...(type === "assistance"
+          ? ["clientName", "problem", "category", "resolution"]
+          : ["activityType", "description"]),
+      ])
+    : new Set(["assigned", "status", "endDate", "timeEnded", "priority"]);
+  const rejectedFields = Object.keys(body).filter((key) => !editableFields.has(key));
+  if (rejectedFields.length) {
+    return NextResponse.json(
+      {
+        error: canEditOriginal
+          ? "The record owner cannot be changed"
+          : "Only assignee, status, priority, end date, and end time can be changed after creation",
+        fields: Object.fromEntries(rejectedFields.map((key) => [key, "This field cannot be changed by your role"])),
+      },
+      { status: 400 }
+    );
+  }
+
   // Partial updates still need the cross-field time rules, so merge with the
   // stored row before validating rather than checking the patch in isolation.
   const merged = normalizeTimes({
@@ -103,16 +131,30 @@ return NextResponse.json(updated);
     return NextResponse.json({ error: "Validation failed", fields: flatten(parsed.error) }, { status: 400 });
   }
 
-const normalized = normalizeTimes(parsed.data);
-if (record.status !== "OPEN" && normalized.status === "OPEN") {
-  normalized.endDate = null;
-  normalized.timeEnded = null;
+const normalized = normalizeTimes(parsed.data) as any;
+  const reopening = record.status !== "OPEN" && normalized.status === "OPEN";
+  if (reopening) {
+    normalized.endDate = null;
+    normalized.timeEnded = null;
+  }
+const data: Record<string, any> = {};
+for (const field of editableFields) {
+  if (!Object.hasOwn(body, field)) continue;
+  if (field === "startDate") {
+    data.startDate = new Date(normalized.startDate);
+  } else if (field === "endDate") {
+    data.endDate = normalized.endDate ? new Date(normalized.endDate) : null;
+  } else {
+    data[field] = normalized[field];
+  }
 }
-const data = {
-  ...normalized,
-  startDate: new Date(normalized.startDate),
-  endDate: normalized.endDate ? new Date(normalized.endDate) : null,
-};
+if (reopening) {
+  data.endDate = null;
+  data.timeEnded = null;
+} else if (body.status === "CLOSE_PENDING" && record.status !== "CLOSE_PENDING") {
+  data.endDate = normalized.endDate ? new Date(normalized.endDate) : null;
+  data.timeEnded = normalized.timeEnded;
+}
 
 const updated = await delegateFor(type).update({
   where: { id: record.id },
@@ -174,6 +216,13 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const { type, record } = found;
   if (!canEdit(user, record)) {
     return NextResponse.json({ error: editBlockedReason(user, record) }, { status: 403 });
+  }
+
+  const workLogCount = await prisma.workLog.count({
+    where: type === "assistance" ? { assistanceId: record.id } : { taskId: record.id },
+  });
+  if (workLogCount > 0) {
+    return NextResponse.json({ error: "Records with work log history cannot be deleted" }, { status: 409 });
   }
 
 await delegateFor(type).delete({

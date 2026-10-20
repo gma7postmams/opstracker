@@ -67,12 +67,7 @@ export async function GET(req: NextRequest) {
     },
   };
 
-  if (user.role === "ADMIN") {
-    if (userId !== "all") {
-      where.ownerId = Number(userId);
-    }
-  }
-  const reportWhere = applyReportScope(where, user, scope);
+  const reportWhere = await applyReportScope(where, user, scope, userId);
 
   if (status !== "all") where.status = status;
 

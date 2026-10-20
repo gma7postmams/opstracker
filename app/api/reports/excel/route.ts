@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildReportWorkbook } from "@/lib/reportExcel";
-import { applyReportScope, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
+import { addReportWorkLogSummaries, applyReportScope, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
 
 export async function GET(req: NextRequest) {
   const user = await currentUser();
@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
   const activity = s.get("activity") || "all";
   const status = s.get("status") || "all";
   const scope = resolveReportScope(s.get("scope"), user);
+  const userId = s.get("userId");
 
   const where: any = {
     startDate: {
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
   if (status !== "all") {
     where.status = status;
   }
-  const reportWhere = applyReportScope(where, user, scope);
+  const reportWhere = await applyReportScope(where, user, scope, userId);
 
   const assistance =
     activity === "tasks"
@@ -49,7 +50,14 @@ export async function GET(req: NextRequest) {
             { startDate: "desc" },
             { refNo: "desc" },
           ],
-          include: { owner: { select: reportOwnerSelect } },
+          include: {
+            owner: { select: reportOwnerSelect },
+            workLogs: {
+              orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+              take: 5,
+              select: { id: true, type: true, message: true, createdAt: true, createdByName: true },
+            },
+          },
         });
 
   const tasks =
@@ -61,16 +69,26 @@ export async function GET(req: NextRequest) {
             { startDate: "desc" },
             { refNo: "desc" },
           ],
-          include: { owner: { select: reportOwnerSelect } },
+          include: {
+            owner: { select: reportOwnerSelect },
+            workLogs: {
+              orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+              take: 5,
+              select: { id: true, type: true, message: true, createdAt: true, createdByName: true },
+            },
+          },
         });
+
+  const assistanceWithLogs = await addReportWorkLogSummaries(assistance, "assistance");
+  const tasksWithLogs = await addReportWorkLogSummaries(tasks, "tasks");
 
   const workbook = await buildReportWorkbook({
     range: {
       from,
       to,
     },
-    assistance,
-    tasks,
+    assistance: assistanceWithLogs,
+    tasks: tasksWithLogs,
   });
 
   const buffer = await workbook.xlsx.writeBuffer();

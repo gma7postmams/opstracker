@@ -5,7 +5,7 @@ import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildReportWorkbook } from "@/lib/reportExcel";
 import { logAudit } from "@/lib/audit";
-import { applyReportScope, formatReportOwner, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
+import { addReportWorkLogSummaries, applyReportScope, formatReportOwner, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
 
 export async function POST(req: NextRequest) {
   const actor = await currentUser();
@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
   const activity = body.activity || "all";
   const status = body.status || "all";
   const scope = resolveReportScope(body.scope, actor);
+  const userId = typeof body.userId === "string" ? body.userId : null;
 
   const sender = await prisma.user.findUnique({
     where: { id: actor.id },
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
   if (status !== "all") {
     where.status = status;
   }
-  const reportWhere = applyReportScope(where, actor, scope);
+  const reportWhere = await applyReportScope(where, actor, scope, userId);
 
   const assistance =
     activity === "tasks"
@@ -70,7 +71,14 @@ export async function POST(req: NextRequest) {
       : await prisma.assistance.findMany({
           where: reportWhere,
           orderBy: [{ startDate: "desc" }],
-          include: { owner: { select: reportOwnerSelect } },
+          include: {
+            owner: { select: reportOwnerSelect },
+            workLogs: {
+              orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+              take: 5,
+              select: { id: true, type: true, message: true, createdAt: true, createdByName: true },
+            },
+          },
         });
 
   const tasks =
@@ -79,13 +87,23 @@ export async function POST(req: NextRequest) {
       : await prisma.task.findMany({
           where: reportWhere,
           orderBy: [{ startDate: "desc" }],
-          include: { owner: { select: reportOwnerSelect } },
+          include: {
+            owner: { select: reportOwnerSelect },
+            workLogs: {
+              orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+              take: 5,
+              select: { id: true, type: true, message: true, createdAt: true, createdByName: true },
+            },
+          },
         });
+
+  const assistanceWithLogs = await addReportWorkLogSummaries(assistance, "assistance");
+  const tasksWithLogs = await addReportWorkLogSummaries(tasks, "tasks");
 
   const workbook = await buildReportWorkbook({
     range: { from, to },
-    assistance,
-    tasks,
+    assistance: assistanceWithLogs,
+    tasks: tasksWithLogs,
   });
 
   const attachment = Buffer.from(await workbook.xlsx.writeBuffer());
@@ -126,19 +144,27 @@ const headerCellStyle = "padding:10px 8px;background:#edf3f4;border-bottom:1px s
 const detailStyle = "margin-top:6px;padding:6px 8px;background-color:#f3f6f7;border-left:2px solid #bac8ce;color:#6b7785;font-family:Arial,sans-serif;font-size:10px;line-height:14px;word-break:break-word;word-wrap:break-word;overflow-wrap:break-word;";
 const secondaryDetail = (label: string, value: unknown) =>
   value ? `<div style="${detailStyle}"><strong>${label}:</strong><br>${escapeHtml(value)}</div>` : "";
+const formatWorkLog = (log: any) =>
+  log ? `${new Date(log.createdAt).toLocaleString()} · ${log.createdByName}: ${log.message}` : "";
+const formatRecentWorkLogs = (logs: any[]) =>
+  logs.map((log) => `${log.type} · ${formatWorkLog(log)}`).join(" | ");
 const tableHead = (labels: string[]) => `<tr>${labels.map((label) => {
   const align = label === "Status" || label === "Assigned" ? "center" : "left";
   return `<th align="${align}" style="${headerCellStyle}text-align:${align};">${label}</th>`;
 }).join("")}</tr>`;
-const assistanceRows = assistance.length
-  ? assistance.map((row) => `
+const assistanceRows = assistanceWithLogs.length
+  ? assistanceWithLogs.map((row) => `
       <tr>
         <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.refNo)}</td>
         <td style="${cellStyle}">${escapeHtml(row.clientName)}</td>
         <td style="${cellStyle}vertical-align:top;">
           <div>${escapeHtml(row.problem)}</div>
+          ${secondaryDetail("Latest Investigation Work Log", formatWorkLog(row.latestInvestigationWorkLog))}
           ${secondaryDetail("Resolution", row.resolution)}
           ${secondaryDetail("Remarks", row.remarks)}
+          ${secondaryDetail("Latest Resolution Work Log", formatWorkLog(row.latestResolutionWorkLog))}
+          ${secondaryDetail("Latest Remark Work Log", formatWorkLog(row.latestRemarkWorkLog))}
+          ${secondaryDetail("Recent Work Log Entries", formatRecentWorkLogs(row.recentWorkLogs))}
         </td>
         <td style="${cellStyle}width:120px;text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(formatStatusLabel(row.status))}</td>
           <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;">${escapeHtml(formatReportOwner(row.owner))}</td>
@@ -146,14 +172,18 @@ const assistanceRows = assistance.length
       </tr>`).join("")
         : `<tr><td colspan="6" style="${cellStyle}color:#6b7785;text-align:center;padding:18px;">No technical assistance records in this period.</td></tr>`;
 
-const taskRows = tasks.length
-  ? tasks.map((row) => `
+const taskRows = tasksWithLogs.length
+  ? tasksWithLogs.map((row) => `
       <tr>
         <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.refNo)}</td>
         <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.activityType)}</td>
         <td style="${cellStyle}vertical-align:top;">
           <div>${escapeHtml(row.description)}</div>
           ${secondaryDetail("Remarks", row.remarks)}
+          ${secondaryDetail("Latest Investigation Work Log", formatWorkLog(row.latestInvestigationWorkLog))}
+          ${secondaryDetail("Latest Resolution Work Log", formatWorkLog(row.latestResolutionWorkLog))}
+          ${secondaryDetail("Latest Remark Work Log", formatWorkLog(row.latestRemarkWorkLog))}
+          ${secondaryDetail("Recent Work Log Entries", formatRecentWorkLogs(row.recentWorkLogs))}
         </td>
         <td style="${cellStyle}width:120px;text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(formatStatusLabel(row.status))}</td>
           <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;">${escapeHtml(formatReportOwner(row.owner))}</td>
@@ -174,8 +204,8 @@ const reportingPeriod =
     ? `As of ${from}`
     : `${from} to ${to}`;
 
-const totalRecords = assistance.length + tasks.length;
-const allRows = [...assistance, ...tasks];
+const totalRecords = assistanceWithLogs.length + tasksWithLogs.length;
+const allRows = [...assistanceWithLogs, ...tasksWithLogs];
 const statusCounts = {
   open: allRows.filter((row) => row.status === "OPEN").length,
   pending: allRows.filter((row) => row.status === "CLOSE_PENDING").length,
@@ -217,7 +247,7 @@ const emailHtml = `
           ${(activity !== "all" || status !== "all") ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;"><tr><td style="padding:10px 12px;background-color:#f2f7f7;border-left:3px solid #59a59d;color:#435564;font-family:Arial,sans-serif;font-size:12px;line-height:19px;">${activity !== "all" ? `<strong>Activity:</strong> ${escapeHtml(activity)} &nbsp;&nbsp;` : ""}${status !== "all" ? `<strong>Status:</strong> ${escapeHtml(status)}` : ""}</td></tr></table>` : ""}
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed;">
             <tr><td colspan="3" style="padding:10px 5px 4px;color:#263947;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Activity Summary</td></tr>
-            <tr>${summaryCard("Technical Assistance", assistance.length, "#0786a3", "&#8984;")}${summaryCard("Other Tasks", tasks.length, "#b77914", "&#9776;")}${summaryCard("Total Records", totalRecords, "#2563a8", "&#9638;")}</tr>
+            <tr>${summaryCard("Technical Assistance", assistanceWithLogs.length, "#0786a3", "&#8984;")}${summaryCard("Other Tasks", tasksWithLogs.length, "#b77914", "&#9776;")}${summaryCard("Total Records", totalRecords, "#2563a8", "&#9638;")}</tr>
             <tr><td colspan="3" style="padding:10px 5px 4px;color:#263947;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Status Summary</td></tr>
             <tr>${summaryCard("Open", statusCounts.open, "#c74646", "&#9675;")}${summaryCard("Close Pending", statusCounts.pending, "#b77914", "&#9684;")}${summaryCard("Closed", statusCounts.closed, "#34845e", "&#10003;")}</tr>
           </table>

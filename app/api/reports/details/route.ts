@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { applyReportScope, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
+import { addReportWorkLogSummaries, applyReportScope, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
 
 export async function GET(req: NextRequest) {
   const user = await currentUser();
@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
   const activity = s.get("activity") || "all";
   const status = s.get("status") || "all";
   const scope = resolveReportScope(s.get("scope"), user);
+  const userId = s.get("userId");
 
   if (from > to) {
     return NextResponse.json(
@@ -44,7 +45,7 @@ export async function GET(req: NextRequest) {
   if (status !== "all") {
     where.status = status;
   }
-  const reportWhere = applyReportScope(where, user, scope);
+  const reportWhere = await applyReportScope(where, user, scope, userId);
 
   const assistance =
     activity === "tasks"
@@ -56,6 +57,7 @@ export async function GET(req: NextRequest) {
             { refNo: "desc" },
           ],
           select: {
+            id: true,
             refNo: true,
             startDate: true,
             shift: true,
@@ -73,6 +75,11 @@ export async function GET(req: NextRequest) {
             assigned: true,
             accountable: true,
             remarks: true,
+            workLogs: {
+              orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+              take: 5,
+              select: { id: true, type: true, message: true, createdAt: true, createdByName: true },
+            },
           },
         });
 
@@ -86,6 +93,7 @@ export async function GET(req: NextRequest) {
             { refNo: "desc" },
           ],
           select: {
+            id: true,
             refNo: true,
             startDate: true,
             shift: true,
@@ -101,15 +109,23 @@ export async function GET(req: NextRequest) {
             assigned: true,
             accountable: true,
             remarks: true,
+            workLogs: {
+              orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+              take: 5,
+              select: { id: true, type: true, message: true, createdAt: true, createdByName: true },
+            },
           },
         });
+
+  const assistanceWithLogs = await addReportWorkLogSummaries(assistance, "assistance");
+  const tasksWithLogs = await addReportWorkLogSummaries(tasks, "tasks");
 
   return NextResponse.json({
     range: {
       from,
       to,
     },
-    assistance,
-    tasks,
+    assistance: assistanceWithLogs,
+    tasks: tasksWithLogs,
   });
 }

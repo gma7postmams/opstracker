@@ -23,11 +23,12 @@ interface Props {
   singular: string;
   master: Record<string, string[]>;
   record?: any;
+  canEditOriginal?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export default function RecordForm({ type, singular, master, record, onClose, onSaved }: Props) {
+export default function RecordForm({ type, singular, master, record, canEditOriginal = false, onClose, onSaved }: Props) {
   const isAssistance = type === "assistance";
 
 const [people, setPeople] = useState<string[]>([]);
@@ -202,12 +203,38 @@ useEffect(() => {
     setSaving(true);
     setErrors({});
 
-	const payload = {
-      ...form,
+	const payload = record && canEditOriginal
+  ? {
+      startDate: form.startDate,
       endDate: form.endDate || null,
-      timeEnded: form.timeEnded || null,
+      shift: form.shift,
+      location: form.location,
       showGroup: form.showGroup || null,
-    };
+      priority: form.priority,
+      timeStarted: form.timeStarted,
+      timeEnded: form.timeEnded || null,
+      status: form.status,
+      assigned: form.assigned,
+      accountable: form.accountable,
+      remarks: form.remarks,
+      ...(isAssistance
+    ? { clientName: form.clientName, problem: form.problem, category: form.category, resolution: form.resolution }
+    : { activityType: form.activityType, description: form.description }),
+    }
+  : record
+      ? {
+          assigned: form.assigned,
+          status: form.status,
+          priority: form.priority,
+          endDate: form.endDate || null,
+          timeEnded: form.timeEnded || null,
+        }
+      : {
+          ...form,
+          endDate: form.endDate || null,
+          timeEnded: form.timeEnded || null,
+          showGroup: form.showGroup || null,
+        };
     const url = record ? `/api/records/${type}/${record.id}` : `/api/records/${type}`;
     const res = await fetch(url, {
       method: record ? "PATCH" : "POST",
@@ -240,6 +267,43 @@ useEffect(() => {
       <form id="recordform" onSubmit={submit} className="form">
         {errors._ && <div className="err">{errors._}</div>}
 
+        {record && !canEditOriginal ? (
+          <>
+            <div className="sectionlabel">Operational updates</div>
+            <label>Assigned to
+              <select value={form.assigned} onChange={(e) => set("assigned", e.target.value)} required>
+                <option value="">Select a user</option>
+                {form.assigned && !people.includes(form.assigned) && <option value={form.assigned}>{form.assigned}</option>}
+                {people.map((person) => <option key={person} value={person}>{person}</option>)}
+              </select>
+              {err("assigned")}
+            </label>
+            <label>Status
+              <select value={form.status} onChange={(e) => set("status", e.target.value)}>
+                {STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+              {err("status")}
+            </label>
+            <label>End Date
+              <input type="date" value={form.endDate ?? ""} onChange={(e) => set("endDate", e.target.value)} />
+              {err("endDate")}
+            </label>
+            <label>End Time
+              <span className="time-control">
+                <input type="time" value={form.timeEnded ?? ""} onChange={(e) => set("timeEnded", e.target.value)} />
+                <button type="button" className="secondary time-now" onClick={() => setCurrentTime("timeEnded")}>Now</button>
+              </span>
+              {err("timeEnded")}
+            </label>
+            <label>Priority
+              <select value={form.priority} onChange={(e) => set("priority", e.target.value)}>
+                {PRIORITIES.map((priority) => <option key={priority} value={priority}>{priority[0] + priority.slice(1).toLowerCase()}</option>)}
+              </select>
+              {err("priority")}
+            </label>
+          </>
+        ) : (
+          <>
         <div className="sectionlabel">Activity details</div>
         <label>Shift
           <select value={form.shift} onChange={(e) => {
@@ -280,11 +344,12 @@ useEffect(() => {
   <textarea
     value={form.problem}
     onChange={(e) => set("problem", e.target.value)}
+    readOnly={Boolean(record && !canEditOriginal)}
     placeholder="Describe the issue or request…"
     required
   />
 
-{aiEnabled && (
+{aiEnabled && !record && (
   <div style={{ marginTop: 8 }}>
     <button
       type="button"
@@ -300,7 +365,7 @@ useEffect(() => {
 )}
 
 
-{aiEnabled && aiSuggestion && aiSuggestion !== form.problem && (
+{!record && aiEnabled && aiSuggestion && aiSuggestion !== form.problem && (
 
   <div className="ai-ready">
     <strong>✅ Suggested Improvement</strong>
@@ -560,7 +625,7 @@ useEffect(() => {
 
         <div className="sectionlabel">Work timeline &amp; assignment</div>
         <label>Start Date
-          <input type="date" value={form.startDate} onChange={(e) => set("startDate", e.target.value)} required />
+          <input type="date" value={form.startDate} onChange={(e) => set("startDate", e.target.value)} required disabled={Boolean(record && !canEditOriginal)} />
           {err("startDate")}
         </label>
         <label>Start Time
@@ -631,6 +696,8 @@ useEffect(() => {
           </select>
           {err("accountable")}
         </label>
+          </>
+        )}
       </form>
     </Modal>
   );

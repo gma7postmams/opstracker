@@ -9,6 +9,7 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 import { statusLabel, priorityLabel } from "@/lib/recordTypes";
 import { formatTime12Hour } from "@/lib/format";
+import WorkLogTimeline from "@/components/WorkLogTimeline";
 
 export default function RecordDetail() {
   const { type, id } = useParams<{ type: string; id: string }>();
@@ -176,6 +177,7 @@ if (!historyEvents.some((event: any) => event.title === "Reported")) {
             <div><h3>{r.refNo}</h3>
               <span className="muted">
                 {isAssistance ? "Technical Assistance" : "Other Task"} · entered by {ownerName}
+                {r.createdAt ? ` · created ${displayDate(new Date(r.createdAt))}` : ""}
               </span></div>
             <StatusBadge status={r.status} />
           </div>
@@ -337,12 +339,17 @@ if (!historyEvents.some((event: any) => event.title === "Reported")) {
             )}
           </div>
         </section>
+
+        <section className="panel">
+          <div className="panelhead"><h3>Work Log</h3></div>
+          <WorkLogTimeline type={type} recordId={id} canAdd={r.canEdit} />
+        </section>
       </div>
 
       {editing && (
         <RecordForm
           type={type as any} singular={isAssistance ? "Assistance" : "Task"}
-          master={master} record={r}
+          master={master} record={r} canEditOriginal={r.canEditOriginal}
           onClose={() => setEditing(false)}
           onSaved={() => { setEditing(false); load(); toast("Record updated"); }}
         />

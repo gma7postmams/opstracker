@@ -1,8 +1,19 @@
 import { SessionUser } from "./permissions";
 import { applyRecordVisibility } from "./records";
 import { fullName } from "./format";
+import { prisma } from "./prisma";
 
 export type ReportScope = "mine" | "all";
+
+export const WORK_LOG_TYPE_ORDER = ["INVESTIGATION", "RESOLUTION", "REMARK"] as const;
+
+const reportParticipationWhere = (user: Pick<SessionUser, "id" | "name">) => ({
+  OR: [
+    { ownerId: user.id },
+    { assigned: user.name },
+    { workLogs: { some: { createdById: user.id } } },
+  ],
+});
 
 export const reportOwnerSelect = {
   firstName: true,
@@ -24,16 +35,80 @@ export function resolveReportScope(scope: string | null | undefined, user: Sessi
   return "all";
 }
 
-export function applyReportScope<T extends Record<string, any>>(
+export async function applyReportScope<T extends Record<string, any>>(
   where: T,
   user: SessionUser,
-  scope: ReportScope
+  scope: ReportScope,
+  userId?: string | null
 ) {
-  if (scope === "all") return applyRecordVisibility(where, user);
-  return {
-    AND: [
-      where,
-      { OR: [{ ownerId: user.id }, { assigned: user.name }] },
-    ],
-  };
+  const filters: Record<string, any>[] = scope === "all"
+    ? [applyRecordVisibility(where, user)]
+    : [where, reportParticipationWhere(user)];
+
+  if (user.role === "ADMIN" && userId && userId !== "all" && /^\d+$/.test(userId)) {
+    const selectedUser = await prisma.user.findUnique({
+      where: { id: Number(userId) },
+      select: { id: true, firstName: true, middleInitial: true, surname: true },
+    });
+    filters.push(selectedUser
+      ? reportParticipationWhere({ id: selectedUser.id, name: fullName(selectedUser) })
+      : { id: -1 });
+  }
+
+  return filters.length === 1 ? filters[0] : { AND: filters };
+}
+
+export async function addReportWorkLogSummaries<T extends {
+  id: number;
+  workLogs?: Array<{
+    id: number;
+    type: string;
+    message: string;
+    createdAt: Date;
+    createdByName: string;
+  }>;
+}>(records: T[], recordType: "assistance" | "tasks") {
+  if (!records.length) return [];
+
+  const foreignKey = recordType === "assistance" ? "assistanceId" : "taskId";
+  const where = { [foreignKey]: { in: records.map((record) => record.id) } };
+  const select = {
+    assistanceId: true,
+    taskId: true,
+    id: true,
+    type: true,
+    message: true,
+    createdAt: true,
+    createdByName: true,
+  } as const;
+  const latestForType = (type: (typeof WORK_LOG_TYPE_ORDER)[number]) =>
+    prisma.workLog.findMany({
+      where: { ...where, type } as any,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      distinct: [foreignKey as any],
+      select,
+    });
+
+  const [investigations, resolutions, remarks] = await Promise.all([
+    latestForType("INVESTIGATION"),
+    latestForType("RESOLUTION"),
+    latestForType("REMARK"),
+  ]);
+  const latestByRecord = (logs: typeof resolutions) =>
+    new Map(logs.map((log) => [log[foreignKey]!, log]));
+  const latestInvestigations = latestByRecord(investigations);
+  const latestResolutions = latestByRecord(resolutions);
+  const latestRemarks = latestByRecord(remarks);
+
+  return records.map((record) => ({
+    ...record,
+    latestInvestigationWorkLog: latestInvestigations.get(record.id) ?? null,
+    latestResolutionWorkLog: latestResolutions.get(record.id) ?? null,
+    latestRemarkWorkLog: latestRemarks.get(record.id) ?? null,
+    recentWorkLogs: [...(record.workLogs ?? [])].sort((a, b) =>
+      WORK_LOG_TYPE_ORDER.indexOf(a.type as (typeof WORK_LOG_TYPE_ORDER)[number]) -
+        WORK_LOG_TYPE_ORDER.indexOf(b.type as (typeof WORK_LOG_TYPE_ORDER)[number]) ||
+      a.createdAt.getTime() - b.createdAt.getTime() || a.id - b.id
+    ),
+  }));
 }

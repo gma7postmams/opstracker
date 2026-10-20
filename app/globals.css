@@ -367,6 +367,17 @@ hr{border:0;border-top:1px solid var(--line);margin:19px 0}
 .event:last-child::before{animation:timeline-latest-pulse 4s ease-in-out infinite}
 .event b{font-size:12px}
 .event small{display:block;color:var(--muted);margin-top:3px}
+.worklog-content{display:grid;gap:18px}
+.worklog-form{display:grid;gap:8px}
+.worklog-form label{font-size:12px;font-weight:650;color:var(--muted)}
+.worklog-form textarea{min-height:78px;resize:vertical}
+.worklog-form button{justify-self:start}
+.worklog-error{margin:0;color:var(--err-fg);font-size:12px}
+.worklog-empty{margin:0}
+.worklog-timeline{gap:18px}
+.worklog-type-section{display:grid;gap:10px}
+.worklog-type-section>h4{margin:0 0 0 15px;color:var(--muted);font-size:12px;font-weight:700}
+.worklog-event p{margin:7px 0 0;font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
 @keyframes timeline-line-draw{from{transform:scaleY(0)}to{transform:scaleY(1)}}
 @keyframes timeline-latest-pulse{
   0%,100%{box-shadow:0 0 0 1px var(--timeline-accent),0 0 0 0 color-mix(in srgb,var(--timeline-accent) 0%,transparent)}

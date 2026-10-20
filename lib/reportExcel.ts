@@ -90,6 +90,16 @@ function colorStatusColumn(
   }
 }
 
+function formatWorkLog(log: any) {
+  return log
+    ? `${new Date(log.createdAt).toLocaleString()} - ${log.createdByName}: ${log.message}`
+    : "";
+}
+
+function formatRecentWorkLogs(logs: any[]) {
+  return logs.map((log) => `${log.type} - ${formatWorkLog(log)}`).join("\n");
+}
+
 export async function buildReportWorkbook(data: {
   range: {
     from: string;
@@ -174,13 +184,17 @@ export async function buildReportWorkbook(data: {
     "Assigned",
     "Accountable",
     "Remarks",
+    "Latest Investigation Work Log",
+    "Latest Resolution Work Log",
+    "Latest Remark Work Log",
+    "Recent Work Log Entries",
   ]);
 
   styleHeader(taHeader);
 
   ta.autoFilter = {
     from: "A1",
-    to: "O1",
+    to: "S1",
   };
 
   data.assistance.forEach((r) => {
@@ -200,6 +214,10 @@ export async function buildReportWorkbook(data: {
       r.assigned,
       r.accountable,
       r.remarks,
+      formatWorkLog(r.latestInvestigationWorkLog),
+      formatWorkLog(r.latestResolutionWorkLog),
+      formatWorkLog(r.latestRemarkWorkLog),
+      formatRecentWorkLogs(r.recentWorkLogs ?? []),
     ]);
   });
 
@@ -232,13 +250,17 @@ export async function buildReportWorkbook(data: {
     "Assigned",
     "Accountable",
     "Remarks",
+    "Latest Investigation Work Log",
+    "Latest Resolution Work Log",
+    "Latest Remark Work Log",
+    "Recent Work Log Entries",
   ]);
 
   styleHeader(taskHeader);
 
   taskSheet.autoFilter = {
     from: "A1",
-    to: "M1",
+    to: "Q1",
   };
 
   data.tasks.forEach((r) => {
@@ -256,6 +278,10 @@ export async function buildReportWorkbook(data: {
       r.assigned,
       r.accountable,
       r.remarks,
+      formatWorkLog(r.latestInvestigationWorkLog),
+      formatWorkLog(r.latestResolutionWorkLog),
+      formatWorkLog(r.latestRemarkWorkLog),
+      formatRecentWorkLogs(r.recentWorkLogs ?? []),
     ]);
   });
 
