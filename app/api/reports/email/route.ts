@@ -5,7 +5,7 @@ import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildReportWorkbook } from "@/lib/reportExcel";
 import { logAudit } from "@/lib/audit";
-import { addReportWorkLogSummaries, applyReportScope, formatReportOwner, getReportContributionSummary, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
+import { addReportWorkLogSummaries, applyReportScope, formatReportOwner, getReportContributionSummary, getReportWorkLogsForExport, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
 
 export async function POST(req: NextRequest) {
   const actor = await currentUser();
@@ -105,6 +105,7 @@ export async function POST(req: NextRequest) {
     range: { from, to },
     assistance: assistanceWithLogs,
     tasks: tasksWithLogs,
+    workLogs: await getReportWorkLogsForExport(assistance, tasks),
     contributionSummary,
   });
 

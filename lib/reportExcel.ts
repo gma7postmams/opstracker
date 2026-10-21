@@ -107,6 +107,15 @@ export async function buildReportWorkbook(data: {
   };
   assistance: any[];
   tasks: any[];
+  workLogs: Array<{
+    parentRecordNo: string;
+    recordType: string;
+    createdAt: Date;
+    createdBy: string;
+    investigate: string;
+    resolution: string;
+    remarks: string;
+  }>;
   contributionSummary: ReportContributionSummary;
 }) {
   const wb = new ExcelJS.Workbook();
@@ -295,6 +304,36 @@ export async function buildReportWorkbook(data: {
 
   colorStatusColumn(taskSheet, 9, 2);
   autoFit(taskSheet);
+
+  //
+  // WORK LOGS
+  //
+  const workLogs = wb.addWorksheet("WorkLogs");
+  workLogs.views = [{ state: "frozen", ySplit: 1 }];
+  const workLogsHeader = workLogs.addRow([
+    "Parent Record No",
+    "Record Type",
+    "Created At",
+    "Created By",
+    "Investigate",
+    "Resolution",
+    "Remarks",
+  ]);
+  styleHeader(workLogsHeader);
+  workLogs.autoFilter = { from: "A1", to: "G1" };
+  data.workLogs.forEach((log) => {
+    const row = workLogs.addRow([
+      log.parentRecordNo,
+      log.recordType,
+      log.createdAt,
+      log.createdBy,
+      log.investigate,
+      log.resolution,
+      log.remarks,
+    ]);
+    row.getCell(3).numFmt = "yyyy-mm-dd hh:mm";
+  });
+  autoFit(workLogs);
 
   //
   // COMBINED SHEET

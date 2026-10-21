@@ -1,5 +1,11 @@
 ## 2026-10-21
 
+- Fixed import previews to show the imported start date, normalized Excel date/time serials before validation, and added End Date to both worksheets in the downloadable template so closed records can pass validation.
+- Added an import scope selector available from either record page, defaulting to both Technical Assistance and Other Tasks worksheets. Previews and completion summaries report counts per worksheet and label warnings by worksheet; unsupported worksheets such as WorkLogs remain ignored.
+- Defaulted Technical Assistance and Other Tasks list filtering to the signed-in user, with All Users still available, and added the record owner's full name beside Assigned To.
+- Added Export mine beside Import mine on record toolbars. It downloads the existing Technical Assistance, Other Tasks and WorkLogs workbook for records owned by the signed-in user.
+- Updated Excel imports to process only the named Technical Assistance and Other Tasks worksheets, report ignored tabs such as WorkLogs, and match optional Assigned To values by user full name. Unknown or ambiguous names remain unassigned with warnings; imported records remain owned by the importer and Accountable Person values are ignored.
+- Added a WorkLogs worksheet to report workbook downloads and email attachments, listing each exported record's work-log entries with parent reference, type, timestamp, author and typed content. Existing Technical Assistance and Other Tasks worksheet columns are unchanged.
 - Refined the Record Timeline animation so each card fade/slide-in begins at the same distance-based arrival time as its node glow. The continuous rail, reduced-motion behavior, event order, work-log functionality and permissions are unchanged.
 - Fixed list summaries to fall back from typed Resolution and Remark work logs to legacy fields before showing Update.
 - Added second-by-second elapsed-time counters for open records in list and detail views. The list retains the start time, while detail pages show Started and Elapsed Time instead of ongoing end-time/duration labels; closed-record duration and report/export calculations are unchanged.

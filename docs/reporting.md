@@ -10,6 +10,8 @@ The dashboard presents status counts by record type, totals, assistance counts b
 
 The Reports page has Today, This Week, This Month and Custom date choices, plus filters for activity type (`all`, `assistance`, `tasks`) and status. Administrators can select a report scope (`mine` or `all`) and a user. Regular users are forced to `mine`.
 
+Technical Assistance and Other Tasks record toolbars also provide `Export mine`. This downloads the existing report Excel workbook with `scope=mine` and an owner-only constraint for the signed-in user. The workbook includes Technical Assistance, Other Tasks and WorkLogs sheets; this owner-only export is narrower than the Reports page's participation-based `mine` scope.
+
 The `mine` scope includes records where the selected participant is the owner, assignee, or author of a work log. For administrators, `all` removes that participation restriction. If an administrator selects a user, that user's participation condition is additionally applied.
 
 Summary metrics include total assistance, tasks, all records, closed, open, pending and closed-per-day average. Each enabled tally groups by record owner and assigned name and reports total, closed, open, pending, average closed per date-range day, and average duration in minutes. Duration averages use closed records for which start and end timestamps are available.
@@ -20,7 +22,7 @@ The report-details response also includes distinct participant names and a chron
 
 ## Detailed Excel workbook
 
-Export creates a workbook with Summary, Technical Assistance, Other Tasks and Combined Records sheets. The Summary sheet includes contribution counts for the selected user. Detail sheets include the record fields, owner and assignee, latest work-log summaries by type, and recent work-log entries.
+Export creates a workbook with Summary, Technical Assistance, Other Tasks, WorkLogs and Combined Records sheets. The Summary sheet includes contribution counts for the selected user. Detail sheets include the record fields, owner and assignee, latest work-log summaries by type, and recent work-log entries. The WorkLogs sheet lists every work-log entry for the exported records with its parent reference, record type, timestamp, author and typed content.
 
 Email previews and sent reports use a compact table with Ref No, Details, Status, Owner and Assigned columns. Technical Assistance details show client, show/group and location, followed by the problem and any latest Resolution and Remark work-log messages. When neither typed message exists, Details shows the newest work-log message as Update when available. Work-log candidates are selected by descending creation timestamp, with ID as a tie-breaker. Other Tasks details show activity type, description and the newest work-log update, or `Not recorded.` when no work log exists. The same Excel workbook is attached to an emailed report; report filters, contribution calculations and workbook calculations are unchanged.
 

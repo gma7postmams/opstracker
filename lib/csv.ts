@@ -59,10 +59,13 @@ export function normalizeTime(raw?: string): string {
   const iso = v.match(/^\d{4}-\d{2}-\d{2}T(\d{2}:\d{2})/);
   if (iso) return iso[1];
 
-  // Excel time cells occasionally survive as a raw fraction of a day.
-  if (/^0?\.\d+$/.test(v)) {
-    const mins = Math.round(Number(v) * 24 * 60);
-    return `${String(Math.floor(mins / 60) % 24).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+  // Excel date/time cells can survive as a serial number instead of a Date.
+  if (/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(v)) {
+    const serial = Number(v);
+    if (serial >= 0 && serial <= 2958465) {
+      const mins = Math.round((serial % 1) * 24 * 60);
+      return `${String(Math.floor(mins / 60) % 24).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+    }
   }
 
   const m = v.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
@@ -84,6 +87,15 @@ export function normalizeDate(raw?: string): string {
   const v = (raw ?? "").trim();
   if (!v) return "";
   if (/^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10);
+
+  // Excel's 1900 date system includes the fictitious 1900-02-29 at serial 60.
+  if (/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(v)) {
+    const serial = Number(v);
+    if (serial >= 1 && serial <= 2958465) {
+      const days = Math.floor(serial) - (serial >= 60 ? 1 : 0);
+      return new Date(Date.UTC(1899, 11, 31 + days)).toISOString().slice(0, 10);
+    }
+  }
 
   const m = v.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
   if (m) {

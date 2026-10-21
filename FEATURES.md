@@ -36,7 +36,7 @@ Reference numbers are generated as `TA-YYYY-NNNNN` or `OT-YYYY-NNNNN`. A per-typ
 
 ## Record operations
 
-- Lists support text search, status/location/shift/date filters, sorting and pagination.
+- Lists support text search, status/location/shift/date filters, sorting and pagination. The user filter defaults to the signed-in user, with All Users available as a manual selection. The Assigned To column is followed by Accountable Person, which displays the record owner's full name.
 - Open records show the start time and a live elapsed-time counter in the list, and Started plus a live elapsed-time counter on the detail page, refreshed every second. Closed records retain their final calculated duration; reports and exports are unchanged.
 - Technical Assistance list content shows the client and problem; Other Tasks shows the description. Both prefer the latest Resolution and Remark work logs, falling back independently to legacy Resolution and Remarks fields. If neither is available, the latest work log appears as Update; records without any of these values show “Update: No updates yet.” Status badges use red for Open, orange for Close Pending and green for Closed. Show/group and location remain in their separate columns.
 - Detail pages show record fields and one chronological Record Timeline combining reported, assigned, endorsed, status-transition and typed work-log events.
@@ -60,7 +60,8 @@ Reference numbers are generated as `TA-YYYY-NNNNN` or `OT-YYYY-NNNNN`. A per-typ
 - The Reports page displays a participated-record count for the selected user, or the signed-in user when no user is selected. Report details, Excel summaries and email previews/sent reports include owned, currently assigned and participated record counts for that user. Participation includes ownership, current assignment or at least one authored work log; each record is counted once per user.
 - Report details include a chronological timeline of available creation, assignment, endorsement, close-pending, closed and typed work-log events, plus distinct participant names. Technical Assistance details use the latest Resolution work log as the resolution, falling back to the legacy resolution field.
 - Report scope continues to include owners, current assignees and work-log contributors in My Records. Total Records remains the number of records in the report and is not increased by multiple contributors or work logs.
-- Reports export to a multi-sheet Excel workbook. Email previews and sent reports use compact Ref No, Details, Status, Owner and Assigned tables. Technical Assistance Details show client, show/group and location, the problem, and any latest Resolution and Remark work-log messages. When neither typed message exists, Details shows the newest work-log message as Update when available. Other Tasks use the newest work-log update, or show Not recorded when no work log exists. The emailed report includes the Excel attachment; the workbook's existing detail and summary calculations are unchanged.
+- Reports export to a multi-sheet Excel workbook, including Technical Assistance, Other Tasks and WorkLogs worksheets. WorkLogs lists all entries for exported records with parent reference, record type, creation date and author, and typed Investigation, Resolution or Remark content. Existing worksheet columns and report calculations remain unchanged. Email previews and sent reports use compact Ref No, Details, Status, Owner and Assigned tables. Technical Assistance Details show client, show/group and location, the problem, and any latest Resolution and Remark work-log messages. When neither typed message exists, Details shows the newest work-log message as Update when available. Other Tasks use the newest work-log update, or show Not recorded when no work log exists. The emailed report includes the Excel attachment.
+- The Technical Assistance and Other Tasks record toolbars provide Export mine beside Import mine. It downloads the existing report workbook for records owned by the signed-in user, including their WorkLogs, without changing the Reports page's broader participation-based My Records scope.
 - Audit logs capture supported authentication, record, import, user, master-data, backup/restore and email-report actions. The audit page supports search, action/date filters and Excel export.
 
 ## Users and administration
@@ -74,9 +75,10 @@ Reference numbers are generated as `TA-YYYY-NNNNN` or `OT-YYYY-NNNNN`. A per-typ
 ## Import
 
 - Accepted files: `.xlsx`, `.xlsm`, and `.csv`, up to 10 MB.
-- Single-type imports accept a selected sheet; the two-type mode requires an Excel workbook with `Technical Assistance` and `Other Tasks` sheets.
-- The preview reports detected and valid rows, validation errors, unrecognized columns and a small sample. Invalid rows are skipped when importing valid rows.
-- Self-service imports set both assigned and accountable to the importer. Admin imports may use those columns from the file. Imported records are owned by the importer in either mode.
+- The import scope defaults to both worksheets and can be set to `Technical Assistance Only`, `Other Tasks Only` or `Both Worksheets` on any page. Excel imports process the selected canonical worksheets; additional worksheets, including `WorkLogs`, are ignored and listed. CSV imports remain single-record-type imports.
+- The preview reports detected, valid, invalid and warning counts per worksheet, along with validation errors and warnings labeled by worksheet, ignored worksheets, unrecognized columns and a small sample. The completed import reports the imported count per worksheet. Invalid rows are skipped when importing valid rows.
+- The preview displays the same start date that will be imported. Excel date and time serials are normalized before validation. `CLOSED` rows require `End Date` and `Time Ended`; missing end fields on `CLOSE_PENDING` rows are filled with the current date and time. The downloadable workbook template includes `End Date` on both record worksheets.
+- `Assigned To` is optional and matched to a user by full name. A unique match is assigned; no match or multiple matches leave the record unassigned and produce a warning. Imported records are owned by the importing user. Imported `Accountable Person` values are ignored and accountability is set to the importer.
 - The importer generates new reference numbers; imported reference-number values are not used.
 
 ## AI

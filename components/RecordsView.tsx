@@ -9,7 +9,7 @@ import ImportDialog from "./ImportDialog";
 import ConfirmDialog from "./ConfirmDialog";
 import { useToast } from "./Toast";
 import { statusLabel, priorityLabel } from "@/lib/recordTypes";
-import { formatTime12Hour } from "@/lib/format";
+import { formatTime12Hour, fullName } from "@/lib/format";
 import {
   Activity,
   ArrowDownWideNarrow,
@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   CircleDot,
   Clock3,
+  Download,
   MapPin,
   Plus,
   Search,
@@ -99,7 +100,7 @@ export default function RecordsView(props: Props) {
   const [now, setNow] = useState(() => Date.now());
 
   const [users, setUsers] = useState<any[]>([]);
-  const [userFilter, setUserFilter] = useState("all");
+  const [userFilter, setUserFilter] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(
@@ -127,29 +128,31 @@ export default function RecordsView(props: Props) {
     return () => clearInterval(timer);
   }, []);
 
-  const defaultUserFilter = "all";
+  const defaultUserFilter = session?.user.id != null ? String(session.user.id) : "all";
+  const activeUserFilter = userFilter ?? defaultUserFilter;
 
   const activeCount = useMemo(
     () =>
       (Object.keys(emptyFilters) as (keyof typeof emptyFilters)[])
         .filter((k) => k !== "from" && k !== "to" && filters[k] && filters[k] !== "all").length +
       (period !== "Today" ? 1 : 0) +
-      (userFilter !== defaultUserFilter ? 1 : 0),
-    [filters, period, userFilter, defaultUserFilter]
+      (activeUserFilter !== defaultUserFilter ? 1 : 0),
+    [filters, period, activeUserFilter, defaultUserFilter]
   );
 
   const load = useCallback(async () => {
+    if (!session?.user.id) return;
     setLoading(true);
 
     const p = new URLSearchParams({ sort: sort.key, dir: sort.dir });
 
-    if (userFilter) {p.set("userId", userFilter);}
+    if (activeUserFilter) {p.set("userId", activeUserFilter);}
  
     Object.entries(filters).forEach(([k, v]) => { if (v && v !== "all") p.set(k, v); });
     const res = await fetch(`/api/records/${type}?${p}`);
     setData(await res.json());
     setLoading(false);
-  }, [type, filters, sort, userFilter]);
+  }, [type, filters, sort, activeUserFilter, session]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
@@ -169,7 +172,7 @@ export default function RecordsView(props: Props) {
     setPage(1);
     setPeriod("Today");
     setFilters({ ...emptyFilters, ...periodDates("Today") });
-    setUserFilter(defaultUserFilter);
+    setUserFilter(null);
   };
 
   const changePeriod = (nextPeriod: Period) => {
@@ -236,6 +239,11 @@ export default function RecordsView(props: Props) {
     });
   }
 
+  function exportMine() {
+    const params = new URLSearchParams({ scope: "mine", ownerOnly: "true" });
+    window.open(`/api/reports/excel?${params}`, "_blank");
+  }
+
   const th = (key: string, text: string) => (
     <th
       className={`sortable${sort.key === key ? " sorted" : ""}`}
@@ -266,6 +274,7 @@ export default function RecordsView(props: Props) {
           />
         </div>
         <button className="secondary" onClick={() => setImporting(true)}><Upload size={16} aria-hidden="true" /> Import mine</button>
+        <button className="secondary" onClick={exportMine}><Download size={16} aria-hidden="true" /> Export mine</button>
         <button className="primary" onClick={() => setShowForm({})}><Plus size={16} aria-hidden="true" /> New {singular}</button>
       </div>
 
@@ -283,7 +292,7 @@ export default function RecordsView(props: Props) {
           <span className="crm-filter-label"><UserRound size={14} aria-hidden="true" /> USER</span>
 
           <select
-            value={userFilter}
+            value={activeUserFilter}
             onChange={(e) => { setPage(1); setUserFilter(e.target.value); }}
           >
             <option value="all">
@@ -379,6 +388,7 @@ export default function RecordsView(props: Props) {
               <col className="crm-col-duration" />
               <col className="crm-col-status" />
               <col className="crm-col-assigned" />
+              <col className="crm-col-accountable" />
             </colgroup>
             <thead>
               <tr>
@@ -392,7 +402,8 @@ export default function RecordsView(props: Props) {
                 {th("priority", "Priority")}
                 {th("timeStarted", "Duration")}
                 {th("status", "Status")}
-                {th("assigned", "Assigned")}
+                {th("assigned", "Assigned To")}
+                <th>Accountable Person</th>
               </tr>
             </thead>
             <tbody>
@@ -438,6 +449,7 @@ export default function RecordsView(props: Props) {
                       : `Since ${formatTime12Hour(r.timeStarted)}`}</td>
                   <td><span className={`crm-status crm-status-${String(r.status).toLowerCase()}`}><CircleDot size={13} aria-hidden="true" />{statusLabel(r.status)}</span></td>
                   <td>{r.assigned}</td>
+                  <td>{fullName(r.owner)}</td>
                 </tr>
               ))}
             </tbody>
@@ -481,7 +493,7 @@ export default function RecordsView(props: Props) {
       )}
       {importing && (
         <ImportDialog
-          scope="self" fixedType={type}
+          scope="self"
           onClose={() => setImporting(false)}
           onDone={() => { setImporting(false); load(); }}
         />
@@ -514,11 +526,12 @@ export default function RecordsView(props: Props) {
         .crm-col-id { width: 8%; }
         .crm-col-date { width: 8%; }
         .crm-col-location { width: 11%; }
-        .crm-col-activity { width: 37%; }
+        .crm-col-activity { width: 28%; }
         .crm-col-priority { width: 7%; }
         .crm-col-duration { width: 8%; }
         .crm-col-status { width: 9%; }
         .crm-col-assigned { width: 9%; }
+        .crm-col-accountable { width: 9%; }
         .crm-table-wrap thead { position: sticky; top: 0; z-index: 2; }
         .crm-table-wrap thead th { background: var(--panel); box-shadow: 0 1px 0 var(--border); }
         .crm-table-wrap .selcol input[type="checkbox"] { appearance: none; display: inline-grid; place-content: center; width: 16px; height: 16px; margin: 0; border: 1px solid color-mix(in srgb, var(--border) 55%, var(--text)); border-radius: 4px; background: color-mix(in srgb, var(--panel) 94%, #237a75); color: #fff; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease; }

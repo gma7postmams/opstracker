@@ -36,6 +36,40 @@ export function formatReportOwner(owner?: {
   return owner ? fullName(owner) : "—";
 }
 
+export async function getReportWorkLogsForExport(
+  assistance: Array<{ id: number; refNo: string }>,
+  tasks: Array<{ id: number; refNo: string }>,
+) {
+  const conditions = [
+    ...(assistance.length ? [{ assistanceId: { in: assistance.map((record) => record.id) } }] : []),
+    ...(tasks.length ? [{ taskId: { in: tasks.map((record) => record.id) } }] : []),
+  ];
+  if (!conditions.length) return [];
+
+  const logs = await prisma.workLog.findMany({
+    where: { OR: conditions },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: {
+      type: true,
+      message: true,
+      createdAt: true,
+      createdByName: true,
+      assistance: { select: { refNo: true } },
+      task: { select: { refNo: true } },
+    },
+  });
+
+  return logs.map((log) => ({
+    parentRecordNo: log.assistance?.refNo ?? log.task?.refNo ?? "",
+    recordType: log.assistance ? "Technical Assistance" : "Other Tasks",
+    createdAt: log.createdAt,
+    createdBy: log.createdByName,
+    investigate: log.type === "INVESTIGATION" ? log.message : "",
+    resolution: log.type === "RESOLUTION" ? log.message : "",
+    remarks: log.type === "REMARK" ? log.message : "",
+  }));
+}
+
 export function resolveReportScope(scope: string | null | undefined, user: SessionUser): ReportScope {
   if (user.role !== "ADMIN") return "mine";
   if (scope === "mine" || scope === "all") return scope;

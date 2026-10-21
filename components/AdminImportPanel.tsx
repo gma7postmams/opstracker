@@ -29,20 +29,19 @@ export default function AdminImportPanel({
         <div className="hint spacedbottom">
           <b>How this differs from the record pages</b>
           <br />
-          • <b>Assigned To</b> and <b>Accountable Person</b> can be supplied in
-          the file, allowing rows to be attributed to different people.
+          • <b>Assigned To</b> is optional and matched against users by full name.
           <br />
-          • If either value is blank, the currently logged-in user will be used
-          automatically.
+          • Unknown or ambiguous assignee names leave the record unassigned and
+          add a warning.
           <br />
-          • If those columns are not present in the file, the currently logged-in
-          user will be used automatically.
+          • <b>Accountable Person</b> values are ignored; records remain owned
+          by the importer and accountability is set to them.
           <br />
           • On the Technical Assistance and Other Tasks pages, anyone can import
-          their own work and every row is logged under them.
+          records; each record remains owned by its importer.
           <br />
-          • Either way, the records are owned by you, so you can correct them
-          afterwards.
+          • Only Technical Assistance and Other Tasks worksheets are processed;
+          additional worksheets are ignored.
         </div>
 
         <div

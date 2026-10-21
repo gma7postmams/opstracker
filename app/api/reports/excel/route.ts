@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildReportWorkbook } from "@/lib/reportExcel";
-import { addReportWorkLogSummaries, applyReportScope, getReportContributionSummary, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
+import { addReportWorkLogSummaries, applyReportScope, getReportContributionSummary, getReportWorkLogsForExport, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
 
 export async function GET(req: NextRequest) {
   const user = await currentUser();
@@ -28,6 +28,7 @@ export async function GET(req: NextRequest) {
   const status = s.get("status") || "all";
   const scope = resolveReportScope(s.get("scope"), user);
   const userId = s.get("userId");
+  const ownerOnly = s.get("ownerOnly") === "true";
 
   const where: any = {
     startDate: {
@@ -39,7 +40,10 @@ export async function GET(req: NextRequest) {
   if (status !== "all") {
     where.status = status;
   }
-  const reportWhere = await applyReportScope(where, user, scope, userId);
+  const scopeWhere = await applyReportScope(where, user, scope, userId);
+  const reportWhere = ownerOnly && scope === "mine"
+    ? { AND: [scopeWhere, { ownerId: user.id }] }
+    : scopeWhere;
 
   const assistance =
     activity === "tasks"
@@ -79,6 +83,34 @@ export async function GET(req: NextRequest) {
           },
         });
 
+  const whereWithoutDate = { ...where };
+  delete whereWithoutDate.startDate;
+  const scopeWhereWithoutDate = await applyReportScope(whereWithoutDate, user, scope, userId);
+  const reportWhereWithoutDate = ownerOnly && scope === "mine"
+    ? { AND: [scopeWhereWithoutDate, { ownerId: user.id }] }
+    : scopeWhereWithoutDate;
+
+  const [scopeAssistanceCount, scopeTaskCount, noDateAssistanceCount, noDateTaskCount] = await Promise.all([
+    prisma.assistance.count({ where: scopeWhere }),
+    prisma.task.count({ where: scopeWhere }),
+    prisma.assistance.count({ where: reportWhereWithoutDate }),
+    prisma.task.count({ where: reportWhereWithoutDate }),
+  ]);
+
+  console.info("[reports/excel] temporary export diagnostics", {
+    userId: user.id,
+    scopeWhere,
+    reportWhere,
+    assistanceCount: assistance.length,
+    taskCount: tasks.length,
+    scopeAssistanceCount,
+    scopeTaskCount,
+    noDateAssistanceCount,
+    noDateTaskCount,
+    dateRange: { from, to },
+    ownerOnly,
+  });
+
   const assistanceWithLogs = await addReportWorkLogSummaries(assistance, "assistance");
   const tasksWithLogs = await addReportWorkLogSummaries(tasks, "tasks");
   const contributionSummary = await getReportContributionSummary(reportWhere, user, activity, userId);
@@ -90,6 +122,7 @@ export async function GET(req: NextRequest) {
     },
     assistance: assistanceWithLogs,
     tasks: tasksWithLogs,
+    workLogs: await getReportWorkLogsForExport(assistance, tasks),
     contributionSummary,
   });
 

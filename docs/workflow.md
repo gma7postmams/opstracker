@@ -6,6 +6,8 @@ Users create Technical Assistance records at `/assistance` or Other Task records
 
 The Technical Assistance and Other Tasks list content columns show their respective client/problem or description, followed by the latest Resolution and Remark work logs. Each summary falls back to the corresponding legacy Resolution or Remarks field when no typed log exists. If neither Resolution nor Remark is available, the latest work log is shown as Update; with no available information, the list shows “Update: No updates yet.” Show/group and location remain in their separate table columns.
 
+Both record lists default the USER filter to the signed-in account; users can select All Users manually. The table keeps Assigned To and displays Accountable Person beside it using the record owner's full name.
+
 Open records show their start time beside a live elapsed-time counter in the list, and Started beside Elapsed Time on the detail page, refreshed every second. Closed records continue to show their final calculated duration; reports and exports are unaffected.
 
 The server allocates references such as `TA-2026-00001` and `OT-2026-00001` using a transactionally updated counter. The reference year comes from the server's current year.
@@ -30,18 +32,18 @@ The account that creates or imports a record is its owner; `assigned` and `accou
 
 ## Import workflow
 
-1. Choose a CSV or Excel file (maximum 10 MB); choose the record type or workbook mode.
-2. The server maps known header aliases, normalizes dates, times, status and priority, then validates rows.
-3. Review valid row count, validation errors, ignored columns and a sample. For multi-sheet workbooks, choose a sheet and preview it again.
+1. Choose an import scope: `Technical Assistance Only`, `Other Tasks Only` or `Both Worksheets` (the default), then choose a CSV or Excel file (maximum 10 MB). The same scopes are available from either record page.
+2. The server maps known header aliases, normalizes dates, times, status and priority, then validates rows. Excel date/time serials are supported. `CLOSED` rows need an `End Date` and `Time Ended`; missing end fields on `CLOSE_PENDING` rows are filled with the current date and time. The downloadable workbook template includes `End Date` on both record sheets.
+3. Review detected, valid, invalid and warning counts per worksheet, validation errors and assignment warnings labeled by worksheet, ignored worksheets, ignored columns and a sample. Excel imports select worksheets by their canonical names; no worksheet picker is needed.
 4. Confirm import. Valid rows are inserted with newly generated references and the importing account as owner. Invalid rows are skipped and returned in the result.
 
-Self-service imports set Assigned and Accountable to the importer even if the file contains those columns. Admin imports may read these columns; blank/missing values fall back to the importer. Importing both types requires an Excel workbook with sheets named exactly `Technical Assistance` and `Other Tasks`.
+For Excel, the selected canonical worksheets are processed; in `Both Worksheets` mode, both named worksheets are required and records are created in their matching tables. All other worksheets, including `WorkLogs`, are ignored and reported in the preview and import response. The completion summary reports imported counts for each processed worksheet. CSV parsing supports quoted commas/newlines and remains a single-record-type import.
 
-Supported single-type file extensions are `.xlsx`, `.xlsm`, and `.csv`. The importer does not accept online file links. CSV parsing supports quoted commas/newlines. Excel workbook parsing uses the selected sheet; the dedicated two-type mode selects the two named sheets.
+`Assigned To` is optional and is matched against user full names. A unique match is assigned to the record. An unknown or ambiguous name leaves the record unassigned and generates a warning without blocking import. `Accountable Person` values are ignored; accountability and ownership are set to the importing user. The importer does not accept online file links.
 
 ## Reporting and email
 
-Reports can be filtered by preset/custom date range, record type, status and scope. Administrators can choose all records or their participation and optionally select a user; non-admin users are limited to their participation scope. Export creates an Excel workbook. Email preview renders the report using the configured Gmail sender/recipients; sending attaches the workbook.
+Reports can be filtered by preset/custom date range, record type, status and scope. Administrators can choose all records or their participation and optionally select a user; non-admin users are limited to their participation scope. Excel download and email attachments include the existing Technical Assistance and Other Tasks report worksheets plus a `WorkLogs` worksheet containing each work-log entry for the exported records. The WorkLogs columns are Parent Record No, Record Type, Created At, Created By, Investigate, Resolution and Remarks. Email preview renders the report using the configured Gmail sender/recipients; sending attaches the workbook.
 
 ## Backup and restore
 

@@ -8,7 +8,7 @@ OpsTracker is a Next.js application for recording and reviewing Technical Assist
 
 - Separate Technical Assistance and Other Tasks records with reference numbers, status, priority, assignment and date/time fields.
 - Searchable, filterable record lists with live elapsed-time counters for open records, Resolution and Remark summaries that prefer typed work logs and fall back to legacy fields, record detail pages, batch actions and a chronological Record Timeline with typed entries, message editing, role-based edit/delete permissions and animations.
-- Dashboard summaries and owner/assignee reports with participation counts and report-detail timelines, plus email summaries that show issue context and the latest typed resolution/remark work logs.
+- Dashboard summaries and owner/assignee reports with participation counts and report-detail timelines. Excel downloads and email attachments include a WorkLogs sheet; record lists also offer an owner-only Export mine action.
 - User and master-data administration, branding, JSON backup and restore, and audit-log review/export.
 - Spreadsheet and CSV import, plus AI text improvement and MACO operational Q&A backed by an Ollama-compatible service.
 
@@ -56,7 +56,7 @@ The production server listens on the Next.js default port unless configured othe
 
 ## Operational data
 
-Administrators can download or restore a versioned JSON database backup from Administration. The file includes user password hashes and must be protected. It excludes uploaded assets; preserve `public/uploads` separately. Imports accept `.xlsx`, `.xlsm`, and `.csv` files up to 10 MB. The two-record-type import mode requires an Excel workbook with sheets named `Technical Assistance` and `Other Tasks`.
+Administrators can download or restore a versioned JSON database backup from Administration. The file includes user password hashes and must be protected. It excludes uploaded assets; preserve `public/uploads` separately. Imports accept `.xlsx`, `.xlsm`, and `.csv` files up to 10 MB. The import scope defaults to both the `Technical Assistance` and `Other Tasks` worksheets, with either worksheet available individually from any record page; additional tabs such as `WorkLogs` are ignored. Preview and completion summaries show counts per worksheet, and warnings identify their worksheet. Preview dates match the dates imported; Excel date/time serials are normalized before validation. Closed rows need `End Date` and `Time Ended`; close-pending rows receive the current date/time for missing end fields. Both fields are included in the downloadable template. Optional `Assigned To` values are matched by user full name; unknown or ambiguous names remain unassigned with a preview warning. Imported records are owned by the importer, and `Accountable Person` values are ignored. Report workbooks include a WorkLogs worksheet for exported entries.
 
 The application writes uploaded images to `public/uploads`; use persistent storage for this directory when deploying. Email reporting uses the per-user Gmail SMTP settings saved in the profile. AI settings are stored in `data/ai-settings.json` and point to the configured Ollama-compatible service.
 
