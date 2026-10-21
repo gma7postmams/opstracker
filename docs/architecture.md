@@ -1,0 +1,51 @@
+# Architecture
+
+## Runtime and routing
+
+OpsTracker is a Next.js App Router application using React and TypeScript. The root route redirects to `/dashboard` for an authenticated user and `/login` otherwise. Pages in `app/(app)/` share a server layout that checks the session, loads branding and the current user's avatar, and renders the navigation shell.
+
+The principal pages are:
+
+| Route | Purpose |
+|---|---|
+| `/dashboard` | Operational counts, trend and attention lists |
+| `/assistance` | Technical Assistance records |
+| `/tasks` | Other Task records |
+| `/records/[type]/[id]` | Shared detail route for either record type |
+| `/maco` | MACO chat interface |
+| `/reports` | Summary/tally reports, export and email preview |
+| `/users` | User directory and administrator account management |
+| `/admin` | Master data, imports, branding, AI settings and backup/restore |
+| `/audit` | Audit log search and export |
+| `/profile` | Current user's profile and email settings |
+
+Middleware protects the listed application page paths and restricts `/admin` to administrators. The shared application layout also checks the session for pages in its route group.
+
+## Request and data flow
+
+1. Client components submit requests to `app/api/**/route.ts` handlers.
+2. Route handlers authenticate the caller where implemented, parse inputs with Zod or explicit checks, and call Prisma or shared services.
+3. `lib/records.ts` provides shared list, reference-number, permission partition and batch behavior over the Assistance and Task delegates.
+4. Prisma Client accesses PostgreSQL using `DATABASE_URL`; `prisma/schema.prisma` defines the persisted models and migrations live in `prisma/migrations/`.
+
+Important shared modules:
+
+- `lib/auth.ts`: NextAuth credentials authentication, JWT session claims and current-user lookup.
+- `lib/permissions.ts`: record, lock and user-management permission decisions.
+- `lib/validation.ts`: record, user, master-data and branding schemas.
+- `lib/recordTypes.ts`: client-safe record-type configuration and shared field definitions.
+- `lib/reports.ts`, `lib/reportExcel.ts`: report scoping, work-log summaries and workbook generation.
+- `lib/audit.ts`: audit event writing.
+- `lib/csv.ts`, `lib/xlsx.ts`: import parsing and value normalization.
+
+## External and filesystem dependencies
+
+- PostgreSQL stores users, records, master data, settings, counters, audit events and work logs.
+- `data/ai-settings.json` stores the AI service URL, model and feature options.
+- AI requests use an Ollama-compatible HTTP API.
+- Nodemailer sends reports through the Gmail SMTP configuration stored per user.
+- Uploaded images are written to `public/uploads`; the import workbook template is served from `public/templates/`.
+
+## API areas
+
+The route handlers cover authentication, dashboard, records and work logs, reports and Excel/email output, users/profile, master data, branding, upload, import, backup/restore, audit, AI text improvement and MACO chat. Authorization is enforced route-by-route; see [permissions.md](permissions.md) for implementation boundaries and known exceptions.

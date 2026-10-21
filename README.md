@@ -1,381 +1,75 @@
 # MAMS Support Operations Tracker
 
-A centralized operations management and technical assistance tracking system designed for the MAMS Support Unit.
+# MAMS Support Operations Tracker
 
-The system provides ITIL-inspired incident logging, operational task tracking, audit monitoring, reporting, backup and restore capabilities, and master data administration.
+OpsTracker is a Next.js application for recording and reviewing Technical Assistance and Other Task activity for the MAMS Support Unit. It uses PostgreSQL through Prisma and credential-based NextAuth sessions.
 
-## Technology Stack
+## Current capabilities
 
-- Next.js 16
-- PostgreSQL
-- Prisma ORM
-- NextAuth Authentication
-- TypeScript
+- Separate Technical Assistance and Other Tasks records with reference numbers, status, priority, assignment and date/time fields.
+- Searchable, filterable record lists, record detail pages, batch actions and typed work-log timelines.
+- Dashboard summaries and owner/assignee reports, with Excel export and optional email delivery.
+- User and master-data administration, branding, JSON backup and restore, and audit-log review/export.
+- Spreadsheet and CSV import, plus AI text improvement and MACO operational Q&A backed by an Ollama-compatible service.
 
----
+See [FEATURES.md](FEATURES.md) for user-facing behavior and rules. Technical references: [architecture](docs/architecture.md), [database](docs/database.md), [workflow](docs/workflow.md), [permissions](docs/permissions.md), [reporting](docs/reporting.md), and [AI](docs/ai.md). Existing UI standards are in [docs/ui-crm-standards.md](docs/ui-crm-standards.md).
 
-## Features
+## Stack
 
-### Technical Assistance Management
+- Next.js App Router, React and TypeScript
+- PostgreSQL and Prisma
+- NextAuth credentials provider with JWT sessions
+- Zod validation, ExcelJS, `xlsx`, and Nodemailer
+- Ollama-compatible HTTP API for AI requests
 
-- Technical Assistance record creation and management
-- Client information tracking
-- Issue categorization
-- Resolution documentation
-- Priority management
-- Open, Close Pending, and Closed workflows
-- Activity history tracking
+## Requirements and setup
 
-### Operations Task Management
+Install a supported Node.js runtime, npm, and PostgreSQL. Create a PostgreSQL database, install dependencies, and create a local `.env` file in the project root containing:
 
-- Other Task recording and monitoring
-- Activity type categorization
-- Priority tracking
-- Personnel assignment and accountability
-- Ongoing task monitoring
-- Duration calculation
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/opslog?schema=public"
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="a-long-random-secret"
+```
 
-### Duration Tracking
-
-- Automatic duration calculation
-- Ongoing duration tracking for open records
-- Overnight activity support
-- Multi-day activity support
-
-### User Management
-
-- Role-based access control
-- Administrator and User roles
-- Record ownership validation
-- Login activity tracking
-
-### Audit Trail
-
-- User activity logging
-- System audit records
-- Record modification history
-- Backup and restore audit tracking
-- Advanced audit log filtering
-- User-based audit monitoring
-- Excel export of audit logs
-- Date range and action-based audit reporting
-
-### Master Data Administration
-
-Manage:
-
-- Locations
-- Shifts
-- Categories
-- Activity Types
-- Show Groups
-
-Features include:
-
-- Active / inactive status
-- Administrative management
-- Recovery through backup restore
-
-### Backup and Restore
-
-- Full JSON backup export
-- Backup preview before restore
-- Merge restore mode
-- Replace restore mode
-- Master Data recovery
-- Audit Log restoration
-
-### Reporting
-
-- Dashboard monitoring
-- Operational summaries
-- Technical Assistance reporting
-- Task reporting
-- Audit Log reporting
-- Excel export functionality
-- Detailed export-ready reports
-
----
-
-## Screenshots
-
-### Dashboard
-
-![Dashboard](docs/screenshots/dashboard.png)
-
-Provides a real-time overview of Technical Assistance requests, operational activities, recent actions, and system statistics.
-
-### Technical Assistance
-
-![Technical Assitance](docs/screenshots/technical-assistance.png)
-
-ITIL-inspired Technical Assistance management module for incident logging, categorization, client support tracking, and resolution documentation.
-
-### Other Tasks
-
-![Other Tasks](docs/screenshots/other-tasks.png)
-
-Operational task tracking module for daily activities, assignments, accountability, and work monitoring.
-
-### Reports
-
-![Reports](docs/screenshots/reports.png)
-
-Reporting module for generating operational summaries and activity-based reports.
-
-### User Management
-
-![Users](docs/screenshots/users.png)
-
-Administrative management of user accounts, roles, access permissions, and account status.
-
-### Administration
-
-![Administration](docs/screenshots/administration.png)
-
-Centralized administration panel for managing master data, branding, backups, restores, and system settings.
-
-### Audit Logs
-
-![Audit Logs](docs/screenshots/audit-logs.png)
-
-Comprehensive audit trail capturing user actions, record updates, administrative changes, backup and restore activities, advanced filtering, and Excel export capabilities.
-
-
-### Account Settings
-
-![Account Settings](docs/screenshots/account-settings.png)
-
-User profile management including account settings and password updates.
-
----
-
-## Setup
-
-Install dependencies:
+The repository does not include an `.env.example`. Apply the checked-in migrations and seed initial accounts and master data:
 
 ```bash
 npm install
-```
-
-Copy environment configuration:
-
-```bash
-cp .env.example .env
-```
-
-Configure:
-
-```env
-DATABASE_URL="postgresql://opslog:yourpassword@localhost:5432/opslog?schema=public"
-NEXTAUTH_URL="http://your-server:3000"
-NEXTAUTH_SECRET="your-secret-key"
-```
-
----
-
-## Database Setup
-
-Create the database:
-
-```bash
-createdb opslog
-```
-
-Run migrations:
-
-```bash
-npx prisma migrate dev
-```
-
-Seed the database:
-
-```bash
+npx prisma migrate deploy
 npm run db:seed
-```
-
-The seed process creates:
-
-- Administrator account
-- Team user accounts
-- Default locations
-- Default shifts
-- Default categories
-- Default activity types
-- Default show groups
-
----
-
-## Development
-
-Start the development server:
-
-```bash
 npm run dev
 ```
 
-Access the application:
+Open `http://localhost:3000`. For local schema development, `npm run db:migrate` runs `prisma migrate dev`; `npm run db:studio` opens Prisma Studio.
 
-```text
-http://localhost:3000
-```
+The seed creates `admin` with password `admin123` by default, ten named team accounts with password `<username>123`, and initial master-data values. One named team account is also seeded as an administrator. Set `SEED_ADMIN_PASSWORD` to override the bootstrap admin password. `SEED_DEMO_USER=true` additionally creates a generic demo account whose password can be set with `SEED_USER_PASSWORD`. These defaults are not suitable for production. Seeding does not replace passwords for accounts that already exist.
 
----
-
-## Production Deployment
-
-Build the application:
+## Build and run
 
 ```bash
 npm run build
+npm run start
 ```
 
-Start using PM2:
+The production server listens on the Next.js default port unless configured otherwise. Ensure the database is migrated and `DATABASE_URL`, `NEXTAUTH_URL`, and `NEXTAUTH_SECRET` are set in the runtime environment.
 
-```bash
-pm2 start npm --name opslog -- start
-pm2 save
-```
+## Operational data
 
----
+Administrators can download or restore a versioned JSON database backup from Administration. The file includes user password hashes and must be protected. It excludes uploaded assets; preserve `public/uploads` separately. Imports accept `.xlsx`, `.xlsm`, and `.csv` files up to 10 MB. The two-record-type import mode requires an Excel workbook with sheets named `Technical Assistance` and `Other Tasks`.
 
-## Backup and Restore
+The application writes uploaded images to `public/uploads`; use persistent storage for this directory when deploying. Email reporting uses the per-user Gmail SMTP settings saved in the profile. AI settings are stored in `data/ai-settings.json` and point to the configured Ollama-compatible service.
 
-Navigate to:
+## Project map
 
-```text
-Administration → Backup & Restore
-```
-
-Available functions:
-
-- Download full system backup
-- Backup preview
-- Merge restore
-- Replace restore
-- Master Data recovery
-- Audit Log restoration
-
-### Important
-
-JSON backups include:
-
-- Users
-- Technical Assistance records
-- Task records
-- Master Data
-- Branding configuration
-- Audit Logs
-
-JSON backups do **not** include files stored in:
-
-```text
-public/uploads
-```
-
-Back up that folder separately.
-
----
-
-## Importing Legacy Data
-
-Supported files:
-
-- Microsoft Excel (.xlsx)
-
-Import options:
-
-### User Import
-
-Imports records under the currently logged-in user.
-
-### Administrative Import
-
-Reads Assigned To and Accountable Person values directly from the source file.
-
-Features:
-
-- Preview before import
-- Validation checks
-- Duplicate protection
-- Data normalization
-
----
-
-## Security Features
-
-- NextAuth authentication
-- Role-based permissions
-- Record ownership controls
-- Administrative record locking
-- Audit logging of sensitive actions
-- User activity monitoring and traceability
-- Exportable audit records for compliance and review
-
----
-
-## Project Structure
-
-```text
-app/
-├── (app)/
-├── api/
-
-components/
-├── BackupPanel.tsx
-├── ConfirmDialog.tsx
-├── RecordForm.tsx
-
-lib/
-├── audit.ts
-├── permissions.ts
-├── recordTypes.ts
-├── records.ts
-├── validation.ts
-
-prisma/
-├── schema.prisma
-```
-
----
-
-## Recent Enhancements
-
-- Redesigned Audit Logs interface to align with the Users Management module
-- Added user avatar initials and color-coded activity badges
-- Implemented dynamic filter management with active filter count display
-- Added filtered Audit Log Excel export using ExcelJS
-- Improved audit search, filtering, and reporting experience
-- Removed unused AI configuration components and legacy settings
-
-
-## Current Status
-
-**Version Status:** Complete ✅
-
-Completed Development Areas:
-
-- PostgreSQL Integration
-- Technical Assistance Module
-- Other Tasks Module
-- Dashboard and Reporting
-- Audit Logging
-- Audit Log Excel Export
-- Master Data Management
-- Backup and Restore
-- Import and Migration
-- Role-Based Security
-- Duration Tracking
-- Administrative Controls
-- User Experience Improvements
-
----
-
-## Project Information
-
-**Project Name:** MAMS Support Operations Tracker  
-**Developed By:** Eugene B. Horfilla  
-**Project Period:** September 2, 2026 - September 25, 2026  
-**Status:** Complete ✅
-
-Developed for the MAMS Support Unit to improve Technical Assistance tracking, operational task monitoring, reporting, accountability, auditing, and records management.
+| Path | Purpose |
+|---|---|
+| `app/(app)/` | Authenticated application pages |
+| `app/api/` | Next.js route handlers |
+| `components/` | Shared record, import, backup, and UI components |
+| `lib/` | Authentication, permissions, validation, record/report services, and utilities |
+| `prisma/schema.prisma` | PostgreSQL data model |
+| `prisma/migrations/` | Database migration history |
+| `data/ai-settings.json` | Runtime AI and MACO settings |
+| `public/templates/` | Import workbook template |
+| `public/uploads/` | Runtime user and branding image uploads |
