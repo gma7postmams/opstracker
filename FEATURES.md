@@ -37,9 +37,11 @@ Reference numbers are generated as `TA-YYYY-NNNNN` or `OT-YYYY-NNNNN`. A per-typ
 ## Record operations
 
 - Lists support text search, status/location/shift/date filters, sorting and pagination.
+- Open records show the start time and a live elapsed-time counter in the list, and Started plus a live elapsed-time counter on the detail page, refreshed every second. Closed records retain their final calculated duration; reports and exports are unchanged.
+- Technical Assistance list content shows the client and problem; Other Tasks shows the description. Both prefer the latest Resolution and Remark work logs, falling back independently to legacy Resolution and Remarks fields. If neither is available, the latest work log appears as Update; records without any of these values show “Update: No updates yet.” Status badges use red for Open, orange for Close Pending and green for Closed. Show/group and location remain in their separate columns.
 - Detail pages show record fields and one chronological Record Timeline combining reported, assigned, endorsed, status-transition and typed work-log events.
 - Batch operations can update shared fields, delete records, or lock/unlock them. Unauthorized records in a batch are skipped and counted.
-- The Record Timeline displays lifecycle events and work logs in oldest-first timestamp order, with accent-colored nodes/connectors, theme-aware panel surfaces, small type badges, and staggered entry animations. Work-log entries show their author, date/time and message. Users with record edit permission can add entries. Administrators and record owners can edit or delete any entry; authors can edit or delete their own entries. Edits change only the message and display the modification date/time, including for older entries without an `updatedAt` value.
+- The Record Timeline displays lifecycle events and work logs in oldest-first timestamp order, with one continuous accent-colored rail that ends at the first and last centered nodes. As the rail reaches each node, its glow and the corresponding theme-aware panel card fade/slide-in start together; arrival timing is derived from distance along the rail. Only the newest node retains a subtle static glow after the sequence. Cards have a clear gutter from the rail, with no horizontal connectors, and small type badges. Work-log entries show their author, date/time and message. Users with record edit permission can add entries. Administrators and record owners can edit or delete any entry; authors can edit or delete their own entries. Edits change only the message and display the modification date/time, including for older entries without an `updatedAt` value.
 - Dashboard summaries include assistance/task status counts, date-based activity trends, assistance category counts, attention records and recent audit activity.
 
 ## Status and time rules
@@ -49,6 +51,7 @@ Reference numbers are generated as `TA-YYYY-NNNNN` or `OT-YYYY-NNNNN`. A per-typ
 - For form and single-record saves, Close Pending fills a missing end date/time with the current server date/time. Validation requires an end date/time for Close Pending and Closed records; batch status updates do not run the full record schema validation.
 - Reopening a record clears its end date and end time.
 - Duration calculations use the start and end dates/times. Records without an end date/time have no completed duration.
+- The list displays the start time beside second-resolution elapsed time for open records. The detail view displays Started and Elapsed Time for open records without an “ongoing” end-time label. Closed-record duration formatting and report/export calculations are unchanged.
 
 ## Reporting and audit
 

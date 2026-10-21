@@ -11,6 +11,22 @@ import { statusLabel, priorityLabel } from "@/lib/recordTypes";
 import { formatTime12Hour } from "@/lib/format";
 import WorkLogTimeline from "@/components/WorkLogTimeline";
 
+function formatElapsedDuration(startAt: Date, now: Date) {
+  const totalSeconds = Math.max(0, Math.floor((now.getTime() - startAt.getTime()) / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const parts = [];
+
+  if (days) parts.push(`${days}d`);
+  if (hours || days) parts.push(`${hours}h`);
+  if (minutes || hours || days) parts.push(`${minutes}m`);
+  if (seconds || parts.length === 0) parts.push(`${seconds}s`);
+
+  return parts.join(" ");
+}
+
 export default function RecordDetail() {
   const { type, id } = useParams<{ type: string; id: string }>();
   const router = useRouter();
@@ -22,6 +38,12 @@ export default function RecordDetail() {
   const [master, setMaster] = useState<Record<string, string[]>>({});
   const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/records/${type}/${id}`);
@@ -85,9 +107,6 @@ const isOngoing = r.status === "OPEN" && !recordedEndAt;
 const displayDate = (date: Date) => new Intl.DateTimeFormat(undefined, {
   month: "short", day: "numeric", year: "numeric",
 }).format(date);
-const displayTime = (date: Date) => formatTime12Hour(
-  `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`,
-);
 const duration = startAt && endAt
   ? (() => {
       const totalMinutes = Math.max(0, Math.floor((endAt.getTime() - startAt.getTime()) / 60000));
@@ -192,8 +211,14 @@ if (!historyEvents.some((event: any) => event.title === "Reported")) {
               <h4>Work Summary</h4>
               <div className="detail-summary">
                 <div className="field"><label>Started</label><b>{startAt ? `${displayDate(startAt)} • ${formatTime12Hour(r.timeStarted)}` : "—"}</b></div>
-                <div className="field"><label>Ended</label><b>{endAt ? `${displayDate(endAt)} • ${recordedEndAt ? formatTime12Hour(r.timeEnded) : displayTime(endAt)}${isOngoing ? " (ongoing)" : ""}` : "—"}</b></div>
-                <div className="field"><label>Duration</label><b>{duration}{isOngoing && duration !== "—" ? " (ongoing)" : ""}</b></div>
+                {isOngoing ? (
+                  <div className="field"><label>Elapsed Time</label><b>{startAt ? formatElapsedDuration(startAt, now) : "—"}</b></div>
+                ) : (
+                  <>
+                    <div className="field"><label>Ended</label><b>{endAt ? `${displayDate(endAt)} • ${formatTime12Hour(r.timeEnded)}` : "—"}</b></div>
+                    <div className="field"><label>Duration</label><b>{duration}</b></div>
+                  </>
+                )}
               </div>
             </section>
 

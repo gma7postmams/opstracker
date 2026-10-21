@@ -39,6 +39,28 @@ const STATUSES = ["OPEN", "CLOSE_PENDING", "CLOSED"];
 const emptyFilters = { q: "", status: "all", location: "all", shift: "all", from: "", to: "" };
 type Period = "Today" | "This Week" | "This Month" | "All Records" | "Custom";
 
+function formatElapsedDuration(startAt: Date, now: number) {
+  if (Number.isNaN(startAt.getTime())) return "—";
+
+  const totalSeconds = Math.max(0, Math.floor((now - startAt.getTime()) / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const parts = [];
+
+  if (days) parts.push(`${days}d`);
+  if (hours || days) parts.push(`${hours}h`);
+  if (minutes || hours || days) parts.push(`${minutes}m`);
+  if (seconds || parts.length === 0) parts.push(`${seconds}s`);
+
+  return parts.join(" ");
+}
+
+function summaryMessage(workLogMessage?: string | null, legacyMessage?: string | null) {
+  return workLogMessage?.trim() || legacyMessage?.trim() || "";
+}
+
 function localDateValue(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -74,6 +96,7 @@ export default function RecordsView(props: Props) {
   const [filters, setFilters] = useState(() => ({ ...emptyFilters, ...periodDates("Today") }));
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [now, setNow] = useState(() => Date.now());
 
   const [users, setUsers] = useState<any[]>([]);
   const [userFilter, setUserFilter] = useState("all");
@@ -98,6 +121,11 @@ export default function RecordsView(props: Props) {
   const [showBatch, setShowBatch] = useState(false);
   const [importing, setImporting] = useState(false);
   const [confirm, setConfirm] = useState<null | { title: string; body: string; onYes: () => void }>(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const defaultUserFilter = "all";
 
@@ -389,18 +417,25 @@ export default function RecordsView(props: Props) {
                     {type === "assistance" ? (
                       <>
                         <small className="crm-description-clamp"><strong className="crm-content-label">Problem:</strong> {r[bodyField]}</small>
-                        {r.resolution && <small className="crm-description-clamp"><strong className="crm-content-label">Resolution:</strong> {r.resolution}</small>}
-                        {r.remarks && <small className="crm-remarks-clamp"><strong>Remarks:</strong> {r.remarks}</small>}
                       </>
                     ) : (
-                      <>
-                        <small className="crm-description-clamp"><strong className="crm-content-label">Description:</strong> {r[bodyField]}</small>
-                        {r.remarks && <small className="crm-remarks-clamp"><strong>Remarks:</strong> {r.remarks}</small>}
-                      </>
+                      <small className="crm-description-clamp"><strong className="crm-content-label">Description:</strong> {r[bodyField]}</small>
+                    )}
+                    {summaryMessage(r.latestResolutionWorkLog?.message, r.resolution) && <small className="crm-description-clamp"><strong className="crm-content-label">Resolution:</strong> {summaryMessage(r.latestResolutionWorkLog?.message, r.resolution)}</small>}
+                    {summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) && <small className="crm-remarks-clamp"><strong>Remark:</strong> {summaryMessage(r.latestRemarkWorkLog?.message, r.remarks)}</small>}
+                    {!summaryMessage(r.latestResolutionWorkLog?.message, r.resolution) && !summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) && r.latestWorkLog?.message?.trim() ? (
+                      <small className="crm-description-clamp"><strong className="crm-content-label">Update:</strong> {r.latestWorkLog.message.trim()}</small>
+                    ) : null}
+                    {!summaryMessage(r.latestResolutionWorkLog?.message, r.resolution) && !summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) && !r.latestWorkLog?.message?.trim() && (
+                      <small className="crm-description-clamp"><strong className="crm-content-label">Update:</strong> No updates yet</small>
                     )}
                   </td>
                   <td><span className={`crm-priority crm-priority-${String(r.priority).toLowerCase()}`}><ArrowDownWideNarrow size={13} aria-hidden="true" />{priorityLabel(r.priority)}</span></td>
-                  <td>{r.timeEnded ? `${formatTime12Hour(r.timeStarted)} – ${formatTime12Hour(r.timeEnded)}` : `Since ${formatTime12Hour(r.timeStarted)}`}</td>
+                  <td>{r.status === "OPEN" && !r.timeEnded
+                    ? `${formatTime12Hour(r.timeStarted)} • ${formatElapsedDuration(new Date(`${String(r.startDate).slice(0, 10)}T${r.timeStarted}:00`), now)}`
+                    : r.timeEnded
+                      ? `${formatTime12Hour(r.timeStarted)} – ${formatTime12Hour(r.timeEnded)}`
+                      : `Since ${formatTime12Hour(r.timeStarted)}`}</td>
                   <td><span className={`crm-status crm-status-${String(r.status).toLowerCase()}`}><CircleDot size={13} aria-hidden="true" />{statusLabel(r.status)}</span></td>
                   <td>{r.assigned}</td>
                 </tr>
@@ -502,9 +537,7 @@ export default function RecordsView(props: Props) {
         .crm-remarks-clamp { margin-top: 5px; color: var(--record-content); font-size: 13px; line-height: 1.4; -webkit-line-clamp: 2; line-clamp: 2; }
         .crm-content-label, .crm-remarks-clamp :global(strong) { color: var(--record-label); font-weight: 650; }
         .crm-status, .crm-priority { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border: 1px solid transparent; border-radius: 999px; font-size: 11px; font-weight: 650; white-space: nowrap; }
-        .crm-status-open, .crm-priority-normal { color: #1d4ed8; border-color: #bfdbfe; background: #eff6ff; }
-        .crm-status-close_pending { color: #b45309; border-color: #fde68a; background: #fffbeb; }
-        .crm-status-closed { color: #15803d; border-color: #bbf7d0; background: #f0fdf4; }
+        .crm-priority-normal { color: #1d4ed8; border-color: #bfdbfe; background: #eff6ff; }
         .crm-priority-low { color: #475569; border-color: #e2e8f0; background: #f1f5f9; }
         .crm-priority-high { color: #c2410c; border-color: #fed7aa; background: #fff7ed; }
         .crm-priority-critical { color: #b91c1c; border-color: #fecaca; background: #fef2f2; }

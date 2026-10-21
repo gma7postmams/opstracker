@@ -7,14 +7,11 @@ Apply the CRM UI Standards.
 
 Requirements:
 
-1. Add Remarks visibility to both Technical Assistance and Other Tasks tables.
-2. Do NOT create a separate Remarks column.
-3. Display Remarks beneath the existing Activity / Description content.
-4. Show:
-   - Title
-   - Description
-   - Remarks label (only if remarks exists)
-5. Truncate long Description and Remarks content with line clamp.
+1. Show the latest Resolution and Remark work-log messages beneath the existing content when available, falling back independently to legacy Resolution and Remarks fields.
+2. If neither Resolution nor Remark is available, show the latest work-log message as Update when available; otherwise show “Update: No updates yet.”
+3. Do NOT create a separate Resolution or Remark column.
+4. Do not repeat Show / Group or Location in the content column; they have separate table columns.
+5. Truncate long content with line clamp.
 6. Preserve all existing filtering, sorting, searching, row actions, and responsive behavior.
 7. Do not modify APIs, database schema, business logic, or backend code.
 
@@ -105,6 +102,8 @@ Keep the email Status Summary with three equally sized cards ordered Open, Close
 
 ## Table Column Sizing
 
-For Technical Assistance and Other Tasks tables, make Activity / Description the primary content column at approximately 35-40% of the table width. Keep Title first, followed by Description and optional Remarks; clamp Description and Remarks to two lines. Reduce the Date, Priority, Duration, and Status columns, while retaining enough width for Location and Assigned values to remain readable. Use fixed column proportions within the existing horizontally scrollable table wrapper so narrow viewports remain usable without compressing the primary content.
+For Technical Assistance and Other Tasks tables, make Activity / Description the primary content column at approximately 35-40% of the table width. Keep Title first, followed by the record's client/problem or description and its latest Resolution and Remark summaries; clamp long content to two lines. Reduce the Date, Priority, Duration, and Status columns, while retaining enough width for Location and Assigned values to remain readable. Use fixed column proportions within the existing horizontally scrollable table wrapper so narrow viewports remain usable without compressing the primary content.
 
-For Technical Assistance, use the existing content column to show Client Name, Problem, optional Resolution, and optional Remarks in that order. Keep the client name strongest, the problem in normal text, and the Resolution and Remarks labels muted with their values in secondary text. Clamp long content without adding table columns or changing table interactions.
+For Technical Assistance, use the existing content column to show Client Name, Problem, latest Resolution work log or legacy Resolution, and latest Remark work log or legacy Remarks in that order. If neither Resolution nor Remark is available, show the latest work log as Update, or “Update: No updates yet” if no work log exists. Keep the client name strongest, with labels muted and values in secondary text. Clamp long content without adding table columns or changing table interactions.
+
+For Other Tasks, show Description followed by the latest Resolution and Remark work logs, falling back to legacy Resolution and Remarks fields where available. If neither Resolution nor Remark is available, show the latest work log as Update, or “Update: No updates yet” if no work log exists.

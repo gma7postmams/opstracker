@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Pencil, Save, Trash2, X } from "lucide-react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 
@@ -48,6 +48,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
   timeStyle: "short",
 });
+const timelineDrawDuration = 1600;
 
 export default function RecordTimeline({
   type,
@@ -70,6 +71,9 @@ export default function RecordTimeline({
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editMessage, setEditMessage] = useState("");
   const [savingEditId, setSavingEditId] = useState<number | null>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const timelineNodes = useRef<(HTMLSpanElement | null)[]>([]);
+  const [railGeometry, setRailGeometry] = useState({ key: "", path: "", width: 0, height: 0, delays: [] as number[] });
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/records/${type}/${recordId}/work-logs`);
@@ -98,6 +102,52 @@ export default function RecordTimeline({
       createdAt: entry.createdAt,
     })),
   ].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
+  const timelineKey = timelineEvents.map((event) => event.id).join("|");
+
+  useEffect(() => {
+    const timeline = timelineRef.current;
+    if (!timeline) return;
+
+    const measureRail = () => {
+      const timelineBounds = timeline.getBoundingClientRect();
+      const points = timelineEvents.map((_, index) => {
+        const node = timelineNodes.current[index];
+        if (!node) return null;
+        const bounds = node.getBoundingClientRect();
+        return {
+          x: bounds.left + bounds.width / 2 - timelineBounds.left,
+          y: bounds.top + bounds.height / 2 - timelineBounds.top,
+        };
+      });
+      if (points.some((point) => point === null)) return;
+
+      const measuredPoints = points as { x: number; y: number }[];
+      const distances = [0];
+      for (let index = 1; index < measuredPoints.length; index += 1) {
+        const previous = measuredPoints[index - 1];
+        const current = measuredPoints[index];
+        distances.push(distances[index - 1] + Math.hypot(current.x - previous.x, current.y - previous.y));
+      }
+      const totalDistance = distances[distances.length - 1] ?? 0;
+      const path = measuredPoints.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+      const delays = distances.map((distance) => totalDistance ? Math.round(distance / totalDistance * timelineDrawDuration) : 0);
+      setRailGeometry((current) => {
+        if (
+          current.key === timelineKey && current.path === path && current.width === timelineBounds.width && current.height === timelineBounds.height &&
+          current.delays.length === delays.length && current.delays.every((delay, index) => delay === delays[index])
+        ) return current;
+        return { key: timelineKey, path, width: timelineBounds.width, height: timelineBounds.height, delays };
+      });
+    };
+
+    measureRail();
+    const observer = new ResizeObserver(measureRail);
+    observer.observe(timeline);
+    timeline.querySelectorAll(".record-timeline-item").forEach((item) => observer.observe(item));
+    return () => observer.disconnect();
+  }, [timelineKey]);
+
+  const timelineReady = railGeometry.key === timelineKey && Boolean(railGeometry.path);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -191,17 +241,36 @@ export default function RecordTimeline({
       )}
       {error && <p className="worklog-error" role="alert">{error}</p>}
       {timelineEvents.length ? (
-        <div className="timeline record-timeline">
+        <div className={`timeline record-timeline${timelineReady ? " record-timeline-ready" : ""}`} ref={timelineRef}>
+          {timelineReady && (
+            <svg
+              className="record-timeline-rail"
+              viewBox={`0 0 ${railGeometry.width} ${railGeometry.height}`}
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <path d={railGeometry.path} pathLength="1" />
+            </svg>
+          )}
           {timelineEvents.map((event, index) => {
             const entry = event.source === "worklog"
               ? entries.find((candidate) => `worklog-${candidate.id}` === event.id)
               : undefined;
             return (
-              <article
-                className="event record-timeline-card"
-                key={event.id}
-                style={{ animationDelay: `${Math.min(index * 55, 440)}ms` }}
-              >
+              <div className="record-timeline-item" key={event.id}>
+                <span
+                  className={`record-timeline-node${index === timelineEvents.length - 1 ? " record-timeline-node-latest" : ""}`}
+                  ref={(node) => { timelineNodes.current[index] = node; }}
+                  style={{ animationDelay: `${timelineReady ? railGeometry.delays[index] ?? 0 : 0}ms` }}
+                  aria-hidden="true"
+                />
+                <div
+                  className="record-timeline-reveal"
+                  style={{ animationDelay: `${timelineReady ? railGeometry.delays[index] ?? 0 : 0}ms` }}
+                >
+                <article
+                  className="event record-timeline-card"
+                >
                 <div className="record-timeline-card-head">
                   <span className="record-timeline-type">{event.source === "system" ? "System Event" : event.title}</span>
                   <time dateTime={event.createdAt}>{dateTimeFormatter.format(new Date(event.createdAt))}</time>
@@ -265,7 +334,9 @@ export default function RecordTimeline({
                 ) : (
                   <small><b>{event.title}</b>{event.description ? ` · ${event.description}` : ""}</small>
                 )}
-              </article>
+                </article>
+                </div>
+              </div>
             );
           })}
         </div>

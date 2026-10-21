@@ -1,5 +1,10 @@
 ## 2026-10-21
 
+- Refined the Record Timeline animation so each card fade/slide-in begins at the same distance-based arrival time as its node glow. The continuous rail, reduced-motion behavior, event order, work-log functionality and permissions are unchanged.
+- Fixed list summaries to fall back from typed Resolution and Remark work logs to legacy fields before showing Update.
+- Added second-by-second elapsed-time counters for open records in list and detail views. The list retains the start time, while detail pages show Started and Elapsed Time instead of ongoing end-time/duration labels; closed-record duration and report/export calculations are unchanged.
+- Changed record-list status badges to red for Open, orange for Close Pending and green for Closed, and added an “Update: No updates yet” fallback when a record has no work logs.
+- Updated Technical Assistance and Other Tasks list content to use latest Resolution and Remark work logs, with latest-work-log Update fallback and no duplicate Show/group or Location text.
 - Fixed Work Log edits for older entries with no `updatedAt`, falling back to `createdAt` or the current time.
 - Refined Technical Assistance email Details to show client/show/location, the problem, and separate latest Resolution and Remark work logs, with a latest-work-log Update fallback only when neither typed log exists.
 - Fixed Technical Assistance email Latest Update selection to fall back from the newest Resolution and Remark work logs to the newest work log of any type before legacy fields.

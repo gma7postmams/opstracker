@@ -7,7 +7,7 @@ OpsTracker is a Next.js application for recording and reviewing Technical Assist
 ## Current capabilities
 
 - Separate Technical Assistance and Other Tasks records with reference numbers, status, priority, assignment and date/time fields.
-- Searchable, filterable record lists, record detail pages, batch actions and a chronological Record Timeline with typed entries, message editing, role-based edit/delete permissions and animations.
+- Searchable, filterable record lists with live elapsed-time counters for open records, Resolution and Remark summaries that prefer typed work logs and fall back to legacy fields, record detail pages, batch actions and a chronological Record Timeline with typed entries, message editing, role-based edit/delete permissions and animations.
 - Dashboard summaries and owner/assignee reports with participation counts and report-detail timelines, plus email summaries that show issue context and the latest typed resolution/remark work logs.
 - User and master-data administration, branding, JSON backup and restore, and audit-log review/export.
 - Spreadsheet and CSV import, plus AI text improvement and MACO operational Q&A backed by an Ollama-compatible service.

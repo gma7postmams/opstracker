@@ -328,6 +328,9 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:po
 .status.open{background:var(--badge-open-bg);color:var(--open)}
 .status.pending{background:var(--badge-pending-bg);color:var(--pending)}
 .status.closed{background:var(--badge-closed-bg);color:var(--closed)}
+.crm-status-open{background:var(--badge-open-bg);border-color:color-mix(in srgb,var(--open) 35%,transparent);color:var(--open)}
+.crm-status-close_pending{background:var(--badge-pending-bg);border-color:color-mix(in srgb,var(--pending) 35%,transparent);color:var(--pending)}
+.crm-status-closed{background:var(--badge-closed-bg);border-color:color-mix(in srgb,var(--closed) 35%,transparent);color:var(--closed)}
 .priority{font-size:11px;color:#475467}
 .empty{padding:44px 20px;text-align:center;color:var(--muted)}
 .empty b{display:block;color:var(--text);margin-bottom:5px;font-size:14px}
@@ -379,11 +382,22 @@ hr{border:0;border-top:1px solid var(--line);margin:19px 0}
 .worklog-error{margin:0;color:var(--err-fg);font-size:12px}
 .worklog-empty{margin:0}
 .record-timeline{gap:12px;--timeline-accent:var(--accent)}
-.record-timeline-card{margin-left:23px;padding:11px 13px;border:1px solid var(--line);
-  border-radius:8px;background:var(--panel);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
-  animation:timeline-entry-in 420ms cubic-bezier(.2,.7,.25,1) both}
+.record-timeline::before{display:none}
+.record-timeline:not(.record-timeline-ready) .record-timeline-node,
+.record-timeline:not(.record-timeline-ready) .record-timeline-reveal{animation:none;opacity:1;transform:none}
+.record-timeline-rail{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:0}
+.record-timeline-rail path{fill:none;stroke:var(--timeline-accent);stroke-width:2;stroke-linecap:round;
+  stroke-dasharray:1;stroke-dashoffset:1;animation:timeline-rail-draw 1.6s ease-out forwards}
+.record-timeline-item{position:relative;z-index:1;display:grid;grid-template-columns:14px minmax(0,1fr);column-gap:24px}
+.record-timeline-node{grid-column:1;grid-row:1;align-self:center;justify-self:center;width:10px;height:10px;
+  border:2px solid var(--panel);border-radius:50%;background:var(--timeline-accent);
+  box-shadow:0 0 0 1px var(--timeline-accent);animation:timeline-node-arrive 420ms ease-out both}
+.record-timeline-node-latest{animation-name:timeline-node-latest}
+.record-timeline-reveal{grid-column:2;grid-row:1;min-width:0;animation:timeline-entry-in 420ms cubic-bezier(.2,.7,.25,1) both}
+.record-timeline-card{grid-column:2;margin:0;padding:11px 13px;border:1px solid var(--line);
+  border-radius:8px;background:var(--panel);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
 .record-timeline-card:hover{transform:translateX(3px);border-color:var(--line2);box-shadow:0 4px 14px #00000012}
-.record-timeline-card::before{left:-27px;z-index:1}
+.record-timeline-card::before{display:none}
 .record-timeline-card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-right:64px}
 .record-timeline-type{padding:2px 6px;border-radius:3px;background:var(--hint-bg);
   color:var(--muted);font-size:11px;font-weight:650}
@@ -405,13 +419,22 @@ hr{border:0;border-top:1px solid var(--line);margin:19px 0}
 .record-timeline-delete{display:grid;place-items:center}
 @media(hover:none){.record-timeline-actions{opacity:1}}
 @keyframes timeline-entry-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-@keyframes timeline-line-draw{from{transform:scaleY(0)}to{transform:scaleY(1)}}
-@keyframes timeline-latest-pulse{
-  0%,100%{box-shadow:0 0 0 1px var(--timeline-accent),0 0 0 0 color-mix(in srgb,var(--timeline-accent) 0%,transparent)}
-  50%{box-shadow:0 0 0 1px var(--timeline-accent),0 0 9px 3px color-mix(in srgb,var(--timeline-accent) 42%,transparent)}
+@keyframes timeline-rail-draw{to{stroke-dashoffset:0}}
+@keyframes timeline-node-arrive{
+  0%{opacity:.35;transform:scale(.72)}
+  55%{opacity:1;transform:scale(1.35);box-shadow:0 0 0 1px var(--timeline-accent),0 0 9px 3px color-mix(in srgb,var(--timeline-accent) 42%,transparent)}
+  100%{opacity:1;transform:scale(1);box-shadow:0 0 0 1px var(--timeline-accent)}
+}
+@keyframes timeline-node-latest{
+  0%{opacity:.35;transform:scale(.72)}
+  55%{opacity:1;transform:scale(1.35);box-shadow:0 0 0 1px var(--timeline-accent),0 0 9px 3px color-mix(in srgb,var(--timeline-accent) 42%,transparent)}
+  100%{opacity:1;transform:scale(1);box-shadow:0 0 0 1px var(--timeline-accent),0 0 5px 2px color-mix(in srgb,var(--timeline-accent) 24%,transparent)}
 }
 @media(prefers-reduced-motion:reduce){
-  .timeline::before,.event:last-child::before,.record-timeline-card,.worklog-form{animation:none}
+  .timeline::before,.record-timeline-rail path,.record-timeline-node,.record-timeline-reveal,.worklog-form{animation:none}
+  .record-timeline-rail path{stroke-dashoffset:0}
+  .record-timeline-node{opacity:1;transform:none}
+  .record-timeline-node-latest{box-shadow:0 0 0 1px var(--timeline-accent),0 0 5px 2px color-mix(in srgb,var(--timeline-accent) 24%,transparent)}
   .record-timeline-card,.record-timeline-card:hover{transition:none;transform:none}
 }
 

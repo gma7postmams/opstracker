@@ -4,6 +4,7 @@ import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isRecordType, SortKey } from "@/lib/recordTypes";
 import { listRecords, nextRefNo, normalizeTimes, delegateFor } from "@/lib/records";
+import { addReportWorkLogSummaries } from "@/lib/reports";
 import { schemaFor, flatten } from "@/lib/validation";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
@@ -39,8 +40,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
     user
   );
 
-
-  return NextResponse.json(data);
+  const rows = await addReportWorkLogSummaries(data.rows, p.type);
+  return NextResponse.json({ ...data, rows });
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
