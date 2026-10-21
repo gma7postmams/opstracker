@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/components/Toast";
 import { useSession } from "next-auth/react";
-import { Activity, CheckCircle2, CircleDot, Clock3 } from "lucide-react";
+import { Activity, CheckCircle2, CircleDot, Clock3, UsersRound } from "lucide-react";
 
 
 const formatDate = (date: Date) => {
@@ -260,7 +260,7 @@ const activeFilters =
         .report-page .filters { border:1px solid var(--border); border-radius:10px; padding:12px; background:var(--panel); box-shadow:0 3px 12px rgba(18,38,63,.04); align-items:end; }
         .report-page .report-actions { display:flex; flex-direction:row; flex-shrink:0; gap:8px; margin-left:auto; }
         .report-page .flabel { font-size:10px; font-weight:750; letter-spacing:.055em; }
-        .report-page .report-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); grid-auto-rows:1fr; gap:12px; margin:12px 0 12px; }
+        .report-page .report-kpis { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); grid-auto-rows:1fr; gap:12px; margin:12px 0 12px; }
         .report-page .report-kpi { position:relative; display:flex; flex-direction:column; overflow:hidden; min-height:102px; padding:14px 16px 12px 20px; border:1px solid color-mix(in srgb,var(--border) 70%,var(--muted)); border-radius:9px; background:var(--panel); box-shadow:0 3px 12px rgba(0,0,0,.12); transition:transform .18s ease,box-shadow .18s ease; }
         .report-page .report-kpi:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.18); }
         .report-page .report-kpi:before { position:absolute; inset:0 auto 0 0; width:4px; content:""; background:var(--kpi-accent); }
@@ -372,6 +372,10 @@ const activeFilters =
             <div className="report-kpi" style={{ "--kpi-accent": "#64748b" } as React.CSSProperties}>
               <div className="report-kpi-top"><span>Total records</span><span className="report-kpi-icon"><Activity size={16} aria-hidden="true" /></span></div>
               <strong>{totalRecords}</strong><small>{s.assistance} assistance · {s.tasks} other tasks</small>
+            </div>
+            <div className="report-kpi" style={{ "--kpi-accent": "#0f766e" } as React.CSSProperties}>
+              <div className="report-kpi-top"><span>Participated Records</span><span className="report-kpi-icon"><UsersRound size={16} aria-hidden="true" /></span></div>
+              <strong>{d.contributionSummary.participated}</strong><small>Owned, assigned, or contributed</small>
             </div>
             <div className="report-kpi" style={{ "--kpi-accent": "#2563eb" } as React.CSSProperties}>
               <div className="report-kpi-top"><span>Open</span><span className="report-kpi-icon"><CircleDot size={16} aria-hidden="true" /></span></div>

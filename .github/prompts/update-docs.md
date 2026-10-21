@@ -1,4 +1,4 @@
-Analyze the entire workspace and all uncommitted changes.
+Analyze all uncommitted changes.
 
 Update:
 
@@ -11,12 +11,12 @@ Requirements:
 
 - Use actual implementation only.
 - Do not invent functionality.
-- Document new features.
-- Document changed behavior.
-- Document database changes.
-- Document workflow changes.
-- Document permission changes.
-- Document reporting changes.
-- Document AI changes.
+- Verify behavior against source code.
+- Update screenshots references if needed.
+- Update workflow documentation if process changed.
+- Update database documentation if Prisma schema changed.
+- Update permissions documentation if authorization changed.
+- Update reporting documentation if reports changed.
+- Update AI documentation if AI functionality changed.
 
-Make all documentation commit-ready.
+Make documentation commit-ready.

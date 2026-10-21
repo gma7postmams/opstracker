@@ -14,9 +14,11 @@ The `mine` scope includes records where the selected participant is the owner, a
 
 Summary metrics include total assistance, tasks, all records, closed, open, pending and closed-per-day average. Each enabled tally groups by record owner and assigned name and reports total, closed, open, pending, average closed per date-range day, and average duration in minutes. Duration averages use closed records for which start and end timestamps are available.
 
+The Reports page displays the selected user's Participated Records count, or the signed-in user's count when no user is selected. Report details, the Excel Summary sheet, email previews and sent reports include Owned Records, Assigned Records and Participated Records for that same user. Participation is the distinct union of records the user owns, is currently assigned to, or has authored at least one work log on. Multiple work logs and overlapping owner/assignee/contributor roles count once per user and record. These metrics use the report's active date, activity, status and scope filters. They are separate from Total Records, which remains the actual number of records returned.
+
 ## Detailed Excel workbook
 
-Export creates a workbook with Summary, Technical Assistance, Other Tasks and Combined Records sheets. Detail sheets include the record fields, owner and assignee, latest work-log summaries by type, and recent work-log entries. The same workbook is attached to an emailed report.
+Export creates a workbook with Summary, Technical Assistance, Other Tasks and Combined Records sheets. The Summary sheet includes contribution counts for the selected user. Detail sheets include the record fields, owner and assignee, latest work-log summaries by type, and recent work-log entries. The email preview and sent email include the same contribution summary, and the same workbook is attached to an emailed report.
 
 Email delivery is available when the current user's email-report settings are enabled and include a Gmail sender, SMTP password and recipient string. The application uses Gmail SMTP on port 587 with STARTTLS-style transport settings. The UI provides an email preview before sending. Successful delivery is audit logged.
 

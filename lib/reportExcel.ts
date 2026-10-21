@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { formatReportOwner } from "@/lib/reports";
+import { formatReportOwner, ReportContributionSummary } from "@/lib/reports";
 
 function styleHeader(row: ExcelJS.Row) {
   row.eachCell((cell) => {
@@ -107,6 +107,7 @@ export async function buildReportWorkbook(data: {
   };
   assistance: any[];
   tasks: any[];
+  contributionSummary: ReportContributionSummary;
 }) {
   const wb = new ExcelJS.Workbook();
 
@@ -153,6 +154,13 @@ export async function buildReportWorkbook(data: {
     "Total Records",
     data.assistance.length + data.tasks.length,
   ]);
+
+  summary.addRow([]);
+  const contributionHeader = summary.addRow(["Contribution Summary", data.contributionSummary.userName]);
+  styleHeader(contributionHeader);
+  summary.addRow(["Owned Records", data.contributionSummary.owned]);
+  summary.addRow(["Assigned Records", data.contributionSummary.assigned]);
+  summary.addRow(["Participated Records", data.contributionSummary.participated]);
 
   autoFit(summary);
 

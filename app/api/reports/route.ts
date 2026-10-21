@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { minutesBetween } from "@/lib/format";
-import { applyReportScope, formatReportOwner, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
+import { applyReportScope, formatReportOwner, getReportContributionSummary, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
 
 interface Row {
   owner: string; assigned: string; total: number; closed: number; open: number; pending: number;
@@ -83,9 +83,11 @@ export async function GET(req: NextRequest) {
 
   const combined = [...assistance, ...tasks];
   const closed = combined.filter((r) => r.status === "CLOSED").length;
+  const contributionSummary = await getReportContributionSummary(reportWhere, user, activity, userId);
 
   return NextResponse.json({
     range: { from, to, days },
+    contributionSummary,
     summary: {
       assistance: assistance.length,
       tasks: tasks.length,

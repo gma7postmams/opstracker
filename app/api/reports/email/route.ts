@@ -5,7 +5,7 @@ import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildReportWorkbook } from "@/lib/reportExcel";
 import { logAudit } from "@/lib/audit";
-import { addReportWorkLogSummaries, applyReportScope, formatReportOwner, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
+import { addReportWorkLogSummaries, applyReportScope, formatReportOwner, getReportContributionSummary, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
 
 export async function POST(req: NextRequest) {
   const actor = await currentUser();
@@ -99,11 +99,13 @@ export async function POST(req: NextRequest) {
 
   const assistanceWithLogs = await addReportWorkLogSummaries(assistance, "assistance");
   const tasksWithLogs = await addReportWorkLogSummaries(tasks, "tasks");
+  const contributionSummary = await getReportContributionSummary(reportWhere, actor, activity, userId);
 
   const workbook = await buildReportWorkbook({
     range: { from, to },
     assistance: assistanceWithLogs,
     tasks: tasksWithLogs,
+    contributionSummary,
   });
 
   const attachment = Buffer.from(await workbook.xlsx.writeBuffer());
@@ -248,6 +250,8 @@ const emailHtml = `
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed;">
             <tr><td colspan="3" style="padding:10px 5px 4px;color:#263947;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Activity Summary</td></tr>
             <tr>${summaryCard("Technical Assistance", assistanceWithLogs.length, "#0786a3", "&#8984;")}${summaryCard("Other Tasks", tasksWithLogs.length, "#b77914", "&#9776;")}${summaryCard("Total Records", totalRecords, "#2563a8", "&#9638;")}</tr>
+            <tr><td colspan="3" style="padding:14px 5px 4px;color:#263947;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Contribution Summary: ${escapeHtml(contributionSummary.userName)}</td></tr>
+            <tr>${summaryCard("Owned Records", contributionSummary.owned, "#0786a3", "&#9733;")}${summaryCard("Assigned Records", contributionSummary.assigned, "#b77914", "&#9744;")}${summaryCard("Participated Records", contributionSummary.participated, "#2563a8", "&#10003;")}</tr>
             <tr><td colspan="3" style="padding:10px 5px 4px;color:#263947;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Status Summary</td></tr>
             <tr>${summaryCard("Open", statusCounts.open, "#c74646", "&#9675;")}${summaryCard("Close Pending", statusCounts.pending, "#b77914", "&#9684;")}${summaryCard("Closed", statusCounts.closed, "#34845e", "&#10003;")}</tr>
           </table>

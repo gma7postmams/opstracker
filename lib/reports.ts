@@ -5,6 +5,13 @@ import { prisma } from "./prisma";
 
 export type ReportScope = "mine" | "all";
 
+export interface ReportContributionSummary {
+  userName: string;
+  owned: number;
+  assigned: number;
+  participated: number;
+}
+
 export const WORK_LOG_TYPE_ORDER = ["INVESTIGATION", "RESOLUTION", "REMARK"] as const;
 
 const reportParticipationWhere = (user: Pick<SessionUser, "id" | "name">) => ({
@@ -56,6 +63,53 @@ export async function applyReportScope<T extends Record<string, any>>(
   }
 
   return filters.length === 1 ? filters[0] : { AND: filters };
+}
+
+export async function getReportContributionSummary(
+  where: Record<string, any>,
+  user: SessionUser,
+  activity: string,
+  userId?: string | null
+): Promise<ReportContributionSummary> {
+  let contributor = { id: user.id, name: user.name };
+
+  if (user.role === "ADMIN" && userId && userId !== "all" && /^\d+$/.test(userId)) {
+    const selectedUser = await prisma.user.findUnique({
+      where: { id: Number(userId) },
+      select: { id: true, firstName: true, middleInitial: true, surname: true },
+    });
+    if (selectedUser) {
+      contributor = { id: selectedUser.id, name: fullName(selectedUser) };
+    }
+  }
+
+  const delegates = [
+    ...(activity === "tasks" ? [] : [prisma.assistance]),
+    ...(activity === "assistance" ? [] : [prisma.task]),
+  ];
+  const countFor = (delegate: any) => Promise.all([
+    delegate.count({ where: { AND: [where, { ownerId: contributor.id }] } }),
+    delegate.count({ where: { AND: [where, { assigned: contributor.name }] } }),
+    delegate.count({
+      where: {
+        AND: [where, {
+          OR: [
+            { ownerId: contributor.id },
+            { assigned: contributor.name },
+            { workLogs: { some: { createdById: contributor.id } } },
+          ],
+        }],
+      },
+    }),
+  ]);
+
+  const perType = await Promise.all(delegates.map(countFor));
+  return {
+    userName: contributor.name,
+    owned: perType.reduce((total, counts) => total + counts[0], 0),
+    assigned: perType.reduce((total, counts) => total + counts[1], 0),
+    participated: perType.reduce((total, counts) => total + counts[2], 0),
+  };
 }
 
 export async function addReportWorkLogSummaries<T extends {

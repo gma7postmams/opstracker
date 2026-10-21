@@ -1,3 +1,8 @@
+## 2026-10-21
+
+- Added a participated-record KPI to the Reports page and contribution counts to report details, Excel summaries, email previews and sent reports. The counts cover owned, assigned and distinct participated records for the selected user, or the signed-in user when no user is selected.
+- Kept Total Records tied to the actual number of records in the report; no database schema change was required.
+
 ## 2026-10-20
 
 - Added typed, append-only work logs to record detail, and included work-log summaries in report details and report workbooks/emails.

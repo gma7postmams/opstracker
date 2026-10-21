@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildReportWorkbook } from "@/lib/reportExcel";
-import { addReportWorkLogSummaries, applyReportScope, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
+import { addReportWorkLogSummaries, applyReportScope, getReportContributionSummary, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
 
 export async function GET(req: NextRequest) {
   const user = await currentUser();
@@ -81,6 +81,7 @@ export async function GET(req: NextRequest) {
 
   const assistanceWithLogs = await addReportWorkLogSummaries(assistance, "assistance");
   const tasksWithLogs = await addReportWorkLogSummaries(tasks, "tasks");
+  const contributionSummary = await getReportContributionSummary(reportWhere, user, activity, userId);
 
   const workbook = await buildReportWorkbook({
     range: {
@@ -89,6 +90,7 @@ export async function GET(req: NextRequest) {
     },
     assistance: assistanceWithLogs,
     tasks: tasksWithLogs,
+    contributionSummary,
   });
 
   const buffer = await workbook.xlsx.writeBuffer();

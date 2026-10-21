@@ -54,7 +54,9 @@ Reference numbers are generated as `TA-YYYY-NNNNN` or `OT-YYYY-NNNNN`. A per-typ
 
 - Dashboard periods: today, yesterday, this week, this month, this year, all records, and custom dates. Administrators can filter the dashboard by record owner.
 - Reports filter by date period, activity type, status, report scope and (for administrators) user. Tallies are grouped by record owner and assignee and include total, closed, open, pending, closed-per-day average and average handling minutes.
-- Reports export to a multi-sheet Excel workbook. A report can also be previewed and emailed with an Excel attachment when the signed-in user's Gmail SMTP settings are enabled.
+- The Reports page displays a participated-record count for the selected user, or the signed-in user when no user is selected. Report details, Excel summaries and email previews/sent reports include owned, currently assigned and participated record counts for that user. Participation includes ownership, current assignment or at least one authored work log; each record is counted once per user.
+- Report scope continues to include owners, current assignees and work-log contributors in My Records. Total Records remains the number of records in the report and is not increased by multiple contributors or work logs.
+- Reports export to a multi-sheet Excel workbook. A report can also be previewed and emailed with an Excel attachment when the signed-in user's Gmail SMTP settings are enabled; contribution counts are included in the workbook and email summary.
 - Audit logs capture supported authentication, record, import, user, master-data, backup/restore and email-report actions. The audit page supports search, action/date filters and Excel export.
 
 ## Users and administration
