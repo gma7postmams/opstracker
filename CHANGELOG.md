@@ -1,5 +1,8 @@
 ## 2026-10-21
 
+- Refined the Record Timeline spacing and neutral card styling, and added message-only work-log editing for administrators, record owners and entry authors with an edited timestamp.
+- Enhanced the Record Timeline with type-specific entry guidance, entry animations, and confirmed work-log deletion for administrators, record owners and entry authors.
+- Replaced separate Activity History and Work Log views with one chronological Record Timeline combining lifecycle events and typed work logs. Events use the existing accent and theme-aware panel surfaces, with the work-log form above the timeline.
 - Added a participated-record KPI to the Reports page and contribution counts to report details, Excel summaries, email previews and sent reports. The counts cover owned, assigned and distinct participated records for the selected user, or the signed-in user when no user is selected.
 - Kept Total Records tied to the actual number of records in the report; no database schema change was required.
 

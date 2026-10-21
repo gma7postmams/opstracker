@@ -13,7 +13,7 @@ PostgreSQL is the configured datasource. `prisma/schema.prisma` is the current s
 | `Counter` | Integer counters keyed by record type and year for reference-number allocation. |
 | `Branding` | Singleton-style row with title, tagline, logo URL and favicon URL. |
 | `AuditLog` | Action, entity type/id, optional actor ID, JSON details and timestamp. Indexed by timestamp and entity type. |
-| `WorkLog` | Append-only record note with type, message, creator ID/name and timestamp; linked to either Assistance or Task. |
+| `WorkLog` | Record timeline note with type, message, creator ID/name, creation timestamp and modification timestamp; linked to either Assistance or Task. |
 
 Enums are `Status` (`OPEN`, `CLOSE_PENDING`, `CLOSED`), `Role` (`ADMIN`, `USER`), `Priority` (`LOW`, `NORMAL`, `HIGH`, `CRITICAL`), `MasterKind`, and `WorkLogType` (`RESOLUTION`, `REMARK`, `INVESTIGATION`).
 
@@ -22,6 +22,7 @@ Enums are `Status` (`OPEN`, `CLOSE_PENDING`, `CLOSED`), `Role` (`ADMIN`, `USER`)
 - Assistance and Task have nullable owner and lock-holder relations to User. Deleting a user sets those foreign keys to null; the operational record remains.
 - Work logs have optional relations to Assistance and Task. Their foreign keys use `Restrict`, so an attached work-log history prevents deletion of that record at the database level. The single-record delete handler also checks and reports this condition.
 - Work-log creator relations use `SetNull`; `createdByName` preserves the displayed author name.
+- Work-log edits update only `message`; `updatedAt` tracks modification time and is initialized from `createdAt` for existing entries.
 - Audit log `userId` is a scalar field, not a Prisma relation. Audit history remains independent of user deletion.
 - Records keep master-data labels as text, not foreign keys. Retiring a master-data row therefore does not rewrite existing record values.
 

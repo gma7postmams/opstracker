@@ -33,12 +33,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ typ
     where,
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
   });
-  const typeOrder = new Map(WORK_LOG_TYPES.map((type, index) => [type, index]));
-  workLogs.sort((a, b) =>
-    typeOrder.get(a.type)! - typeOrder.get(b.type)! ||
-    a.createdAt.getTime() - b.createdAt.getTime() || a.id - b.id
-  );
-  return NextResponse.json(workLogs);
+  return NextResponse.json(workLogs.map((workLog) => ({
+    ...workLog,
+    canEdit: user.role === "ADMIN" || found.record.ownerId === user.id || workLog.createdById === user.id,
+    canDelete: user.role === "ADMIN" || found.record.ownerId === user.id || workLog.createdById === user.id,
+  })));
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ type: string; id: string }> }) {
@@ -77,4 +76,69 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ typ
   };
   const workLog = await prisma.workLog.create({ data });
   return NextResponse.json(workLog, { status: 201 });
+}
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ type: string; id: string }> }) {
+  const user = await currentUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { type, id } = await params;
+  const found = await loadRecord(type, id);
+  if (!found) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  let body: { id?: unknown; message?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+  const workLogId = Number(body.id);
+  if (!Number.isInteger(workLogId) || workLogId < 1) {
+    return NextResponse.json({ error: "A valid work log ID is required" }, { status: 400 });
+  }
+  const relationWhere = found.type === "assistance"
+    ? { assistanceId: found.record.id }
+    : { taskId: found.record.id };
+  const workLog = await prisma.workLog.findFirst({ where: { id: workLogId, ...relationWhere } });
+  if (!workLog) return NextResponse.json({ error: "Work log not found" }, { status: 404 });
+
+  const canEdit = user.role === "ADMIN" || found.record.ownerId === user.id || workLog.createdById === user.id;
+  if (!canEdit) return NextResponse.json({ error: "You do not have permission to edit this work log" }, { status: 403 });
+
+  const message = typeof body.message === "string" ? body.message.trim() : "";
+  if (!message || message.length > 10000) {
+    return NextResponse.json({ error: "Message must be between 1 and 10000 characters" }, { status: 400 });
+  }
+
+  const updatedAt = new Date(Math.max(Date.now(), workLog.updatedAt.getTime() + 1));
+  const updatedWorkLog = await prisma.workLog.update({
+    where: { id: workLog.id },
+    data: { message, updatedAt },
+  });
+  return NextResponse.json(updatedWorkLog);
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ type: string; id: string }> }) {
+  const user = await currentUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { type, id } = await params;
+  const found = await loadRecord(type, id);
+  if (!found) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const workLogId = Number(req.nextUrl.searchParams.get("id"));
+  if (!Number.isInteger(workLogId) || workLogId < 1) {
+    return NextResponse.json({ error: "A valid work log ID is required" }, { status: 400 });
+  }
+  const relationWhere = found.type === "assistance"
+    ? { assistanceId: found.record.id }
+    : { taskId: found.record.id };
+  const workLog = await prisma.workLog.findFirst({ where: { id: workLogId, ...relationWhere } });
+  if (!workLog) return NextResponse.json({ error: "Work log not found" }, { status: 404 });
+
+  const canDelete = user.role === "ADMIN" || found.record.ownerId === user.id || workLog.createdById === user.id;
+  if (!canDelete) return NextResponse.json({ error: "You do not have permission to delete this work log" }, { status: 403 });
+
+  await prisma.workLog.delete({ where: { id: workLog.id } });
+  return new NextResponse(null, { status: 204 });
 }

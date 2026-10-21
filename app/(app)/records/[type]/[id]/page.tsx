@@ -103,13 +103,13 @@ const duration = startAt && endAt
 const historyEvents = (r.activityHistory ?? []).flatMap((entry: any) => {
   const details = entry.details ?? {};
   const at = new Date(entry.createdAt);
-  const time = displayTime(at);
+  const createdAt = at.toISOString();
   const actor = details.name ? ` by ${details.name}` : "";
 
   if (entry.action === "CREATE") {
     return [
-      { id: `${entry.id}-reported`, time, title: "Reported", description: `Record created by ${details.name ?? ownerName}` },
-      { id: `${entry.id}-assigned`, time, title: "Assigned", description: `Assigned to ${details.assigned ?? r.assigned}` },
+      { id: `${entry.id}-reported`, createdAt, title: "Reported", description: `Record created by ${details.name ?? ownerName}` },
+      { id: `${entry.id}-assigned`, createdAt, title: "Assigned", description: `Assigned to ${details.assigned ?? r.assigned}` },
     ];
   }
   if (entry.action === "STATUS_CHANGE") {
@@ -126,33 +126,32 @@ const historyEvents = (r.activityHistory ?? []).flatMap((entry: any) => {
       : title === "Closed"
         ? "Approved and closed"
         : `Manager requested additional work.${previousCompletion}`;
-    return [{ id: entry.id, time, title, description: `${description}${actor}` }];
+    return [{ id: entry.id, createdAt, title, description: `${description}${actor}` }];
   }
   if (entry.action === "ENDORSED" || entry.action === "ASSIGNMENT_CHANGE") {
     return [{
       id: entry.id,
-      time,
+      createdAt,
       title: "Endorsed",
       description: `Reassigned from ${details.previousAssigned || "unassigned"} to ${details.assigned}${actor}`,
     }];
   }
-  if (entry.action === "LOCK" || entry.action === "UNLOCK") {
-    return [{
-      id: entry.id,
-      time,
-      title: entry.action === "LOCK" ? "Locked" : "Unlocked",
-      description: entry.action === "LOCK" ? "Record edits disabled" : "Record edits enabled",
-    }];
-  }
-  return [{ id: entry.id, time, title: "Updated", description: `Record details updated${actor}` }];
+  return [];
 });
 
 if (!historyEvents.some((event: any) => event.title === "Reported")) {
+  const createdAt = r.createdAt ?? startAt?.toISOString() ?? new Date(0).toISOString();
   historyEvents.unshift({
     id: "reported-fallback",
-    time: formatTime12Hour(r.timeStarted),
+    createdAt,
     title: "Reported",
     description: `Record created by ${ownerName}`,
+  });
+  historyEvents.push({
+    id: "assigned-fallback",
+    createdAt,
+    title: "Assigned",
+    description: `Assigned to ${r.assigned}`,
   });
 }
 
@@ -325,24 +324,8 @@ if (!historyEvents.some((event: any) => event.title === "Reported")) {
         </section>
 
         <section className="panel">
-          <div className="panelhead"><h3>Activity History</h3></div>
-          <div className="timeline">
-            {historyEvents.map((event: any) => (
-              <div className="event" key={event.id}>
-                <b>{event.time} · {event.title}</b>
-                <small>{event.description}</small>
-              </div>
-            ))}
-            {r.locked && !historyEvents.some((event: any) => event.title === "Locked") && (
-              <div className="event"><b>Locked</b>
-                <small>Locked by {r.lockedBy ? `${r.lockedBy.firstName} ${r.lockedBy.surname}` : "an administrator"} — edits disabled.</small></div>
-            )}
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panelhead"><h3>Work Log</h3></div>
-          <WorkLogTimeline type={type} recordId={id} canAdd={r.canEdit} />
+          <div className="panelhead"><h3>Record Timeline</h3></div>
+          <WorkLogTimeline type={type} recordId={id} canAdd={r.canEdit} systemEvents={historyEvents} />
         </section>
       </div>
 

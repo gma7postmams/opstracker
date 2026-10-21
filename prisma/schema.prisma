@@ -201,6 +201,7 @@ model WorkLog {
   createdByName String      @map("created_by_name")
   createdBy     User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
   createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @default(now()) @updatedAt @map("updated_at")
 
   @@index([assistanceId, createdAt])
   @@index([taskId, createdAt])

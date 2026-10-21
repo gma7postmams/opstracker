@@ -13,11 +13,15 @@ The shared `(app)` layout redirects unauthenticated visitors to `/login`. Middle
 | View record lists | Records owned by a regular user, plus records assigned to the caller | All records |
 | View a record detail | Owner is a regular user or caller is assigned | All records |
 | Edit record content | Owner, or assigned user when unlocked; assigned users have a restricted field set | Any record, including locked records |
+| Edit work logs | Author may edit their own; record owner may edit any work log on their record | Any work log |
+| Delete work logs | Author may delete their own; record owner may delete any work log on their record | Any work log |
 | Lock/unlock records | No | Yes |
 | Import records for multiple assignees | No | Yes |
 | Manage users, roles, master data, branding, backup/restore | No | Yes |
 
 An unlocked record owner or assigned user can pass the base edit check. A caller editing a record they do not own is limited to assigned person, status, priority, end date and end time. The owner (and an administrator) can edit the full record except that owner identity is not an editable field. A lock blocks non-admin edits. Batch operations skip records the caller cannot edit.
+
+Work-log editing and deletion are separately authorized and are not blocked by record locks: administrators and record owners can edit or delete any work log in scope, while authors can edit or delete their own work logs. Editing changes only the message; entry type, author and creation timestamp are immutable.
 
 The ordinary-user list visibility rule is based on owner role `USER` or matching assignee name. It is distinct from edit permission. Reports use a participation scope: the caller's owned records, assigned records and records with a work log authored by the caller. The dashboard's ordinary-user data filter is by owner ID.
 

@@ -37,9 +37,9 @@ Reference numbers are generated as `TA-YYYY-NNNNN` or `OT-YYYY-NNNNN`. A per-typ
 ## Record operations
 
 - Lists support text search, status/location/shift/date filters, sorting and pagination.
-- Detail pages show record fields, audit-derived activity history and typed work logs.
+- Detail pages show record fields and one chronological Record Timeline combining reported, assigned, endorsed, status-transition and typed work-log events.
 - Batch operations can update shared fields, delete records, or lock/unlock them. Unauthorized records in a batch are skipped and counted.
-- Work logs are chronological notes typed as Investigation, Resolution or Remark. Entries are append-only through the provided API.
+- The Record Timeline displays lifecycle events and work logs in oldest-first timestamp order, with accent-colored nodes/connectors, theme-aware panel surfaces, small type badges, and staggered entry animations. Work-log entries show their author, date/time and message. Users with record edit permission can add entries. Administrators and record owners can edit or delete any entry; authors can edit or delete their own entries. Edits change only the message and display the modification date/time.
 - Dashboard summaries include assistance/task status counts, date-based activity trends, assistance category counts, attention records and recent audit activity.
 
 ## Status and time rules
