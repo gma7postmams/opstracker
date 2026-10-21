@@ -143,26 +143,160 @@ export async function addReportWorkLogSummaries<T extends {
       select,
     });
 
-  const [investigations, resolutions, remarks] = await Promise.all([
+  const [investigations, resolutions, remarks, latestWorkLogs] = await Promise.all([
     latestForType("INVESTIGATION"),
     latestForType("RESOLUTION"),
     latestForType("REMARK"),
+    prisma.workLog.findMany({
+      where: where as any,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      distinct: [foreignKey as any],
+      select,
+    }),
   ]);
   const latestByRecord = (logs: typeof resolutions) =>
     new Map(logs.map((log) => [log[foreignKey]!, log]));
   const latestInvestigations = latestByRecord(investigations);
   const latestResolutions = latestByRecord(resolutions);
   const latestRemarks = latestByRecord(remarks);
+  const latestAnyWorkLogs = latestByRecord(latestWorkLogs);
 
   return records.map((record) => ({
     ...record,
     latestInvestigationWorkLog: latestInvestigations.get(record.id) ?? null,
     latestResolutionWorkLog: latestResolutions.get(record.id) ?? null,
     latestRemarkWorkLog: latestRemarks.get(record.id) ?? null,
+    latestWorkLog: latestAnyWorkLogs.get(record.id) ?? null,
     recentWorkLogs: [...(record.workLogs ?? [])].sort((a, b) =>
       WORK_LOG_TYPE_ORDER.indexOf(a.type as (typeof WORK_LOG_TYPE_ORDER)[number]) -
         WORK_LOG_TYPE_ORDER.indexOf(b.type as (typeof WORK_LOG_TYPE_ORDER)[number]) ||
       a.createdAt.getTime() - b.createdAt.getTime() || a.id - b.id
     ),
   }));
+}
+
+export async function addReportTimelineSummaries<T extends {
+  id: number;
+  refNo: string;
+  createdAt: Date;
+  updatedAt: Date;
+  assigned: string;
+  status: string;
+  resolution?: string | null;
+  owner?: { firstName: string; middleInitial?: string | null; surname: string } | null;
+}>(records: T[], recordType: "assistance" | "tasks") {
+  if (!records.length) return [];
+
+  const foreignKey = recordType === "assistance" ? "assistanceId" : "taskId";
+  const refs = records.map((record) => record.refNo);
+  const [workLogs, auditLogs] = await Promise.all([
+    prisma.workLog.findMany({
+      where: { [foreignKey]: { in: records.map((record) => record.id) } } as any,
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      select: {
+        [foreignKey]: true,
+        id: true,
+        type: true,
+        message: true,
+        createdAt: true,
+        createdByName: true,
+      } as any,
+    }),
+    prisma.auditLog.findMany({
+      where: { entityType: recordType, entityId: { in: refs } },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      select: { entityId: true, action: true, details: true, createdAt: true },
+    }),
+  ]);
+
+  const logsByRecord = new Map<number, typeof workLogs>();
+  for (const log of workLogs) {
+    const id = (log as any)[foreignKey] as number | null;
+    if (id == null) continue;
+    const logs = logsByRecord.get(id) ?? [];
+    logs.push(log);
+    logsByRecord.set(id, logs);
+  }
+
+  const historyByRecord = new Map<string, typeof auditLogs>();
+  for (const log of auditLogs) {
+    if (!log.entityId) continue;
+    const history = historyByRecord.get(log.entityId) ?? [];
+    history.push(log);
+    historyByRecord.set(log.entityId, history);
+  }
+
+  return records.map((record) => {
+    const recordLogs = (logsByRecord.get(record.id) ?? []) as unknown as Array<{
+      type: string;
+      message: string;
+      createdAt: Date;
+      createdByName: string;
+    }>;
+    const history = historyByRecord.get(record.refNo) ?? [];
+    const timeline: Array<{ title: string; description: string; createdAt: Date }> = [];
+    const addEvent = (title: string, description: string, createdAt: Date) =>
+      timeline.push({ title, description, createdAt });
+
+    for (const entry of history) {
+      const details = entry.details && typeof entry.details === "object"
+        ? entry.details as Record<string, unknown>
+        : {};
+      const actor = typeof details.name === "string" ? ` by ${details.name}` : "";
+      if (entry.action === "CREATE") {
+        addEvent("Reported", `Record created${actor}`, entry.createdAt);
+        addEvent("Assigned", `Assigned to ${String(details.assigned || record.assigned)}`, entry.createdAt);
+      } else if (entry.action === "ENDORSED" || entry.action === "ASSIGNMENT_CHANGE") {
+        addEvent(
+          "Endorsed",
+          `Reassigned from ${String(details.previousAssigned || "unassigned")} to ${String(details.assigned || record.assigned)}${actor}`,
+          entry.createdAt,
+        );
+      } else if (entry.action === "STATUS_CHANGE") {
+        const nextStatus = details.nextStatus;
+        if (nextStatus === "CLOSE_PENDING") {
+          addEvent("Close Pending", `Work completed and awaiting approval${actor}`, entry.createdAt);
+        } else if (nextStatus === "CLOSED") {
+          addEvent("Closed", `Approved and closed${actor}`, entry.createdAt);
+        }
+      }
+    }
+
+    const hasTitle = (title: string) => timeline.some((event) => event.title === title);
+    if (!hasTitle("Reported")) addEvent("Reported", "Record created", record.createdAt);
+    if (!hasTitle("Assigned")) addEvent("Assigned", `Assigned to ${record.assigned}`, record.createdAt);
+    if (record.status === "CLOSE_PENDING" && !hasTitle("Close Pending")) {
+      addEvent("Close Pending", "Current status is Close Pending", record.updatedAt);
+    }
+    if (record.status === "CLOSED" && !hasTitle("Closed")) {
+      addEvent("Closed", "Current status is Closed", record.updatedAt);
+    }
+
+    const contributors = recordLogs
+      .map((log) => log.createdByName.trim())
+      .filter(Boolean);
+    for (const log of recordLogs) {
+      const title = log.type === "INVESTIGATION"
+        ? "Investigation"
+        : log.type === "RESOLUTION"
+          ? "Resolution"
+          : "Remark";
+      addEvent(title, `${log.createdByName}: ${log.message}`, log.createdAt);
+    }
+
+    timeline.sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
+    const latestResolutionLog = [...recordLogs].reverse().find((log) => log.type === "RESOLUTION");
+    const participants = [
+      formatReportOwner(record.owner),
+      record.assigned.trim() || "—",
+      ...contributors,
+    ].filter((name, index, names) => name !== "—" && names.indexOf(name) === index);
+
+    return {
+      ...record,
+      participants,
+      latestResolution: latestResolutionLog?.message || record.resolution || "",
+      timelineSummary: timeline,
+    };
+  });
 }

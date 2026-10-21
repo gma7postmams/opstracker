@@ -1,5 +1,10 @@
 ## 2026-10-21
 
+- Fixed Work Log edits for older entries with no `updatedAt`, falling back to `createdAt` or the current time.
+- Refined Technical Assistance email Details to show client/show/location, the problem, and separate latest Resolution and Remark work logs, with a latest-work-log Update fallback only when neither typed log exists.
+- Fixed Technical Assistance email Latest Update selection to fall back from the newest Resolution and Remark work logs to the newest work log of any type before legacy fields.
+- Refined report email details into compact five-column tables with concise issue descriptions and latest updates; report filters and workbook calculations remain unchanged.
+- Added participant names and chronological lifecycle/work-log summaries to report details, with Technical Assistance resolution fallback to the legacy field when no Resolution work log exists.
 - Refined the Record Timeline spacing and neutral card styling, and added message-only work-log editing for administrators, record owners and entry authors with an edited timestamp.
 - Enhanced the Record Timeline with type-specific entry guidance, entry animations, and confirmed work-log deletion for administrators, record owners and entry authors.
 - Replaced separate Activity History and Work Log views with one chronological Record Timeline combining lifecycle events and typed work logs. Events use the existing accent and theme-aware panel surfaces, with the work-log form above the timeline.

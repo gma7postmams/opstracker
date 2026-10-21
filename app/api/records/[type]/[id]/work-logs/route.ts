@@ -110,7 +110,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ty
     return NextResponse.json({ error: "Message must be between 1 and 10000 characters" }, { status: 400 });
   }
 
-  const updatedAt = new Date(Math.max(Date.now(), workLog.updatedAt.getTime() + 1));
+  const baseTime =
+    workLog.updatedAt?.getTime() ??
+    workLog.createdAt?.getTime() ??
+    Date.now();
+  const updatedAt = new Date(Math.max(Date.now(), baseTime + 1));
   const updatedWorkLog = await prisma.workLog.update({
     where: { id: workLog.id },
     data: { message, updatedAt },

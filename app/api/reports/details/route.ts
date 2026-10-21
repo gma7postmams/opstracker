@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { addReportWorkLogSummaries, applyReportScope, getReportContributionSummary, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
+import { addReportTimelineSummaries, addReportWorkLogSummaries, applyReportScope, getReportContributionSummary, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
 
 export async function GET(req: NextRequest) {
   const user = await currentUser();
@@ -59,6 +59,8 @@ export async function GET(req: NextRequest) {
           select: {
             id: true,
             refNo: true,
+            createdAt: true,
+            updatedAt: true,
             startDate: true,
             shift: true,
             location: true,
@@ -95,6 +97,8 @@ export async function GET(req: NextRequest) {
           select: {
             id: true,
             refNo: true,
+            createdAt: true,
+            updatedAt: true,
             startDate: true,
             shift: true,
             location: true,
@@ -119,6 +123,8 @@ export async function GET(req: NextRequest) {
 
   const assistanceWithLogs = await addReportWorkLogSummaries(assistance, "assistance");
   const tasksWithLogs = await addReportWorkLogSummaries(tasks, "tasks");
+  const assistanceWithTimeline = await addReportTimelineSummaries(assistanceWithLogs, "assistance");
+  const tasksWithTimeline = await addReportTimelineSummaries(tasksWithLogs, "tasks");
   const contributionSummary = await getReportContributionSummary(reportWhere, user, activity, userId);
 
   return NextResponse.json({
@@ -126,8 +132,8 @@ export async function GET(req: NextRequest) {
       from,
       to,
     },
-    assistance: assistanceWithLogs,
-    tasks: tasksWithLogs,
+    assistance: assistanceWithTimeline,
+    tasks: tasksWithTimeline,
     contributionSummary,
   });
 }

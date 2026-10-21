@@ -140,58 +140,50 @@ const formatStatusLabel = (value: string) => ({
   CLOSE_PENDING: "Close Pending",
 }[value] ?? value);
 
-const cellStyle = "padding:9px 8px;border-bottom:1px solid #e3e8ee;color:#273444;font-family:Arial,sans-serif;font-size:12px;line-height:17px;word-break:break-word;";
 const tableStyle = "width:100%;border-collapse:collapse;table-layout:fixed;";
-const headerCellStyle = "padding:10px 8px;background:#edf3f4;border-bottom:1px solid #d7e0e5;color:#435564;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;letter-spacing:.04em;text-align:left;white-space:nowrap;";
-const detailStyle = "margin-top:6px;padding:6px 8px;background-color:#f3f6f7;border-left:2px solid #bac8ce;color:#6b7785;font-family:Arial,sans-serif;font-size:10px;line-height:14px;word-break:break-word;word-wrap:break-word;overflow-wrap:break-word;";
-const secondaryDetail = (label: string, value: unknown) =>
-  value ? `<div style="${detailStyle}"><strong>${label}:</strong><br>${escapeHtml(value)}</div>` : "";
-const formatWorkLog = (log: any) =>
-  log ? `${new Date(log.createdAt).toLocaleString()} · ${log.createdByName}: ${log.message}` : "";
-const formatRecentWorkLogs = (logs: any[]) =>
-  logs.map((log) => `${log.type} · ${formatWorkLog(log)}`).join(" | ");
-const tableHead = (labels: string[]) => `<tr>${labels.map((label) => {
-  const align = label === "Status" || label === "Assigned" ? "center" : "left";
-  return `<th align="${align}" style="${headerCellStyle}text-align:${align};">${label}</th>`;
-}).join("")}</tr>`;
+const cellStyle = "padding:8px 7px;border-bottom:1px solid #e3e8ee;color:#273444;font-family:Arial,sans-serif;font-size:11px;line-height:15px;vertical-align:top;word-break:break-word;overflow-wrap:anywhere;";
+const headerCellStyle = "padding:9px 7px;background:#edf3f4;border-bottom:1px solid #d7e0e5;color:#435564;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;text-align:left;";
+const tableHead = () => `<tr>${["Ref No", "Details", "Status", "Owner", "Assigned"].map((label) =>
+  `<th style="${headerCellStyle}">${label}</th>`).join("")}</tr>`;
+const detailLine = (label: string, value: unknown) =>
+  `<strong>${label}:</strong> ${escapeHtml(value)}<br>`;
 const assistanceRows = assistanceWithLogs.length
-  ? assistanceWithLogs.map((row) => `
-      <tr>
-        <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.refNo)}</td>
-        <td style="${cellStyle}">${escapeHtml(row.clientName)}</td>
-        <td style="${cellStyle}vertical-align:top;">
-          <div>${escapeHtml(row.problem)}</div>
-          ${secondaryDetail("Latest Investigation Work Log", formatWorkLog(row.latestInvestigationWorkLog))}
-          ${secondaryDetail("Resolution", row.resolution)}
-          ${secondaryDetail("Remarks", row.remarks)}
-          ${secondaryDetail("Latest Resolution Work Log", formatWorkLog(row.latestResolutionWorkLog))}
-          ${secondaryDetail("Latest Remark Work Log", formatWorkLog(row.latestRemarkWorkLog))}
-          ${secondaryDetail("Recent Work Log Entries", formatRecentWorkLogs(row.recentWorkLogs))}
-        </td>
-        <td style="${cellStyle}width:120px;text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(formatStatusLabel(row.status))}</td>
-          <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;">${escapeHtml(formatReportOwner(row.owner))}</td>
-          <td style="${cellStyle}text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.assigned)}</td>
-      </tr>`).join("")
-        : `<tr><td colspan="6" style="${cellStyle}color:#6b7785;text-align:center;padding:18px;">No technical assistance records in this period.</td></tr>`;
-
+  ? assistanceWithLogs.map((row) => {
+      const resolution = row.latestResolutionWorkLog?.message?.trim();
+      const remark = row.latestRemarkWorkLog?.message?.trim();
+      const latestUpdate = row.latestWorkLog?.message?.trim();
+      const context = [row.clientName, row.showGroup, row.location]
+        .filter((value) => typeof value === "string" && value.trim())
+        .map(escapeHtml)
+        .join(" / ");
+      const details = [
+        context ? `${context}<br>` : "",
+        row.problem?.trim() ? detailLine("Problem", row.problem) : "",
+        resolution ? detailLine("Resolution", resolution) : "",
+        remark ? detailLine("Remark", remark) : "",
+        !resolution && !remark && latestUpdate ? detailLine("Update", latestUpdate) : "",
+      ].join("");
+      return `<tr>
+        <td style="${cellStyle}">${escapeHtml(row.refNo)}</td>
+        <td style="${cellStyle}">${details}</td>
+        <td style="${cellStyle}">${escapeHtml(formatStatusLabel(row.status))}</td>
+        <td style="${cellStyle}">${escapeHtml(formatReportOwner(row.owner))}</td>
+        <td style="${cellStyle}">${escapeHtml(row.assigned)}</td>
+      </tr>`;
+    }).join("")
+  : `<tr><td colspan="5" style="${cellStyle}color:#6b7785;text-align:center;padding:18px;">No technical assistance records in this period.</td></tr>`;
 const taskRows = tasksWithLogs.length
-  ? tasksWithLogs.map((row) => `
-      <tr>
-        <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.refNo)}</td>
-        <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.activityType)}</td>
-        <td style="${cellStyle}vertical-align:top;">
-          <div>${escapeHtml(row.description)}</div>
-          ${secondaryDetail("Remarks", row.remarks)}
-          ${secondaryDetail("Latest Investigation Work Log", formatWorkLog(row.latestInvestigationWorkLog))}
-          ${secondaryDetail("Latest Resolution Work Log", formatWorkLog(row.latestResolutionWorkLog))}
-          ${secondaryDetail("Latest Remark Work Log", formatWorkLog(row.latestRemarkWorkLog))}
-          ${secondaryDetail("Recent Work Log Entries", formatRecentWorkLogs(row.recentWorkLogs))}
-        </td>
-        <td style="${cellStyle}width:120px;text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(formatStatusLabel(row.status))}</td>
-          <td style="${cellStyle}white-space:nowrap;word-break:normal;overflow-wrap:normal;">${escapeHtml(formatReportOwner(row.owner))}</td>
-          <td style="${cellStyle}text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:11px;">${escapeHtml(row.assigned)}</td>
-      </tr>`).join("")
-        : `<tr><td colspan="6" style="${cellStyle}color:#6b7785;text-align:center;padding:18px;">No other task records in this period.</td></tr>`;
+  ? tasksWithLogs.map((row) => {
+      const latestUpdate = row.workLogs[0]?.message || "Not recorded.";
+      return `<tr>
+        <td style="${cellStyle}">${escapeHtml(row.refNo)}</td>
+        <td style="${cellStyle}">${detailLine("Activity Type", row.activityType)}${detailLine("Description", row.description)}<strong>Latest Update:</strong> ${escapeHtml(latestUpdate)}</td>
+        <td style="${cellStyle}">${escapeHtml(formatStatusLabel(row.status))}</td>
+        <td style="${cellStyle}">${escapeHtml(formatReportOwner(row.owner))}</td>
+        <td style="${cellStyle}">${escapeHtml(row.assigned)}</td>
+      </tr>`;
+    }).join("")
+  : `<tr><td colspan="5" style="${cellStyle}color:#6b7785;text-align:center;padding:18px;">No other task records in this period.</td></tr>`;
 
 const generatedAt = new Date().toLocaleString("en-PH", {
   year: "numeric",
@@ -256,15 +248,15 @@ const emailHtml = `
             <tr>${summaryCard("Open", statusCounts.open, "#c74646", "&#9675;")}${summaryCard("Close Pending", statusCounts.pending, "#b77914", "&#9684;")}${summaryCard("Closed", statusCounts.closed, "#34845e", "&#10003;")}</tr>
           </table>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${tableStyle}margin-top:22px;">
-            <colgroup><col width="12%"><col width="14%"><col width="38%"><col width="120"><col width="13%"><col width="14%"></colgroup>
-            <tr><td colspan="6" style="padding:0 0 9px;color:#165d59;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Technical assistance details</td></tr>
-            ${tableHead(["Ref No", "Client", "Problem", "Status", "Owner", "Assigned"])}
+            <colgroup><col width="12%"><col width="46%"><col width="12%"><col width="15%"><col width="15%"></colgroup>
+            <tr><td colspan="5" style="padding:0 0 9px;color:#165d59;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Technical assistance details</td></tr>
+            ${tableHead()}
             ${assistanceRows}
           </table>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${tableStyle}margin-top:22px;">
-            <colgroup><col width="12%"><col width="14%"><col width="38%"><col width="120"><col width="13%"><col width="14%"></colgroup>
-            <tr><td colspan="6" style="padding:0 0 9px;color:#165d59;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Other task details</td></tr>
-            ${tableHead(["Ref No", "Activity type", "Description", "Status", "Owner", "Assigned"])}
+            <colgroup><col width="12%"><col width="46%"><col width="12%"><col width="15%"><col width="15%"></colgroup>
+            <tr><td colspan="5" style="padding:0 0 9px;color:#165d59;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Other task details</td></tr>
+            ${tableHead()}
             ${taskRows}
           </table>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin-top:22px;border-top:1px solid #e3e8ee;border-collapse:collapse;">
