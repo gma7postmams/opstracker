@@ -21,6 +21,7 @@ const PUBLIC = {
   smtpEmail: true,
   smtpRecipients: true,
   smtpEnabled: true,
+  email2faEnabled: true,
 };
 
 export async function GET() {

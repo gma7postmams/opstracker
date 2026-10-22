@@ -138,6 +138,21 @@ export default function Users() {
                 {isAdmin && (
                   <td>
                     <button className="secondary small" onClick={() => setEditing({ user: u })}>Edit</button>
+                    {u.email2faEnabled && (
+                      <button
+                        className="secondary small destructive-text"
+                        style={{ marginLeft: 6 }}
+                        onClick={async () => {
+                          const res = await fetch(`/api/users/${u.id}/2fa`, { method: "POST" });
+                          const out = await res.json().catch(() => ({}));
+                          if (!res.ok) { toast(out.error ?? "Could not disable 2FA"); return; }
+                          await load();
+                          toast(`Email 2FA disabled for ${u.name}`);
+                        }}
+                      >
+                        Disable 2FA
+                      </button>
+                    )}
                   </td>
                 )}
               </tr>

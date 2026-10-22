@@ -67,7 +67,8 @@ Reference numbers are generated as `TA-YYYY-NNNNN` or `OT-YYYY-NNNNN`. A per-typ
 ## Users and administration
 
 - Roles are `ADMIN` and `USER`. Administrators manage accounts; users can update their own profile and password.
-- Profiles include names, email, username, role, avatar, and optional Gmail report settings.
+- Profiles include names, email, username, role, avatar, optional Gmail report settings, and optional Email Two-Factor Authentication. Enabling 2FA requires a six-digit email code; codes expire after 10 minutes and are single-use. Code issuance is limited to five per user in a rolling 15-minute window. The initial login challenge bypasses the 60-second resend cooldown; explicit resends are subject to the cooldown, and the login page displays the remaining time and any server-provided retry delay.
+- Users can disable Email 2FA on their own account. Administrators can disable it for another account as a recovery action. Enable/disable, code delivery, successful verification and failed verification are audit logged.
 - Administrators manage locations, shifts, show/groups, assistance categories, activity types, branding, AI/MACO settings, imports and JSON backups/restores.
 - Master-data values are retired (marked inactive), not deleted; new records use active values.
 - Avatars, logos and favicons are stored as files under `public/uploads`, not in the JSON backup.
@@ -89,6 +90,8 @@ Reference numbers are generated as `TA-YYYY-NNNNN` or `OT-YYYY-NNNNN`. A per-typ
 ## UI and themes
 
 - The interface includes dashboard, assistance, tasks, MACO, reports, users, administration, audit logs and account settings.
+- Sign-in uses Credentials and Verification steps. When 2FA is required, six-digit OTP entry submits automatically, invalid codes are reported, and resend controls show the remaining cooldown. Credential and verification progress is staged; successful sign-in displays a checklist before redirecting to the dashboard. The flow respects reduced-motion preferences.
+- Account settings show profile details, last login and 2FA state, support self-service 2FA setup/disable, collapse Email Reports settings by default, and show save progress and confirmation. Verification emails include a responsive branded HTML message with the code, expiry and security notice, plus a plaintext fallback.
 - Theme selection supports light, dark and system preference; the selected setting is stored in the browser.
 - Branding values update the sign-in page, sidebar and browser title/icon.
 **Three separate tallies**, each with per-user rows and an all-users total:

@@ -50,6 +50,7 @@ model User {
   passwordHash  String       @map("password_hash")
   role          Role         @default(USER)
   avatarUrl     String?      @map("avatar_url")
+  email2faEnabled Boolean    @default(false)
 
   smtpEmail      String?     @map("smtp_email")
   smtpPassword   String?     @map("smtp_password")
@@ -65,6 +66,7 @@ model User {
   tasksOwned       Task[]       @relation("TaskOwner")
   tasksLocked      Task[]       @relation("TaskLocker")
   workLogs         WorkLog[]
+  emailVerificationCodes EmailVerificationCode[]
 
   @@map("users")
 }
@@ -187,6 +189,19 @@ model AuditLog {
   @@index([entityType])
 
   @@map("audit_logs")
+}
+
+model EmailVerificationCode {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  code      String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
 
 model WorkLog {

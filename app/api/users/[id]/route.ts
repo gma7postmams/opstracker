@@ -22,6 +22,7 @@ const PUBLIC = {
   smtpEmail: true,
   smtpRecipients: true,
   smtpEnabled: true,
+  email2faEnabled: true,
 };
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -173,6 +174,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   // ownerId is ON DELETE SET NULL, so their records survive; the UI falls back
   // to showing the stored owner as unknown rather than losing the row.
+  await prisma.emailVerificationCode.deleteMany({ where: { userId: id } });
   await prisma.user.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

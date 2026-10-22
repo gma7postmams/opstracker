@@ -2,7 +2,7 @@
 
 ## Authentication
 
-Sign-in uses a NextAuth credentials provider with username and password. Passwords are checked against bcrypt hashes; inactive accounts cannot authenticate. The session strategy is JWT with a 12-hour maximum age. Successful and failed credential attempts and explicit logout are written to audit logs.
+Sign-in uses a NextAuth credentials provider with username and password. Passwords are checked against bcrypt hashes; inactive accounts cannot authenticate. Accounts with Email 2FA enabled must also provide a valid one-time email code before NextAuth creates a session. The session strategy is JWT with a 12-hour maximum age. Successful and failed credential attempts and explicit logout are written to audit logs.
 
 The shared `(app)` layout redirects unauthenticated visitors to `/login`. Middleware also checks the protected application routes and restricts `/admin` pages to the `ADMIN` role. API routes require their own checks; middleware does not provide blanket API authorization.
 
@@ -28,10 +28,13 @@ The ordinary-user list visibility rule is based on owner role `USER` or matching
 ## Account management
 
 - Users can update their own profile and password; only administrators can create users, change another user's account/role, deactivate accounts or delete users.
+- Authenticated users can enable or disable Email 2FA for their own account. Only administrators can disable Email 2FA for another user as an account-recovery action; the recovery action invalidates outstanding codes and is audit logged.
 - A user cannot change their own role or delete themselves.
 - The last active administrator cannot be demoted or deleted.
 - Deleting a user sets operational record owner/lock references to null; records remain.
 - Usernames and emails are unique. User creation/update validates passwords with a minimum of eight characters.
+
+Email 2FA setup and login codes are sent to the user's profile email through their saved Gmail SMTP credentials. The login challenge endpoint validates the submitted username and password before issuing a code. Codes are single-use and expire after 10 minutes; issuance is limited to five per user in a rolling 15-minute window. The initial login challenge bypasses the resend cooldown, while explicit resends are subject to a 60-second cooldown. The Audit Logs page supports the `2FA_ENABLED`, `2FA_DISABLED`, `2FA_CODE_SENT`, `2FA_SUCCESS` and `2FA_FAILURE` actions.
 
 ## Other boundaries
 

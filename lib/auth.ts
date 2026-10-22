@@ -5,6 +5,7 @@ import { prisma } from "./prisma";
 import { fullName } from "./format";
 import type { SessionUser } from "./permissions";
 import { logAudit } from "./audit";
+import { verifyEmailVerificationCode } from "./email2fa";
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt", maxAge: 60 * 60 * 12 },
@@ -15,14 +16,22 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" },
+        verificationCode: { label: "Verification code", type: "text" },
       },
       async authorize(creds) {
+        console.log("AUTHORIZE CALLED", {
+          usernamePresent: Boolean(creds?.username),
+          passwordPresent: Boolean(creds?.password),
+          verificationCodePresent: Boolean(creds?.verificationCode),
+          verificationCodeLength: creds?.verificationCode?.length ?? 0,
+        });
         if (!creds?.username || !creds?.password) return null;
         const user = await prisma.user.findUnique({
           where: { username: creds.username.trim().toLowerCase() },
         });
 
 if (!user || !user.active) {
+  console.log("AUTHORIZE FAILED", { reason: !user ? "user-not-found" : "inactive-user" });
   await logAudit({
     action: "LOGIN_FAILED",
     entityType: "auth",
@@ -36,6 +45,7 @@ if (!user || !user.active) {
 }
 
 if (!(await bcrypt.compare(creds.password, user.passwordHash))) {
+  console.log("AUTHORIZE FAILED", { reason: "password-mismatch" });
   await logAudit({
     action: "LOGIN_FAILED",
     entityType: "auth",
@@ -48,6 +58,20 @@ if (!(await bcrypt.compare(creds.password, user.passwordHash))) {
   return null;
 }
 
+if (user.email2faEnabled) {
+  const verificationValid = Boolean(creds.verificationCode) && await verifyEmailVerificationCode(user.id, creds.verificationCode);
+  console.log("AUTHORIZE 2FA RESULT", { verificationCodePresent: Boolean(creds.verificationCode), verificationValid });
+  if (!verificationValid) {
+    console.log("AUTHORIZE FAILED", { reason: "verification-failed" });
+    return null;
+  }
+  await logAudit({
+    action: "2FA_SUCCESS",
+    entityType: "auth",
+    entityId: "Login verification",
+    userId: user.id,
+  });
+}
 
 await prisma.user.update({
   where: { id: user.id },
@@ -66,6 +90,7 @@ await logAudit({
 });
 
 
+console.log("AUTHORIZE SUCCESS", { userId: user.id });
 return {
   id: String(user.id),
   name: fullName(user),

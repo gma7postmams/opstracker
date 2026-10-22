@@ -1,5 +1,7 @@
 ## 2026-10-22
-
+- Added optional Email Two-Factor Authentication with password-first login verification, six-digit single-use codes that expire after 10 minutes, per-user email delivery limits, profile setup, administrator recovery, and audit events.
+- Updated sign-in and account settings with a Credentials/Verification flow, automatic OTP submission, resend countdowns, staged progress and a success checklist. Account settings show profile and security status, keep Email Reports collapsed by default, and provide save feedback. Verification emails include responsive branded HTML and a plaintext fallback.
+- Fixed duplicate login challenge submissions and resend handling: initial credential challenges bypass the resend cooldown, while explicit resends observe it. Added correlated browser/server request logging.
 - Aligned Technical Assistance, Other Tasks and Audit Logs period filters with the Dashboard's shared seven periods and UTC date boundaries. Custom date inputs are visible only for Custom, and audit periods are applied in the database query.
 
 ## 2026-10-21

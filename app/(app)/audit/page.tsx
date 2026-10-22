@@ -211,6 +211,11 @@ const deleteCount = filteredLogs.filter((log) =>
   <option value="LOGIN">LOGIN</option>
   <option value="LOGOUT">LOGOUT</option>
   <option value="LOGIN_FAILED">LOGIN_FAILED</option>
+  <option value="2FA_ENABLED">2FA_ENABLED</option>
+  <option value="2FA_DISABLED">2FA_DISABLED</option>
+  <option value="2FA_CODE_SENT">2FA_CODE_SENT</option>
+  <option value="2FA_SUCCESS">2FA_SUCCESS</option>
+  <option value="2FA_FAILURE">2FA_FAILURE</option>
   <option value="REPORT_EMAIL_SENT">REPORT_EMAIL_SENT</option>
   <option value="REPORT_EMAIL_FAILED">REPORT_EMAIL_FAILED</option>
   <option value="MASTERDATA_ADD">MASTERDATA_ADD</option>

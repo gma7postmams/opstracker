@@ -31,6 +31,7 @@ Middleware protects the listed application page paths and restricts `/admin` to 
 Important shared modules:
 
 - `lib/auth.ts`: NextAuth credentials authentication, JWT session claims and current-user lookup.
+- `lib/email2fa.ts`: one-time verification-code issuance, email delivery, throttling and verification.
 - `lib/permissions.ts`: record, lock and user-management permission decisions.
 - `lib/validation.ts`: record, user, master-data and branding schemas.
 - `lib/recordTypes.ts`: client-safe record-type configuration and shared field definitions.
@@ -43,9 +44,9 @@ Important shared modules:
 - PostgreSQL stores users, records, master data, settings, counters, audit events and work logs.
 - `data/ai-settings.json` stores the AI service URL, model and feature options.
 - AI requests use an Ollama-compatible HTTP API.
-- Nodemailer sends reports through the Gmail SMTP configuration stored per user.
+- Nodemailer sends reports and Email 2FA codes through each user's saved Gmail SMTP configuration. Email 2FA is verified before the credentials provider returns a user to NextAuth for JWT session creation.
 - Uploaded images are written to `public/uploads`; the import workbook template is served from `public/templates/`.
 
 ## API areas
 
-The route handlers cover authentication, dashboard, records and work logs, reports and Excel/email output, users/profile, master data, branding, upload, import, backup/restore, audit, AI text improvement and MACO chat. Authorization is enforced route-by-route; see [permissions.md](permissions.md) for implementation boundaries and known exceptions.
+The route handlers cover authentication and Email 2FA, dashboard, records and work logs, reports and Excel/email output, users/profile, master data, branding, upload, import, backup/restore, audit, AI text improvement and MACO chat. Authorization is enforced route-by-route; see [permissions.md](permissions.md) for implementation boundaries and known exceptions.

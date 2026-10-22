@@ -31,6 +31,7 @@ export async function GET() {
       smtpEmail: true,
       smtpRecipients: true,
       smtpEnabled: true,
+      email2faEnabled: true,
     },
   });
 
@@ -48,6 +49,15 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = await req.json();
+  if (body.email !== undefined) {
+    const current = await prisma.user.findUnique({
+      where: { id: sessionUser.id },
+      select: { email: true, email2faEnabled: true },
+    });
+    if (current?.email2faEnabled && body.email.trim().toLowerCase() !== current.email.toLowerCase()) {
+      return NextResponse.json({ error: "Disable Email 2FA before changing your email address." }, { status: 400 });
+    }
+  }
   const changedFields: string[] = [];
 
   const data: Record<string, unknown> = {};
@@ -129,6 +139,7 @@ export async function PATCH(req: NextRequest) {
       smtpEnabled: true,
       smtpEmail: true,
       smtpRecipients: true,
+      email2faEnabled: true,
     },
   });
 

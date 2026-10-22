@@ -14,4 +14,5 @@ export interface U {
   smtpPassword?: string | null;
   smtpRecipients?: string | null;
   smtpEnabled?: boolean;
+  email2faEnabled?: boolean;
 }
