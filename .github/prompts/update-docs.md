@@ -16,4 +16,11 @@ Before updating documentation:
 
 If changed files belong to Authentication & Login in `docs/DOC_MAP.md`, update `docs/authentication.md`. Update `docs/workflow.md` only when the change also alters the overall operational workflow.
 
+If no documentation changes are required:
+
+- Explicitly state: `Documentation is already synchronized with the current implementation.`
+- Summarize the files reviewed.
+- Explain why no documentation updates were necessary.
+- Do not propose unnecessary documentation edits.
+
 Keep documentation concise, accurate, and commit-ready. Update screenshot references only when affected.
