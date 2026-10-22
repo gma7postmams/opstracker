@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { fullName } from "@/lib/format";
 import { getCustomPeriodRange, getPeriodRange, PERIOD_OPTIONS, type Period } from "@/lib/period";
 
 export async function GET(request: Request) {
@@ -38,5 +39,21 @@ export async function GET(request: Request) {
     take: 200,
   });
 
-  return NextResponse.json(logs);
+  const userIds = [...new Set(logs.flatMap((log) => log.userId === null ? [] : [log.userId]))];
+  const actors = userIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, firstName: true, middleInitial: true, surname: true, username: true },
+      })
+    : [];
+  const actorsById = new Map(actors.map((actor) => [actor.id, actor]));
+
+  return NextResponse.json(logs.map((log) => {
+    const actor = log.userId === null ? undefined : actorsById.get(log.userId);
+    return {
+      ...log,
+      actorName: actor ? fullName(actor) : null,
+      actorUsername: actor?.username ?? null,
+    };
+  }));
 }

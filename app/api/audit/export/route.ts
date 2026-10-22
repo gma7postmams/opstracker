@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import ExcelJS from "exceljs";
+import { AUDIT_CATEGORIES, getAuditCategory, type AuditCategory } from "@/lib/auditCategories";
 
 export async function GET(req: NextRequest) {
   const user = await currentUser();
@@ -17,8 +18,10 @@ export async function GET(req: NextRequest) {
 
   const search = searchParams.get("search") ?? "";
   const action = searchParams.get("action") ?? "ALL";
+  const categoryParam = searchParams.get("category") ?? "ALL";
   const from = searchParams.get("from");
   const to = searchParams.get("to");
+  const category = AUDIT_CATEGORIES.find((item) => item.value === categoryParam)?.value as AuditCategory | undefined;
 
   const logs = await prisma.auditLog.findMany({
     where: {
@@ -63,11 +66,15 @@ export async function GET(req: NextRequest) {
     const matchesTo =
       !to ||
       logDate <= new Date(`${to}T23:59:59`);
+    const matchesCategory =
+      categoryParam === "ALL" ||
+      (category !== undefined && getAuditCategory(log) === category);
 
     return (
       matchesSearch &&
       matchesFrom &&
-      matchesTo
+      matchesTo &&
+      matchesCategory
     );
   });
 

@@ -44,3 +44,26 @@ Before investigating, implementing, refactoring, or fixing a feature:
 5. Use `docs/DOC_MAP.md` to determine documentation ownership.
 
 This map should help reduce unnecessary repository-wide searches and improve consistency when working on feature-specific changes.
+
+## Development Workflow
+
+After completing a feature, fix, refactor, enhancement, or UI improvement:
+
+1. Implement the change.
+2. Test the implementation.
+3. Run:
+
+   @workspace Follow .github/prompts/update-docs.md
+
+4. Review all documentation updates.
+5. Review the complete git diff.
+6. Stage changes.
+7. Commit changes.
+8. Push changes.
+
+Additional Guidance:
+
+- Do not suggest a commit until required documentation has been reviewed and updated according to `docs/DOC_MAP.md`.
+- Use `docs/SYSTEM_MAP.md` to locate feature-related code before performing broad searches.
+- Use `docs/DOC_MAP.md` to determine documentation ownership.
+- Prefer targeted file analysis over repository-wide searches when the ownership maps provide sufficient context.

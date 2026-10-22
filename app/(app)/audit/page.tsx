@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity, CalendarDays, Download, Eye, FilePlus2, Search, Trash2, X } from "lucide-react";
+import { Activity, CalendarDays, Clock3, Download, Eye, FilePlus2, Search, Trash2, X } from "lucide-react";
 import { PERIOD_OPTIONS, type Period } from "@/lib/period";
+import { AUDIT_ACTIONS, AUDIT_ACTIONS_BY_CATEGORY, AUDIT_CATEGORIES, getAuditCategory, type AuditCategory } from "@/lib/auditCategories";
 
 function formatAuditValue(value: unknown) {
   if (value === null || value === undefined || value === "") {
@@ -18,11 +19,90 @@ function formatAuditValue(value: unknown) {
   }
 }
 
+const AUDIT_ACTION_LABELS: Record<string, string> = {
+  CREATE: "Record Created",
+  UPDATE: "Record Updated",
+  UPDATE_PROFILE: "Profile Updated",
+  UPDATE_USER: "User Updated",
+  DELETE: "Record Deleted",
+  IMPORT: "Records Imported",
+  IMPORT_BOTH: "Both Record Types Imported",
+  LOCK: "Record Locked",
+  UNLOCK: "Record Unlocked",
+  LOGIN: "Login Successful",
+  LOGOUT: "Logout",
+  LOGIN_FAILED: "Login Failed",
+  "2FA_ENABLED": "2FA Enabled",
+  "2FA_DISABLED": "2FA Disabled",
+  "2FA_CODE_SENT": "Verification Code Sent",
+  "2FA_SUCCESS": "2FA Verified",
+  "2FA_FAILURE": "2FA Failed",
+  REPORT_EMAIL_SENT: "Report Email Sent",
+  REPORT_EMAIL_FAILED: "Report Email Failed",
+  MASTERDATA_ADD: "Master Data Added",
+  MASTERDATA_RETIRE: "Master Data Retired",
+  MASTERDATA_RESTORE: "Master Data Restored",
+};
+
+function formatAuditAction(actionValue: unknown) {
+  const action = String(actionValue ?? "").toUpperCase();
+  return AUDIT_ACTION_LABELS[action] ?? (action
+    ? String(actionValue).replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/[_\s]+/g, " ").trim().toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
+    : "System Activity");
+}
+
+function getAuditUserName(log: any) {
+  const details = log.details && typeof log.details === "object" && !Array.isArray(log.details)
+    ? log.details
+    : {};
+  const fullName = [log.actorName, details.actor, details.name, details.user]
+    .find((value) => typeof value === "string" && value.trim());
+  if (fullName) return String(fullName).trim();
+
+  const username = [log.actorUsername, details.username]
+    .find((value) => typeof value === "string" && value.trim());
+  return username ? String(username).trim() : "Unknown User";
+}
+
+function getAuditTone(actionValue: unknown) {
+  const action = String(actionValue ?? "").toUpperCase();
+  if (action.includes("FAILED") || action.includes("FAILURE")) return "failure";
+  if (
+    action === "LOGIN" || action === "2FA_SUCCESS" || action.includes("CREATE") ||
+    action.endsWith("_ADD") || action.endsWith("_RESTORE") || action.includes("IMPORT") ||
+    action === "UNLOCK" || action === "2FA_ENABLED" || action === "REPORT_EMAIL_SENT"
+  ) return "success";
+  if (action.includes("DELETE") || action === "LOCK" || action.endsWith("_RETIRE") || action === "2FA_DISABLED") return "warning";
+  if (action.includes("UPDATE") || action === "2FA_CODE_SENT") return "information";
+  return "neutral";
+}
+
+function getAuditStatusLabel(tone: string) {
+  const labels: Record<string, string> = {
+    success: "Success",
+    information: "Information",
+    warning: "Warning",
+    failure: "Failure",
+    neutral: "Recorded",
+  };
+  return labels[tone] ?? "Recorded";
+}
+
+function formatAuditFieldLabel(value: string) {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 export default function AuditPage() {
   const [logs, setLogs] = useState<any[]>([]);
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<AuditCategory | "ALL">("ALL");
   const [actionFilter, setActionFilter] = useState("ALL");
-  const [period, setPeriod] = useState<Period>("today");
+  const [period, setPeriod] = useState<Period>("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -67,15 +147,15 @@ const cellStyle = {
   whiteSpace: "nowrap",
 };
 
-const rowStyle = {
-  transition: "all 0.2s ease",
-  cursor: "pointer",
-};
+const actionOptions = categoryFilter === "ALL"
+  ? AUDIT_ACTIONS
+  : AUDIT_ACTIONS_BY_CATEGORY[categoryFilter];
 
 const activeCount =
   (search ? 1 : 0) +
+  (categoryFilter !== "ALL" ? 1 : 0) +
   (actionFilter !== "ALL" ? 1 : 0) +
-  (period !== "today" ? 1 : 0);
+  (period !== "all" ? 1 : 0);
   
 const filteredLogs = logs.filter((log) => {
   const term = search.toLowerCase();
@@ -86,6 +166,8 @@ const matchesSearch =
   (log.action ?? "").toLowerCase().includes(term) ||
   (log.entityType ?? "").toLowerCase().includes(term) ||
   (log.entityId ?? "").toLowerCase().includes(term) ||
+  (log.actorName ?? "").toLowerCase().includes(term) ||
+  (log.actorUsername ?? "").toLowerCase().includes(term) ||
   (log.details?.user ?? "").toLowerCase().includes(term) ||
   (log.details?.name ?? "").toLowerCase().includes(term) ||
   (log.details?.username ?? "").toLowerCase().includes(term);
@@ -93,10 +175,14 @@ const matchesSearch =
   const matchesAction =
     actionFilter === "ALL" ||
     log.action === actionFilter;
+  const matchesCategory =
+    categoryFilter === "ALL" ||
+    getAuditCategory(log) === categoryFilter;
 
   return (
     matchesSearch &&
-    matchesAction
+    matchesAction &&
+    matchesCategory
   );
 });
 
@@ -134,6 +220,30 @@ const deleteCount = filteredLogs.filter((log) =>
         .audit-pagination-controls { display:flex; align-items:center; gap:8px; }
         .audit-page-size { display:flex; align-items:center; gap:7px; color:var(--muted); font-size:13px; }
         .audit-page-size select { height:34px; padding:0 8px; border-radius:6px; }
+        .audit-table-wrap { max-height:min(68vh,720px); overflow:auto; border:1px solid var(--line); border-radius:10px; }
+        .audit-table-wrap :global(table) { min-width:760px; font-size:13px; }
+        .audit-table-wrap :global(th) { top:0; z-index:2; padding:13px 16px; }
+        .audit-table-wrap :global(td) { padding:15px 16px; vertical-align:middle; }
+        .audit-row { cursor:pointer; transition:background-color .16s ease; }
+        .audit-row:hover { background:var(--row-hover); }
+        .audit-row:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+        .audit-avatar { display:grid; place-items:center; width:36px; height:36px; flex:none; border:1px solid var(--line); border-radius:50%; background:var(--barbg); color:var(--text); font-size:12px; font-weight:650; }
+        .audit-user-name { color:var(--text); font-weight:650; }
+        .audit-secondary { display:block; margin-top:4px; color:var(--muted); font-size:12px; }
+        .audit-entity { color:var(--record-content); font-weight:600; }
+        .audit-activity-context { display:block; margin-top:6px; color:var(--muted); font-size:12px; }
+        .audit-datetime strong { display:block; color:var(--text); font-size:13px; font-weight:600; }
+        .audit-datetime small { display:block; margin-top:4px; color:var(--muted); font-size:12px; }
+        .audit-badge { display:inline-flex; align-items:center; min-height:25px; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:650; line-height:1.2; white-space:nowrap; }
+        .audit-badge--success { background:var(--chip-ok-bg); color:var(--chip-ok-fg); }
+        .audit-badge--information { background:var(--pill-blue-bg); color:var(--chip-fg); }
+        .audit-badge--warning { background:var(--pill-amber-bg); color:var(--pending); }
+        .audit-badge--failure { background:var(--chip-bad-bg); color:var(--chip-bad-fg); }
+        .audit-badge--neutral { background:var(--code-bg); color:var(--muted); }
+        .audit-details-button { display:grid; place-items:center; width:34px; height:34px; border:1px solid var(--line2); border-radius:8px; background:var(--panel); color:var(--muted); cursor:pointer; transition:background-color .16s ease,color .16s ease,border-color .16s ease; }
+        .audit-details-button:hover { border-color:var(--accent); background:var(--pill-blue-bg); color:var(--chip-fg); }
+        .audit-empty { display:grid; justify-items:center; gap:6px; padding:38px 20px; border:1px dashed var(--line2); border-radius:10px; background:var(--hint-bg); color:var(--muted); text-align:center; }
+        .audit-empty strong { color:var(--text); font-size:14px; }
         @media(max-width:560px) { .audit-search,.audit-export { flex-basis:100%; } .audit-control { flex:1 1 calc(50% - 10px); min-width:0; } .audit-pagination { align-items:flex-start; } .audit-pagination-controls { width:100%; justify-content:space-between; } }
         .audit-kpi { position:relative; display:flex; flex-direction:column; overflow:hidden; min-height:102px; padding:14px 16px 12px 20px; border:1px solid color-mix(in srgb,var(--border) 70%,var(--muted)); border-radius:9px; background:var(--panel); box-shadow:0 3px 12px rgba(0,0,0,.12); transition:transform .18s ease,box-shadow .18s ease; }
         .audit-kpi:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.18); }
@@ -141,19 +251,31 @@ const deleteCount = filteredLogs.filter((log) =>
         .audit-kpi-top { display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:12px; font-weight:650; }
         .audit-kpi-icon { display:grid; place-items:center; width:30px; height:30px; border-radius:7px; color:var(--kpi-accent); background:color-mix(in srgb,var(--kpi-accent) 15%,var(--panel)); }
         .audit-kpi strong { display:block; margin-top:7px; color:var(--text); font-size:27px; line-height:1; letter-spacing:0; }
+        .audit-dialog { width:min(100%,720px); max-height:min(85vh,760px); overflow-y:auto; padding:24px; border:1px solid var(--line); border-radius:8px; background:var(--panel); color:var(--text); box-shadow:0 20px 60px rgba(0,0,0,.24); }
+        .audit-dialog-header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:20px; }
+        .audit-dialog-title-row { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
+        .audit-dialog-title { margin:0; font-size:20px; line-height:1.3; font-weight:700; overflow-wrap:anywhere; }
+        .audit-dialog-status { display:inline-flex; align-items:center; min-height:24px; padding:4px 9px; border-radius:999px; font-size:11px; font-weight:650; line-height:1.2; white-space:nowrap; }
+        .audit-dialog-close { display:grid; place-items:center; width:34px; height:34px; flex:none; border:1px solid var(--line2); border-radius:8px; background:var(--panel); color:var(--muted); cursor:pointer; }
+        .audit-dialog-summary { display:grid; gap:12px; padding:16px; border:1px solid var(--line); border-radius:8px; background:var(--hint-bg); }
+        .audit-dialog-summary h3 { margin:0; color:var(--text); font-size:14px; font-weight:650; }
+        .audit-dialog-summary-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px 20px; }
+        .audit-dialog-label { color:var(--muted); font-size:11px; font-weight:650; }
+        .audit-dialog-value { margin-top:4px; color:var(--text); font-size:13px; font-weight:550; overflow-wrap:anywhere; }
+        .audit-dialog-datetime { display:flex; align-items:center; gap:6px; }
+        .audit-dialog-section { margin-top:20px; }
+        .audit-dialog-section h3 { margin:0 0 9px; color:var(--text); font-size:14px; font-weight:650; }
+        .audit-dialog-table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:7px; }
+        .audit-dialog-table { width:100%; min-width:440px; margin:0; }
+        .audit-dialog-table :global(th),.audit-dialog-table :global(td) { padding:10px 12px; }
+        .audit-dialog-table :global(td) { overflow-wrap:anywhere; white-space:pre-wrap; }
+        .audit-dialog-metadata { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 18px; padding:14px 16px; border:1px solid var(--line); border-radius:7px; background:var(--panel); }
+        .audit-dialog-raw-detail { margin:0; padding:14px 16px; border:1px solid var(--line); border-radius:7px; background:var(--panel); font-size:13px; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; }
+        @media(max-width:560px) { .audit-dialog { padding:18px; } .audit-dialog-summary-grid,.audit-dialog-metadata { grid-template-columns:1fr; gap:13px; } }
         @media(max-width:760px) { .audit-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
         @media(max-width:480px) { .audit-kpi { padding:13px 12px 12px 15px; } .audit-kpi strong { font-size:24px; } }
       `}</style>
       <section className="panel">
-        <div className="panelhead">
-          <div>
-	    <h3>Audit Logs ({filteredLogs.length})</h3>
-            <span className="muted">
-              System activity and user actions
-            </span>
-          </div>
-        </div>
-
 <div className="audit-toolbar">
   <label className="audit-search">
     <Search className="audit-search-icon" size={17} aria-hidden="true" />
@@ -190,6 +312,23 @@ const deleteCount = filteredLogs.filter((log) =>
   </label>
 
   <label className="audit-control">
+    Category
+    <select
+      value={categoryFilter}
+      onChange={(e) => {
+        setCategoryFilter(e.target.value as AuditCategory | "ALL");
+        setActionFilter("ALL");
+        setCurrentPage(1);
+      }}
+    >
+      <option value="ALL">All Categories</option>
+      {AUDIT_CATEGORIES.map((category) => (
+        <option key={category.value} value={category.value}>{category.label}</option>
+      ))}
+    </select>
+  </label>
+
+  <label className="audit-control">
     Action
     <select
       value={actionFilter}
@@ -199,28 +338,9 @@ const deleteCount = filteredLogs.filter((log) =>
       }}
     >
   <option value="ALL">All Actions</option>
-  <option value="CREATE">CREATE</option>
-  <option value="UPDATE">UPDATE</option>
-  <option value="UPDATE_PROFILE">UPDATE_PROFILE</option>
-  <option value="UPDATE_USER">UPDATE_USER</option>
-  <option value="DELETE">DELETE</option>
-  <option value="IMPORT">IMPORT</option>
-  <option value="IMPORT_BOTH">IMPORT_BOTH</option>
-  <option value="LOCK">LOCK</option>
-  <option value="UNLOCK">UNLOCK</option>
-  <option value="LOGIN">LOGIN</option>
-  <option value="LOGOUT">LOGOUT</option>
-  <option value="LOGIN_FAILED">LOGIN_FAILED</option>
-  <option value="2FA_ENABLED">2FA_ENABLED</option>
-  <option value="2FA_DISABLED">2FA_DISABLED</option>
-  <option value="2FA_CODE_SENT">2FA_CODE_SENT</option>
-  <option value="2FA_SUCCESS">2FA_SUCCESS</option>
-  <option value="2FA_FAILURE">2FA_FAILURE</option>
-  <option value="REPORT_EMAIL_SENT">REPORT_EMAIL_SENT</option>
-  <option value="REPORT_EMAIL_FAILED">REPORT_EMAIL_FAILED</option>
-  <option value="MASTERDATA_ADD">MASTERDATA_ADD</option>
-  <option value="MASTERDATA_RETIRE">MASTERDATA_RETIRE</option>
-  <option value="MASTERDATA_RESTORE">MASTERDATA_RESTORE</option>
+  {actionOptions.map((action) => (
+    <option key={action} value={action}>{formatAuditAction(action)}</option>
+  ))}
     </select>
   </label>
 
@@ -245,6 +365,8 @@ const deleteCount = filteredLogs.filter((log) =>
       if (search) p.set("search", search);
       if (actionFilter !== "ALL")
         p.set("action", actionFilter);
+      if (categoryFilter !== "ALL")
+        p.set("category", categoryFilter);
       if (fromDate) p.set("from", fromDate);
       if (toDate) p.set("to", toDate);
 
@@ -263,8 +385,9 @@ const deleteCount = filteredLogs.filter((log) =>
       className="chip"
       onClick={() => {
         setSearch("");
+        setCategoryFilter("ALL");
         setActionFilter("ALL");
-        setPeriod("today");
+        setPeriod("all");
         setFromDate("");
         setToDate("");
         setCurrentPage(1);
@@ -295,28 +418,26 @@ const deleteCount = filteredLogs.filter((log) =>
 </div>
 
 {filteredLogs.length ? (
-  <div className="tablewrap">
+  <div className="audit-table-wrap">
     <table className="table">
+      <colgroup>
+        <col style={{ width: "20%" }} />
+        <col style={{ width: "46%" }} />
+        <col style={{ width: "24%" }} />
+        <col style={{ width: "10%" }} />
+      </colgroup>
       <thead>
         <tr>
+          <th>Date &amp; Time</th>
+          <th>Activity</th>
           <th>User</th>
-          <th>Action</th>
-          <th>Type</th>
-          <th>Reference</th>
-          <th>Date / Time</th>
           <th>Details</th>
         </tr>
       </thead>
 
       <tbody>
         {paginatedLogs.map((log) => {
-          console.log("AUDIT LOG:", log);
-          const userName =
-            log.details?.actor ??
-            log.details?.user ??
-            log.details?.name ??
-            log.details?.username ??
-            (log.userId ? `User #${log.userId}` : "Anonymous");
+          const userName = getAuditUserName(log);
 
           const initials = String(userName)
             .split(" ")
@@ -329,9 +450,8 @@ const deleteCount = filteredLogs.filter((log) =>
               <tr
                 key={log.id}
                 className="audit-row"
-                style={rowStyle}
                 tabIndex={0}
-                aria-label={`View audit details for ${log.action} by ${userName}`}
+                aria-label={`${formatAuditAction(log.action)} by ${userName}; view audit details`}
                 onClick={() => setSelectedLog(log)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
@@ -339,170 +459,44 @@ const deleteCount = filteredLogs.filter((log) =>
                     setSelectedLog(log);
                   }
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#f8fafc";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "";
-                }}
               >
               <td>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: "50%",
-                      background: "#374151",
-                      color: "#fff",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {initials}
-                  </div>
-
-                  <div>
-                    <div
-                      style={{
-                        fontWeight: 600,
-                      }}
-                    >
-                      {userName}
-                    </div>
-
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: "#6b7280",
-                      }}
-                    >
-                      {log.entityType}
-                    </div>
-                  </div>
+                <div className="audit-datetime">
+                  <strong>{new Date(log.createdAt).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "2-digit" })}</strong>
+                  <small>{new Date(log.createdAt).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}</small>
                 </div>
               </td>
 
               <td>
-                <span
-                  style={{
-                    display: "inline-block",
-                    padding: "4px 10px",
-                    borderRadius: 999,
-                    background:
-                      log.action.includes("DELETE") ||
-                      log.action.includes("FAILED")
-                        ? "#fee2e2"
-                        : log.action.includes("CREATE") ||
-                          log.action.includes("ADD")
-                        ? "#dcfce7"
-                        : log.action.includes("UPDATE")
-                        ? "#dbeafe"
-                        : log.action.includes("LOGIN")
-                        ? "#f3e8ff"
-                        : log.action.includes("LOGOUT")
-                        ? "#f3f4f6"
-                        : "#f3f4f6",
-
-                    color:
-                      log.action.includes("DELETE") ||
-                      log.action.includes("FAILED")
-                        ? "#b91c1c"
-                        : log.action.includes("CREATE") ||
-                          log.action.includes("ADD")
-                        ? "#166534"
-                        : log.action.includes("UPDATE")
-                        ? "#1d4ed8"
-                        : log.action.includes("LOGIN")
-                        ? "#7e22ce"
-                        : log.action.includes("LOGOUT")
-                        ? "#4b5563"
-                        : "#4b5563",
-                    fontSize: 12,
-                    fontWeight: 600,
-                  }}
-                >
-                  {log.action}
+                <span className={`audit-badge audit-badge--${getAuditTone(log.action)}`}>
+                  {formatAuditAction(log.action)}
                 </span>
-              </td>
-
-              <td
-                style={{
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  color: "#374151",
-                }}
-              >
-                {log.entityType}
+                <small className="audit-activity-context">
+                  {[log.entityType ? formatAuditAction(log.entityType) : "System", log.entityId ? `Ref ${log.entityId}` : null]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </small>
               </td>
 
               <td>
-                <div>
-                  <div
-                    style={{
-                      fontWeight: 600,
-                    }}
-                  >
-                    {log.entityId || "-"}
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: "#6b7280",
-                    }}
-                  >
-                    {log.action === "CREATE"
-                      ? "Record Created"
-                      : log.action === "UPDATE"
-                      ? "Record Updated"
-                      : log.action === "DELETE"
-                      ? "Record Deleted"
-                      : log.action === "LOGIN"
-                      ? "User Authentication"
-                      : log.action === "LOGOUT"
-                      ? "Session Ended"
-                      : log.action === "LOCK"
-                      ? "Record Locked"
-                      : log.action === "UNLOCK"
-                      ? "Record Unlocked"
-                      : log.entityType}
-                  </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div className="audit-avatar">{initials}</div>
+                  <div className="audit-user-name">{userName}</div>
                 </div>
               </td>
 
-              <td>
-                {new Date(log.createdAt).toLocaleString("en-PH", {
-                  year: "numeric",
-                  month: "short",
-                  day: "2-digit",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </td>
               <td>
                 <button
                   type="button"
-                  className="chip"
+                  className="audit-details-button"
                   aria-label={`View details for audit log ${log.id}`}
+                  title="View details"
                   onClick={(event) => {
                     event.stopPropagation();
                     setSelectedLog(log);
                   }}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
                 >
-                  <Eye size={14} aria-hidden="true" />
-                  View Details
+                  <Eye size={16} aria-hidden="true" />
                 </button>
               </td>
             </tr>
@@ -512,8 +506,10 @@ const deleteCount = filteredLogs.filter((log) =>
     </table>
   </div>
 ) : (
-  <div className="empty">
-    No audit activity found.
+  <div className="audit-empty" role="status">
+    <Activity size={22} aria-hidden="true" />
+    <strong>No audit activity found</strong>
+    <span>Try adjusting your search or filters.</span>
   </div>
 )}
 
@@ -578,14 +574,25 @@ const deleteCount = filteredLogs.filter((log) =>
       : explicitMetadata !== undefined ? { value: explicitMetadata } : {}),
     ...additionalMetadata,
   };
-  const userName =
-    detailObject.actor ??
-    detailObject.user ??
-    detailObject.name ??
-    detailObject.username ??
-    (selectedLog.userId ? `User #${selectedLog.userId}` : "Anonymous");
+  const userName = getAuditUserName(selectedLog);
   const displayValue = (value: unknown) =>
     value === null || value === undefined || value === "" ? "-" : formatAuditValue(value);
+  const hasDetailValue = (value: unknown) => {
+    if (value === null || value === undefined) return false;
+    if (typeof value === "string") return value.trim().length > 0;
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === "object") return Object.keys(value).length > 0;
+    return true;
+  };
+  const metadataEntries = Object.entries(metadata).filter(([, value]) => hasDetailValue(value));
+  const hasRawDetails = details !== null && details !== undefined && details !== "" &&
+    (typeof details !== "object" || Array.isArray(details)) && hasDetailValue(details);
+  const hasMetadata = metadataEntries.length > 0 || hasRawDetails;
+  const actionTone = getAuditTone(selectedLog.action);
+  const tone = actionTone === "neutral" ? "information" : actionTone;
+  const timestamp = selectedLog.createdAt
+    ? new Date(selectedLog.createdAt).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })
+    : "Time not recorded";
 
   return (
     <div
@@ -606,74 +613,74 @@ const deleteCount = filteredLogs.filter((log) =>
         aria-modal="true"
         aria-labelledby="audit-details-title"
         onClick={(event) => event.stopPropagation()}
-        style={{
-          width: "min(100%, 720px)",
-          maxHeight: "min(85vh, 760px)",
-          overflowY: "auto",
-          padding: 24,
-          border: "1px solid var(--border)",
-          borderRadius: 8,
-          background: "var(--panel)",
-          color: "var(--text)",
-          boxShadow: "0 20px 60px rgba(0, 0, 0, 0.24)",
-        }}
+        className="audit-dialog"
       >
-        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 20 }}>
+        <header className="audit-dialog-header">
           <div>
-            <h2 id="audit-details-title" style={{ margin: 0, fontSize: 20 }}>Audit Details</h2>
-            <span className="muted">Log #{selectedLog.id}</span>
+            <div className="audit-dialog-title-row">
+              <h2 id="audit-details-title" className="audit-dialog-title">{formatAuditAction(selectedLog.action)}</h2>
+              <span className={`audit-dialog-status audit-badge--${tone}`}>{getAuditStatusLabel(tone)}</span>
+            </div>
           </div>
           <button
             type="button"
-            className="chip"
+            className="audit-dialog-close"
             aria-label="Close audit details"
             onClick={() => setSelectedLog(null)}
+            title="Close"
           >
             <X size={16} aria-hidden="true" />
           </button>
         </header>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 16 }}>
-          <div><strong>User</strong><div style={{ marginTop: 4, overflowWrap: "anywhere" }}>{displayValue(userName)}</div></div>
-          <div><strong>Action</strong><div style={{ marginTop: 4, overflowWrap: "anywhere" }}>{displayValue(selectedLog.action)}</div></div>
-          <div><strong>Type</strong><div style={{ marginTop: 4, overflowWrap: "anywhere" }}>{displayValue(selectedLog.entityType)}</div></div>
-          <div><strong>Reference</strong><div style={{ marginTop: 4, overflowWrap: "anywhere" }}>{displayValue(selectedLog.entityId)}</div></div>
-          <div><strong>Timestamp</strong><div style={{ marginTop: 4 }}>{selectedLog.createdAt ? new Date(selectedLog.createdAt).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" }) : "-"}</div></div>
-        </div>
+        <section className="audit-dialog-summary" aria-labelledby="audit-summary-title">
+          <h3 id="audit-summary-title">Activity Summary</h3>
+          <div className="audit-dialog-summary-grid">
+            <div><div className="audit-dialog-label">Event</div><div className="audit-dialog-value">{formatAuditAction(selectedLog.action)}</div></div>
+            <div><div className="audit-dialog-label">Category</div><div className="audit-dialog-value">{selectedLog.entityType ? formatAuditAction(selectedLog.entityType) : "System"}</div></div>
+            <div><div className="audit-dialog-label">User</div><div className="audit-dialog-value">{displayValue(userName)}</div></div>
+            <div><div className="audit-dialog-label">Date &amp; Time</div><div className="audit-dialog-value audit-dialog-datetime"><Clock3 size={14} aria-hidden="true" />{timestamp}</div></div>
+          </div>
+        </section>
 
-        <div style={{ display: "grid", gap: 16, marginTop: 22 }}>
-          <section>
-            <h3 style={{ margin: "0 0 8px", fontSize: 14 }}>Changes</h3>
-            <div style={{ overflowX: "auto", border: "1px solid var(--border)", borderRadius: 6 }}>
-              <table className="table" style={{ margin: 0, minWidth: 480 }}>
+        {changeRows.length > 0 && (
+          <section className="audit-dialog-section">
+            <h3>Changes</h3>
+            <div className="audit-dialog-table-wrap">
+              <table className="table audit-dialog-table">
                 <thead>
-                  <tr><th>Field</th><th>Old Value</th><th>New Value</th></tr>
+                  <tr><th>Field</th><th>Previous</th><th>Updated</th></tr>
                 </thead>
                 <tbody>
-                  {changeRows.length ? changeRows.map((change, index) => (
+                  {changeRows.map((change, index) => (
                     <tr key={`${String(change.field)}-${index}`}>
                       <td style={{ overflowWrap: "anywhere" }}>{displayValue(change.field)}</td>
                       <td style={{ overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}>{displayValue(change.oldValue)}</td>
                       <td style={{ overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}>{displayValue(change.newValue)}</td>
                     </tr>
-                  )) : (
-                    <tr><td colSpan={3} className="muted">No changes recorded</td></tr>
-                  )}
+                  ))}
                 </tbody>
               </table>
             </div>
           </section>
-          <section>
-            <h3 style={{ margin: "0 0 8px", fontSize: 14 }}>Metadata</h3>
-            <pre style={{ margin: 0, padding: 12, border: "1px solid var(--border)", borderRadius: 6, background: "var(--background)", font: "12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
-              {formatAuditValue(
-                typeof details === "object" && !Array.isArray(details)
-                  ? Object.keys(metadata).length ? metadata : null
-                  : details
-              )}
-            </pre>
+        )}
+        {hasMetadata && (
+          <section className="audit-dialog-section">
+            <h3>Additional details</h3>
+            {metadataEntries.length > 0 ? (
+              <div className="audit-dialog-metadata">
+                {metadataEntries.map(([key, value]) => (
+                  <div key={key}>
+                    <div className="audit-dialog-label">{formatAuditFieldLabel(key)}</div>
+                    <div className="audit-dialog-value">{value === null || value === undefined || value === "" ? "Not provided" : formatAuditValue(value)}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="audit-dialog-raw-detail">{formatAuditValue(details)}</p>
+            )}
           </section>
-        </div>
+        )}
       </section>
     </div>
   );
