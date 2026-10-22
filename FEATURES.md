@@ -86,6 +86,7 @@ Reference numbers are generated as `TA-YYYY-NNNNN` or `OT-YYYY-NNNNN`. A per-typ
 
 - Text improvement sends a supplied text string to an Ollama-compatible `/api/generate` endpoint and returns a suggested edit.
 - MACO accepts conversational questions, builds live context from OpsTracker records and selected system data, then asks the configured model for a response. Responses can include source categories and record references.
+- The saved `enabled` setting controls record-writing assistance visibility and endpoint availability. The saved `maco.enabled` setting controls MACO sidebar visibility, page availability and chat endpoint use; saving AI & MACO settings refreshes sidebar visibility without signing out.
 
 ## UI and themes
 

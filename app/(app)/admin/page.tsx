@@ -141,6 +141,7 @@ useEffect(() => {
         toast("Unable to save AI settings");
         return;
       }
+      window.dispatchEvent(new Event("opstracker:ai-settings-saved"));
       toast("AI settings saved");
     } catch {
       toast("Unable to save AI settings");

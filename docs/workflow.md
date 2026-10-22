@@ -4,6 +4,8 @@
 
 Users create Technical Assistance records at `/assistance` or Other Task records at `/tasks`. Required fields include the activity date, shift, location, the type-specific subject/details, start time, assignee and accountable person. Show/group and remarks are optional. The server validates record data and creates an owner link to the signed-in account.
 
+Record-form AI writing actions are shown only while the administrator's saved AI Assistance setting is enabled. MACO is shown in navigation and available at `/maco` only while the saved MACO setting is enabled; when disabled, its page displays an administrator-disabled message and chat requests are rejected. Saving AI & MACO settings refreshes the sidebar without requiring logout.
+
 The Technical Assistance and Other Tasks list content columns show their respective client/problem or description, followed by the latest Resolution and Remark work logs. Each summary falls back to the corresponding legacy Resolution or Remarks field when no typed log exists. If neither Resolution nor Remark is available, the latest work log is shown as Update; with no available information, the list shows “Update: No updates yet.” Show/group and location remain in their separate table columns.
 
 Both record lists provide Today, Yesterday, This Week, This Month, This Year, All Records and Custom periods using the Dashboard's UTC date boundaries. From and To inputs appear only for Custom. The USER filter defaults to the signed-in account; users can select All Users manually. The table keeps Assigned To and displays Accountable Person beside it using the record owner's full name.

@@ -44,8 +44,22 @@ export default function Shell({ branding, user, children }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
+  const [macoEnabled, setMacoEnabled] = useState(false);
   const displayRole = user.role === "ADMIN" ? "Administrator" : user.role;
   const heading = TITLES[pathname] ?? (pathname.startsWith("/records/assistance") ? "Technical Assistance" : pathname.startsWith("/records/tasks") ? "Other Tasks" : branding.title);
+
+  useEffect(() => {
+    const loadSettings = () => {
+      fetch("/api/admin/ai")
+        .then((res) => res.json())
+        .then((settings) => setMacoEnabled(settings.maco?.enabled === true))
+        .catch(() => setMacoEnabled(false));
+    };
+
+    loadSettings();
+    window.addEventListener("opstracker:ai-settings-saved", loadSettings);
+    return () => window.removeEventListener("opstracker:ai-settings-saved", loadSettings);
+  }, []);
 
   useEffect(() => {
     const updateClock = () => setNow(new Date());
@@ -76,8 +90,9 @@ export default function Shell({ branding, user, children }: Props) {
           {NAV
             .filter(
               (n) =>
-                user.role === "ADMIN" ||
-                (n.href !== "/admin" && n.href !== "/users")
+                (n.href !== "/maco" || macoEnabled) &&
+                (user.role === "ADMIN" ||
+                  (n.href !== "/admin" && n.href !== "/users"))
             )
             .map((n) => (
 

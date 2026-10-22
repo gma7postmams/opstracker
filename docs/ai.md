@@ -6,11 +6,11 @@ OpsTracker has two AI-backed workflows: field text improvement and MACO chat. Bo
 
 Record forms can request a rewrite for problem, resolution, remarks or task description. The server prompt asks for corrected text only, preserving technical terms, IP addresses, hostnames, software names, error messages and reference numbers. The endpoint returns a `suggestion` string. The request timeout defaults to 30 seconds and can be set in the AI settings file.
 
-If the top-level `enabled` setting is false, the endpoint returns a service-unavailable response. The current `/api/ai/improve` handler does not require a signed-in session.
+If the top-level `enabled` setting is false, record forms hide their text-improvement actions and `/api/ai/improve` returns a service-unavailable response. The endpoint does not require a signed-in session.
 
 ## MACO chat
 
-The MACO page submits the user's question and recent conversation history to `/api/maco/chat`. The route requires an authenticated session and uses the configured `maco.model` and `maco.temperature` values.
+The MACO page is available only when the saved `maco.enabled` setting is true. Otherwise, it shows an administrator-disabled message, and `/api/maco/chat` rejects requests with a service-unavailable response. The sidebar reads the saved settings and updates after an admin saves AI & MACO settings. The chat route requires an authenticated session and uses the configured `maco.model` and `maco.temperature` values.
 
 The route classifies questions and gathers relevant live context from OpsTracker before calling the model. Depending on the question, context can include:
 
@@ -25,9 +25,9 @@ Record visibility is applied to record queries through the shared record-visibil
 
 ## Settings and service checks
 
-The admin page exposes the top-level enabled flag, service URL, text-improvement model and timeout, plus MACO enabled/model/temperature/search options. It also provides a connection/model check against the configured server. Settings are read from and written to `data/ai-settings.json` on the server filesystem.
+The admin page exposes the top-level enabled flag, service URL, text-improvement model and timeout, plus MACO enabled/model/temperature/search options. It also provides a connection/model check against the configured server. Settings are read from and written to `data/ai-settings.json` on the server filesystem. Saving settings causes the shared sidebar to re-read the saved configuration without requiring a new login.
 
-In the current MACO route, `maco.searchRecords` controls record search. The route uses `maco.model` and `maco.temperature`; it does not enforce the top-level or `maco.enabled` flag, and the `showRelatedRecords` option is not consulted there. The AI settings and test API routes currently have no authentication or administrator-role check. Protect the settings file and service endpoint operationally, and do not treat the admin UI as the API authorization boundary.
+In the MACO route, `maco.searchRecords` controls record search, and the route uses `maco.model` and `maco.temperature`; the `showRelatedRecords` option is not consulted there. The AI settings and test API routes currently have no authentication or administrator-role check. Protect the settings file and service endpoint operationally, and do not treat the admin UI as the API authorization boundary.
 
 ## Data handling
 

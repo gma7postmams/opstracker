@@ -1,10 +1,10 @@
 {
-  "enabled": true,
+  "enabled": false,
   "url": "http://172.30.10.76:11434",
   "model": "gpt-oss:20b",
   "timeout": 30000,
   "maco": {
-    "enabled": true,
+    "enabled": false,
     "model": "gpt-oss:20b",
     "temperature": 0.2,
     "searchRecords": true,

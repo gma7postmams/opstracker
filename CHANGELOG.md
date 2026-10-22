@@ -1,4 +1,5 @@
 ## 2026-10-22
+- Made the saved AI and MACO enabled settings control feature availability: disabled AI hides record-writing assistance and returns service unavailable from its endpoint; disabled MACO is removed from the sidebar, shows an administrator-disabled message on its page, and rejects chat requests. Saving the settings refreshes sidebar visibility immediately.
 - Added optional Email Two-Factor Authentication with password-first login verification, six-digit single-use codes that expire after 10 minutes, per-user email delivery limits, profile setup, administrator recovery, and audit events.
 - Updated sign-in and account settings with a Credentials/Verification flow, automatic OTP submission, resend countdowns, staged progress and a success checklist. Account settings show profile and security status, keep Email Reports collapsed by default, and provide save feedback. Verification emails include responsive branded HTML and a plaintext fallback.
 - Fixed duplicate login challenge submissions and resend handling: initial credential challenges bypass the resend cooldown, while explicit resends observe it. Added correlated browser/server request logging.

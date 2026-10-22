@@ -34,6 +34,7 @@ export default function MACOPage() {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [macoEnabled, setMacoEnabled] = useState<boolean | null>(null);
   const [loadingStatusIndex, setLoadingStatusIndex] = useState(0);
   const [typedGreeting, setTypedGreeting] = useState("");
   const [suggestionIndex, setSuggestionIndex] = useState(0);
@@ -107,11 +108,13 @@ export default function MACOPage() {
     useEffect(() => {
       async function loadAIStatus() {
         try {
-          const res =
-            await fetch("/api/admin/ai");
-
-          const settings =
-            await res.json();
+          const settingsResponse = await fetch("/api/admin/ai");
+          const settings = await settingsResponse.json();
+          if (!settingsResponse.ok || settings.maco?.enabled !== true) {
+            setMacoEnabled(false);
+            return;
+          }
+          setMacoEnabled(true);
 
           const test =
             await fetch("/api/admin/ai/test");
@@ -136,6 +139,7 @@ export default function MACOPage() {
             url: "",
             online: false,
           });
+          setMacoEnabled(false);
         }
       }
 
@@ -197,6 +201,14 @@ export default function MACOPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (macoEnabled === null) {
+    return <div className="page maco-page" />;
+  }
+
+  if (!macoEnabled) {
+    return <div className="page maco-page">MACO is currently disabled by an administrator.</div>;
   }
 
   return (

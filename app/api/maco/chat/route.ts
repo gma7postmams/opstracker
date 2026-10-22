@@ -29,6 +29,20 @@ export async function POST(req: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  let settings: any;
+  try {
+    settings = JSON.parse(await fs.readFile(SETTINGS_FILE, "utf8"));
+  } catch {
+    settings = {};
+  }
+  if (settings.maco?.enabled !== true) {
+    return NextResponse.json(
+      { error: "MACO is currently disabled by an administrator." },
+      { status: 503 }
+    );
+  }
+
   const scopeRecords = (where: any = {}) => applyRecordVisibility(where, user);
 
   console.time("MACO Total");
@@ -70,9 +84,6 @@ export async function POST(req: NextRequest) {
       q === "thank you" ||
       q.includes("who are you");    
 
-    const settings = JSON.parse(
-      await fs.readFile(SETTINGS_FILE, "utf8")
-    );
     const searchRecordsEnabled = settings.maco?.searchRecords !== false;
 
     let liveContext = "";

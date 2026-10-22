@@ -35,7 +35,7 @@ const [people, setPeople] = useState<string[]>([]);
 const [errors, setErrors] = useState<Record<string, string>>({});
 const [saving, setSaving] = useState(false);
 
-const [aiEnabled, setAiEnabled] = useState(true);
+const [aiEnabled, setAiEnabled] = useState(false);
 
 const [problemLoading, setProblemLoading] = useState(false);
 const [resolutionLoading, setResolutionLoading] = useState(false);
