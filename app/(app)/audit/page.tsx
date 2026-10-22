@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Activity, CalendarDays, Download, Eye, FilePlus2, Search, Trash2, X } from "lucide-react";
+import { PERIOD_OPTIONS, type Period } from "@/lib/period";
 
 function formatAuditValue(value: unknown) {
   if (value === null || value === undefined || value === "") {
@@ -21,6 +22,7 @@ export default function AuditPage() {
   const [logs, setLogs] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("ALL");
+  const [period, setPeriod] = useState<Period>("today");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -29,8 +31,21 @@ export default function AuditPage() {
 
 
 useEffect(() => {
-  fetch("/api/audit")
+  if (period === "custom" && (!fromDate || !toDate || fromDate > toDate)) {
+    setLogs([]);
+    return;
+  }
+
+  const controller = new AbortController();
+  const params = new URLSearchParams({ period });
+  if (period === "custom") {
+    params.set("from", fromDate);
+    params.set("to", toDate);
+  }
+
+  fetch(`/api/audit?${params}`, { signal: controller.signal })
     .then(async (r) => {
+      if (!r.ok) throw new Error(`Audit API failed: ${r.status}`);
       const data = await r.json();
 
       setLogs(
@@ -39,8 +54,12 @@ useEffect(() => {
           : []
       );
     })
-    .catch(() => setLogs([]));
-}, []);
+    .catch(() => {
+      if (!controller.signal.aborted) setLogs([]);
+    });
+
+  return () => controller.abort();
+}, [period, fromDate, toDate]);
 
 const cellStyle = {
   overflow: "hidden",
@@ -56,8 +75,7 @@ const rowStyle = {
 const activeCount =
   (search ? 1 : 0) +
   (actionFilter !== "ALL" ? 1 : 0) +
-  (fromDate ? 1 : 0) +
-  (toDate ? 1 : 0);
+  (period !== "today" ? 1 : 0);
   
 const filteredLogs = logs.filter((log) => {
   const term = search.toLowerCase();
@@ -76,21 +94,9 @@ const matchesSearch =
     actionFilter === "ALL" ||
     log.action === actionFilter;
 
-  const logDate = new Date(log.createdAt);
-
-  const matchesFrom =
-    !fromDate ||
-    logDate >= new Date(fromDate);
-
-  const matchesTo =
-    !toDate ||
-    logDate <= new Date(`${toDate}T23:59:59`);
-
   return (
     matchesSearch &&
-    matchesAction &&
-    matchesFrom &&
-    matchesTo
+    matchesAction
   );
 });
 
@@ -116,20 +122,19 @@ const deleteCount = filteredLogs.filter((log) =>
   return (
     <div className="page audit-page">
       <style jsx>{`
-        .audit-toolbar { display:grid; grid-template-columns:minmax(240px,1fr) 140px 150px 150px auto; align-items:end; gap:10px; margin-bottom:16px; padding:12px; border:1px solid var(--line); border-radius:10px; background:var(--panel); box-shadow:0 3px 12px rgba(18,38,63,.04); }
-        .audit-search { position:relative; display:flex; align-items:center; flex:1 1 0; min-width:0; margin-right:2px; }
+        .audit-toolbar { display:flex; flex-wrap:wrap; align-items:end; gap:10px; margin-bottom:16px; padding:12px; border:1px solid var(--line); border-radius:10px; background:var(--panel); box-shadow:0 3px 12px rgba(18,38,63,.04); }
+        .audit-search { position:relative; display:flex; align-items:center; flex:1 1 240px; min-width:0; margin-right:2px; }
         .audit-search-icon { position:absolute; left:12px; color:var(--muted); pointer-events:none; }
         .audit-search input { width:100%; padding:9px 11px 9px 38px; border:1px solid var(--line2); border-radius:9px; background:var(--input-bg); }
-        .audit-control { display:grid; gap:4px; min-width:0; color:var(--muted); font-size:11px; font-weight:650; }
+        .audit-control { display:grid; flex:0 1 150px; gap:4px; min-width:120px; color:var(--muted); font-size:11px; font-weight:650; }
         .audit-control select,.audit-control input { width:100%; height:36px; min-width:0; padding:0 9px; border-radius:6px; }
-        .audit-export { display:inline-flex; align-items:center; justify-content:center; justify-self:end; gap:7px; white-space:nowrap; }
+        .audit-export { display:inline-flex; align-items:center; justify-content:center; margin-left:auto; gap:7px; white-space:nowrap; }
         .audit-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:16px 0 20px; }
         .audit-pagination { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-top:16px; padding-top:12px; border-top:1px solid var(--line); }
         .audit-pagination-controls { display:flex; align-items:center; gap:8px; }
         .audit-page-size { display:flex; align-items:center; gap:7px; color:var(--muted); font-size:13px; }
         .audit-page-size select { height:34px; padding:0 8px; border-radius:6px; }
-        @media(max-width:900px) { .audit-toolbar { grid-template-columns:minmax(0,1fr) repeat(3,minmax(112px,140px)); } .audit-export { grid-column:1 / -1; } }
-        @media(max-width:560px) { .audit-toolbar { grid-template-columns:repeat(2,minmax(0,1fr)); } .audit-search,.audit-export { grid-column:1 / -1; } .audit-control { min-width:0; } .audit-pagination { align-items:flex-start; } .audit-pagination-controls { width:100%; justify-content:space-between; } }
+        @media(max-width:560px) { .audit-search,.audit-export { flex-basis:100%; } .audit-control { flex:1 1 calc(50% - 10px); min-width:0; } .audit-pagination { align-items:flex-start; } .audit-pagination-controls { width:100%; justify-content:space-between; } }
         .audit-kpi { position:relative; display:flex; flex-direction:column; overflow:hidden; min-height:102px; padding:14px 16px 12px 20px; border:1px solid color-mix(in srgb,var(--border) 70%,var(--muted)); border-radius:9px; background:var(--panel); box-shadow:0 3px 12px rgba(0,0,0,.12); transition:transform .18s ease,box-shadow .18s ease; }
         .audit-kpi:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.18); }
         .audit-kpi:before { position:absolute; inset:0 auto 0 0; width:4px; content:""; background:var(--kpi-accent); }
@@ -165,6 +170,26 @@ const deleteCount = filteredLogs.filter((log) =>
   </label>
 
   <label className="audit-control">
+    Period
+    <select
+      value={period}
+      onChange={(e) => {
+        const nextPeriod = e.target.value as Period;
+        setPeriod(nextPeriod);
+        setCurrentPage(1);
+        if (nextPeriod !== "custom") {
+          setFromDate("");
+          setToDate("");
+        }
+      }}
+    >
+      {PERIOD_OPTIONS.map((option) => (
+        <option key={option.value} value={option.value}>{option.label}</option>
+      ))}
+    </select>
+  </label>
+
+  <label className="audit-control">
     Action
     <select
       value={actionFilter}
@@ -194,29 +219,18 @@ const deleteCount = filteredLogs.filter((log) =>
     </select>
   </label>
 
-  <label className="audit-control">
-    From Date
-    <input
-      type="date"
-      value={fromDate}
-      onChange={(e) => {
-        setFromDate(e.target.value);
-        setCurrentPage(1);
-      }}
-    />
-  </label>
-
-  <label className="audit-control">
-    To Date
-    <input
-      type="date"
-      value={toDate}
-      onChange={(e) => {
-        setToDate(e.target.value);
-        setCurrentPage(1);
-      }}
-    />
-  </label>
+  {period === "custom" && (
+    <>
+      <label className="audit-control">
+        From
+        <input type="date" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setCurrentPage(1); }} />
+      </label>
+      <label className="audit-control">
+        To
+        <input type="date" value={toDate} onChange={(e) => { setToDate(e.target.value); setCurrentPage(1); }} />
+      </label>
+    </>
+  )}
 
   <button
     className="primary audit-export"
@@ -245,6 +259,7 @@ const deleteCount = filteredLogs.filter((log) =>
       onClick={() => {
         setSearch("");
         setActionFilter("ALL");
+        setPeriod("today");
         setFromDate("");
         setToDate("");
         setCurrentPage(1);

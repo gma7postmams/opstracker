@@ -6,6 +6,7 @@ import { priorityLabel } from "@/lib/recordTypes";
 import { useSession } from "next-auth/react";
 import { Activity, CheckCircle2, ClipboardList, CircleDot, Clock3, Wrench } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { PERIOD_OPTIONS, type Period } from "@/lib/period";
 
 const PALETTE = ["#3b82f6", "#7f56d9", "#06aed4", "#f79009", "#12b76a", "#f04438", "#ee46bc"];
 
@@ -21,18 +22,6 @@ const QUOTES = [
   "Stay positive, work hard, make it happen.",
   "Quality means doing it right when no one is looking.",
 ];
-
-const PERIOD_OPTIONS = [
-  { value: "today", label: "Today" },
-  { value: "yesterday", label: "Yesterday" },
-  { value: "thisWeek", label: "This Week" },
-  { value: "thisMonth", label: "This Month" },
-  { value: "thisYear", label: "This Year" },
-  { value: "all", label: "All Records" },
-  { value: "custom", label: "Custom" },
-] as const;
-
-type DashboardPeriod = (typeof PERIOD_OPTIONS)[number]["value"];
 
 type DashboardUser = {
   id: number;
@@ -75,7 +64,7 @@ export default function Dashboard() {
   const [dashboardDataRevision, setDashboardDataRevision] = useState(0);
   const [animateDashboardEntrance, setAnimateDashboardEntrance] = useState(false);
   const hasRenderedDashboard = useRef(false);
-  const [period, setPeriod] = useState<DashboardPeriod>("today");
+  const [period, setPeriod] = useState<Period>("today");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
@@ -274,7 +263,7 @@ export default function Dashboard() {
     setToDate("");
   }
 
-  function selectPeriod(nextPeriod: DashboardPeriod) {
+  function selectPeriod(nextPeriod: Period) {
     setPeriod(nextPeriod);
     if (nextPeriod !== "custom") {
       setFromDate("");
@@ -330,7 +319,7 @@ export default function Dashboard() {
       <div className="filters dashboard-filter-bar dashboard-glass dashboard-enter dashboard-enter-2" aria-label="Dashboard filters">
         <label className="flabel">
           Period
-          <select value={period} onChange={(event) => selectPeriod(event.target.value as DashboardPeriod)}>
+          <select value={period} onChange={(event) => selectPeriod(event.target.value as Period)}>
             {PERIOD_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}

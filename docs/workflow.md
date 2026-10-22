@@ -6,7 +6,7 @@ Users create Technical Assistance records at `/assistance` or Other Task records
 
 The Technical Assistance and Other Tasks list content columns show their respective client/problem or description, followed by the latest Resolution and Remark work logs. Each summary falls back to the corresponding legacy Resolution or Remarks field when no typed log exists. If neither Resolution nor Remark is available, the latest work log is shown as Update; with no available information, the list shows “Update: No updates yet.” Show/group and location remain in their separate table columns.
 
-Both record lists default the USER filter to the signed-in account; users can select All Users manually. The table keeps Assigned To and displays Accountable Person beside it using the record owner's full name.
+Both record lists provide Today, Yesterday, This Week, This Month, This Year, All Records and Custom periods using the Dashboard's UTC date boundaries. From and To inputs appear only for Custom. The USER filter defaults to the signed-in account; users can select All Users manually. The table keeps Assigned To and displays Accountable Person beside it using the record owner's full name.
 
 Open records show their start time beside a live elapsed-time counter in the list, and Started beside Elapsed Time on the detail page, refreshed every second. Closed records continue to show their final calculated duration; reports and exports are unaffected.
 
@@ -44,6 +44,8 @@ For Excel, the selected canonical worksheets are processed; in `Both Worksheets`
 ## Reporting and email
 
 Reports can be filtered by preset/custom date range, record type, status and scope. Administrators can choose all records or their participation and optionally select a user; non-admin users are limited to their participation scope. Excel download and email attachments include the existing Technical Assistance and Other Tasks report worksheets plus a `WorkLogs` worksheet containing each work-log entry for the exported records. The WorkLogs columns are Parent Record No, Record Type, Created At, Created By, Investigate, Resolution and Remarks. Email preview renders the report using the configured Gmail sender/recipients; sending attaches the workbook.
+
+The Audit Logs page uses the same seven periods as the Dashboard. From and To appear only for Custom, and the selected period is applied to `createdAt` in the audit-log database query; search and action filters remain client-side.
 
 ## Backup and restore
 

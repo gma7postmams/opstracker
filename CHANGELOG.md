@@ -1,3 +1,7 @@
+## 2026-10-22
+
+- Aligned Technical Assistance, Other Tasks and Audit Logs period filters with the Dashboard's shared seven periods and UTC date boundaries. Custom date inputs are visible only for Custom, and audit periods are applied in the database query.
+
 ## 2026-10-21
 
 - Fixed import previews to show the imported start date, normalized Excel date/time serials before validation, and added End Date to both worksheets in the downloadable template so closed records can pass validation.

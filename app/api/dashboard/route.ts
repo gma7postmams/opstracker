@@ -2,11 +2,9 @@ import { NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ymd } from "@/lib/format";
+import { getCustomPeriodRange, getPeriodRange, PERIOD_OPTIONS, type Period } from "@/lib/period";
 
 const EMPTY = { OPEN: 0, CLOSE_PENDING: 0, CLOSED: 0 };
-const PERIODS = ["today", "yesterday", "thisWeek", "thisMonth", "thisYear", "all", "custom"] as const;
-type DashboardPeriod = (typeof PERIODS)[number];
-
 type TrendGranularity = "day" | "week" | "month" | "year" | "monthWeek";
 type TrendBucket = { key: string; date: string; label: string; tooltip: string; highlighted: boolean };
 type TrendConfig = {
@@ -21,31 +19,6 @@ const toMap = (rows: { status: string; _count: number }[]) => {
   rows.forEach((r) => (m[r.status] = r._count));
   return m;
 };
-
-function getPeriodRange(period: DashboardPeriod, now: Date) {
-  const today = new Date(now);
-  today.setUTCHours(0, 0, 0, 0);
-
-  const tomorrow = new Date(today);
-  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-
-  if (period === "today") return { start: today, end: tomorrow };
-  if (period === "yesterday") {
-    const yesterday = new Date(today);
-    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-    return { start: yesterday, end: today };
-  }
-  if (period === "thisWeek") {
-    const monday = new Date(today);
-    monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
-    return { start: monday, end: tomorrow };
-  }
-  if (period === "thisMonth") {
-    return { start: new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1)), end: tomorrow };
-  }
-
-  return { start: new Date(Date.UTC(today.getUTCFullYear(), 0, 1)), end: tomorrow };
-}
 
 function startOfUtcDay(date: Date) {
   const result = new Date(date);
@@ -63,7 +36,7 @@ function utcDateKey(date: Date) {
   return ymd(date);
 }
 
-function buildTrendConfig(period: DashboardPeriod, now: Date, customRange: { start: Date; end: Date } | null): TrendConfig {
+function buildTrendConfig(period: Period, now: Date, customRange: { start: Date; end: Date } | null): TrendConfig {
   const today = startOfUtcDay(now);
   const todayKey = utcDateKey(today);
   const currentMonthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
@@ -198,25 +171,20 @@ export async function GET(request: Request) {
 
   const searchParams = new URL(request.url).searchParams;
   const periodParam = searchParams.get("period") ?? "today";
-  if (!PERIODS.includes(periodParam as DashboardPeriod)) {
+  if (!PERIOD_OPTIONS.some((option) => option.value === periodParam)) {
     return NextResponse.json({ error: "Invalid period" }, { status: 400 });
   }
-  const period = periodParam as DashboardPeriod;
+  const period = periodParam as Period;
   let range: { start: Date; end: Date } | null = null;
   if (period === "custom") {
     const fromParam = searchParams.get("from") ?? "";
     const toParam = searchParams.get("to") ?? "";
-    const from = /^\d{4}-\d{2}-\d{2}$/.test(fromParam) ? new Date(`${fromParam}T00:00:00.000Z`) : null;
-    const to = /^\d{4}-\d{2}-\d{2}$/.test(toParam) ? new Date(`${toParam}T00:00:00.000Z`) : null;
-    if (!from || !to || Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || fromParam > toParam ||
-      from.toISOString().slice(0, 10) !== fromParam || to.toISOString().slice(0, 10) !== toParam) {
+    range = getCustomPeriodRange(fromParam, toParam);
+    if (!range) {
       return NextResponse.json({ error: "Invalid date range" }, { status: 400 });
     }
-    const end = new Date(to);
-    end.setUTCDate(end.getUTCDate() + 1);
-    range = { start: from, end };
   } else if (period !== "all") {
-    range = getPeriodRange(period as Exclude<DashboardPeriod, "all" | "custom">, new Date());
+    range = getPeriodRange(period, new Date());
   }
 
   const requestedUserId = searchParams.get("userId");

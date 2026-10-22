@@ -36,7 +36,7 @@ Reference numbers are generated as `TA-YYYY-NNNNN` or `OT-YYYY-NNNNN`. A per-typ
 
 ## Record operations
 
-- Lists support text search, status/location/shift/date filters, sorting and pagination. The user filter defaults to the signed-in user, with All Users available as a manual selection. The Assigned To column is followed by Accountable Person, which displays the record owner's full name.
+- Lists support text search, status/location/shift filters, and the shared Today, Yesterday, This Week, This Month, This Year, All Records and Custom period filter, plus sorting and pagination. From and To date inputs appear only for Custom. The user filter defaults to the signed-in user, with All Users available as a manual selection. The Assigned To column is followed by Accountable Person, which displays the record owner's full name.
 - Open records show the start time and a live elapsed-time counter in the list, and Started plus a live elapsed-time counter on the detail page, refreshed every second. Closed records retain their final calculated duration; reports and exports are unchanged.
 - Technical Assistance list content shows the client and problem; Other Tasks shows the description. Both prefer the latest Resolution and Remark work logs, falling back independently to legacy Resolution and Remarks fields. If neither is available, the latest work log appears as Update; records without any of these values show “Update: No updates yet.” Status badges use red for Open, orange for Close Pending and green for Closed. Show/group and location remain in their separate columns.
 - Detail pages show record fields and one chronological Record Timeline combining reported, assigned, endorsed, status-transition and typed work-log events.
@@ -55,14 +55,14 @@ Reference numbers are generated as `TA-YYYY-NNNNN` or `OT-YYYY-NNNNN`. A per-typ
 
 ## Reporting and audit
 
-- Dashboard periods: today, yesterday, this week, this month, this year, all records, and custom dates. Administrators can filter the dashboard by record owner.
+- Dashboard and record-list periods share Today, Yesterday, This Week, This Month, This Year, All Records and Custom options and the same UTC date boundaries. Administrators can filter the dashboard by record owner.
 - Reports filter by date period, activity type, status, report scope and (for administrators) user. Tallies are grouped by record owner and assignee and include total, closed, open, pending, closed-per-day average and average handling minutes.
 - The Reports page displays a participated-record count for the selected user, or the signed-in user when no user is selected. Report details, Excel summaries and email previews/sent reports include owned, currently assigned and participated record counts for that user. Participation includes ownership, current assignment or at least one authored work log; each record is counted once per user.
 - Report details include a chronological timeline of available creation, assignment, endorsement, close-pending, closed and typed work-log events, plus distinct participant names. Technical Assistance details use the latest Resolution work log as the resolution, falling back to the legacy resolution field.
 - Report scope continues to include owners, current assignees and work-log contributors in My Records. Total Records remains the number of records in the report and is not increased by multiple contributors or work logs.
 - Reports export to a multi-sheet Excel workbook, including Technical Assistance, Other Tasks and WorkLogs worksheets. WorkLogs lists all entries for exported records with parent reference, record type, creation date and author, and typed Investigation, Resolution or Remark content. Existing worksheet columns and report calculations remain unchanged. Email previews and sent reports use compact Ref No, Details, Status, Owner and Assigned tables. Technical Assistance Details show client, show/group and location, the problem, and any latest Resolution and Remark work-log messages. When neither typed message exists, Details shows the newest work-log message as Update when available. Other Tasks use the newest work-log update, or show Not recorded when no work log exists. The emailed report includes the Excel attachment.
 - The Technical Assistance and Other Tasks record toolbars provide Export mine beside Import mine. It downloads the existing report workbook for records owned by the signed-in user, including their WorkLogs, without changing the Reports page's broader participation-based My Records scope.
-- Audit logs capture supported authentication, record, import, user, master-data, backup/restore and email-report actions. The audit page supports search, action/date filters and Excel export.
+- Audit logs capture supported authentication, record, import, user, master-data, backup/restore and email-report actions. The audit page supports search, action and shared period filters; preset or custom date ranges filter the audit-log query. Excel export remains separate and accepts search, action and custom From/To dates; preset periods are not passed to the export.
 
 ## Users and administration
 

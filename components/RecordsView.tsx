@@ -10,6 +10,7 @@ import ConfirmDialog from "./ConfirmDialog";
 import { useToast } from "./Toast";
 import { statusLabel, priorityLabel } from "@/lib/recordTypes";
 import { formatTime12Hour, fullName } from "@/lib/format";
+import { PERIOD_OPTIONS, periodDateFilters, type Period } from "@/lib/period";
 import {
   Activity,
   ArrowDownWideNarrow,
@@ -38,7 +39,6 @@ interface Props {
 
 const STATUSES = ["OPEN", "CLOSE_PENDING", "CLOSED"];
 const emptyFilters = { q: "", status: "all", location: "all", shift: "all", from: "", to: "" };
-type Period = "Today" | "This Week" | "This Month" | "All Records" | "Custom";
 
 function formatElapsedDuration(startAt: Date, now: number) {
   if (Number.isNaN(startAt.getTime())) return "—";
@@ -62,39 +62,14 @@ function summaryMessage(workLogMessage?: string | null, legacyMessage?: string |
   return workLogMessage?.trim() || legacyMessage?.trim() || "";
 }
 
-function localDateValue(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function periodDates(period: Exclude<Period, "Custom">) {
-  const today = new Date();
-  const to = localDateValue(today);
-
-  if (period === "All Records") return { from: "", to: "" };
-  if (period === "Today") return { from: to, to };
-
-  const from = new Date(today);
-  if (period === "This Week") {
-    const daysSinceMonday = (today.getDay() + 6) % 7;
-    from.setDate(today.getDate() - daysSinceMonday);
-  } else {
-    from.setDate(1);
-  }
-
-  return { from: localDateValue(from), to };
-}
-
 export default function RecordsView(props: Props) {
   const { type, label, singular, subjectHeader, subjectField, bodyField } = props;
   const { data: session } = useSession();
   const isAdmin = session?.user.role === "ADMIN";
   const toast = useToast();
 
-  const [period, setPeriod] = useState<Period>("Today");
-  const [filters, setFilters] = useState(() => ({ ...emptyFilters, ...periodDates("Today") }));
+  const [period, setPeriod] = useState<Period>("today");
+  const [filters, setFilters] = useState(() => ({ ...emptyFilters, ...periodDateFilters("today") }));
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [now, setNow] = useState(() => Date.now());
@@ -135,7 +110,7 @@ export default function RecordsView(props: Props) {
     () =>
       (Object.keys(emptyFilters) as (keyof typeof emptyFilters)[])
         .filter((k) => k !== "from" && k !== "to" && filters[k] && filters[k] !== "all").length +
-      (period !== "Today" ? 1 : 0) +
+      (period !== "today" ? 1 : 0) +
       (activeUserFilter !== defaultUserFilter ? 1 : 0),
     [filters, period, activeUserFilter, defaultUserFilter]
   );
@@ -170,8 +145,8 @@ export default function RecordsView(props: Props) {
   const clearFilters = () => {
     setSelected(new Set());
     setPage(1);
-    setPeriod("Today");
-    setFilters({ ...emptyFilters, ...periodDates("Today") });
+    setPeriod("today");
+    setFilters({ ...emptyFilters, ...periodDateFilters("today") });
     setUserFilter(null);
   };
 
@@ -179,8 +154,10 @@ export default function RecordsView(props: Props) {
     setSelected(new Set());
     setPage(1);
     setPeriod(nextPeriod);
-    if (nextPeriod !== "Custom") {
-      setFilters((current) => ({ ...current, ...periodDates(nextPeriod) }));
+    if (nextPeriod === "custom") {
+      setFilters((current) => ({ ...current, from: "", to: "" }));
+    } else {
+      setFilters((current) => ({ ...current, ...periodDateFilters(nextPeriod) }));
     }
   };
 
@@ -281,11 +258,9 @@ export default function RecordsView(props: Props) {
       <div className="filters">
         <label className="flabel"><span className="crm-filter-label"><CalendarDays size={14} aria-hidden="true" /> PERIOD</span>
           <select value={period} onChange={(e) => changePeriod(e.target.value as Period)}>
-            <option>Today</option>
-            <option>This Week</option>
-            <option>This Month</option>
-            <option>All Records</option>
-            <option>Custom</option>
+            {PERIOD_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
           </select>
         </label>
         <label className="flabel">
@@ -328,12 +303,16 @@ export default function RecordsView(props: Props) {
             {(master.SHIFT ?? []).map((v) => <option key={v}>{v}</option>)}
           </select>
         </label>
-        <label className="flabel"><span className="crm-filter-label"><CalendarDays size={14} aria-hidden="true" /> FROM</span>
-          <input type="date" value={filters.from} disabled={period !== "Custom"} onChange={(e) => setFilter("from", e.target.value)} />
-        </label>
-        <label className="flabel"><span className="crm-filter-label"><CalendarDays size={14} aria-hidden="true" /> TO</span>
-          <input type="date" value={filters.to} disabled={period !== "Custom"} onChange={(e) => setFilter("to", e.target.value)} />
-        </label>
+        {period === "custom" && (
+          <>
+            <label className="flabel"><span className="crm-filter-label"><CalendarDays size={14} aria-hidden="true" /> FROM</span>
+              <input type="date" value={filters.from} onChange={(e) => setFilter("from", e.target.value)} />
+            </label>
+            <label className="flabel"><span className="crm-filter-label"><CalendarDays size={14} aria-hidden="true" /> TO</span>
+              <input type="date" value={filters.to} onChange={(e) => setFilter("to", e.target.value)} />
+            </label>
+          </>
+        )}
         {activeCount > 0 && (
           <button className="chip" onClick={clearFilters}>
             ✕ Clear {activeCount} filter{activeCount > 1 ? "s" : ""}
