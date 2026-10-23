@@ -1,4 +1,6 @@
 ## 2026-10-23
+- Changed Dashboard Activity Summary cards to a two-column mobile layout and kept labels intact at word boundaries; desktop layout and card styling are unchanged.
+- Made the Dashboard Activity Trend fit mobile containers without horizontal scrolling while preserving desktop chart sizing and interactions.
 - Added lock-status badges to Dashboard Needs Attention and record detail headers; lock and unlock behavior is unchanged.
 - Added Reference No and available record summary fields to record Audit Details summaries, with a Lock Status diff label; audit storage, APIs and diff table rendering are unchanged.
 - Standardized record update, status, endorsement, lock and unlock audit payloads as structured field diffs, retained record summary details for deletes, and excluded sensitive fields from record audit diffs.

@@ -159,7 +159,11 @@ header{min-height:84px;background:var(--panel);border-bottom:1px solid var(--lin
 .dashboard-kpi-icon{width:28px;height:28px;display:grid;place-items:center;flex:none;
   border-radius:7px;background:var(--kpi-tint);color:var(--kpi-foreground)}
 .dashboard-kpi-label{min-width:0;color:var(--muted);font-size:11px;font-weight:600;line-height:1.25;overflow-wrap:anywhere}
+.dashboard-kpis-activity .dashboard-kpi-label{overflow-wrap:normal;word-break:normal}
 .dashboard-kpi-value{display:block;margin-top:auto;font-size:23px;line-height:1.1}
+@media(max-width:560px){
+  .dashboard-kpis-activity{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 
 .panel{padding:19px}
 .panel.spaced{margin-bottom:16px}

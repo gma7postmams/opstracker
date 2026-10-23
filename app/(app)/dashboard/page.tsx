@@ -69,6 +69,11 @@ export default function Dashboard() {
   const [toDate, setToDate] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
   const [users, setUsers] = useState<DashboardUser[]>([]);
+  const trendChartContainerRef = useRef<HTMLDivElement>(null);
+  const [trendChartContainerWidth, setTrendChartContainerWidth] = useState(0);
+  const [isCompactDashboard, setIsCompactDashboard] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 820px)").matches
+  );
   const [ownershipUsernames, setOwnershipUsernames] = useState<Record<string, string>>({});
   const [typedGreeting, setTypedGreeting] = useState("");
   const [isTypingGreeting, setIsTypingGreeting] = useState(true);
@@ -228,6 +233,27 @@ export default function Dashboard() {
     return () => controller.abort();
   }, [fromDate, isAdmin, period, selectedUserId, toDate]);
 
+  useEffect(() => {
+    const container = trendChartContainerRef.current;
+    if (!container) return;
+
+    const compactViewport = window.matchMedia("(max-width: 820px)");
+    const updateChartSize = () => {
+      setTrendChartContainerWidth(Math.floor(container.getBoundingClientRect().width));
+      setIsCompactDashboard(compactViewport.matches);
+    };
+    const observer = new ResizeObserver(updateChartSize);
+
+    observer.observe(container);
+    compactViewport.addEventListener("change", updateChartSize);
+    updateChartSize();
+
+    return () => {
+      observer.disconnect();
+      compactViewport.removeEventListener("change", updateChartSize);
+    };
+  }, [d]);
+
   const open = d ? d.assistance.OPEN + d.tasks.OPEN : 0;
   const pending = d ? d.assistance.CLOSE_PENDING + d.tasks.CLOSE_PENDING : 0;
   const closed = d ? d.assistance.CLOSED + d.tasks.CLOSED : 0;
@@ -238,9 +264,14 @@ export default function Dashboard() {
   const showHistoricalValueLabels = showDailyLabels || period === "thisMonth" || period === "custom";
   const todayDate = new Date().toISOString().slice(0, 10);
   const peak = Math.max(1, ...trendData.flatMap((point: any) => [point.assistanceCount, point.taskCount]));
-  const chartWidth = Math.max(700, trendData.length * 56);
-  const chartLeft = 42;
-  const chartRight = chartWidth - 22;
+  const chartWidth = isCompactDashboard && trendChartContainerWidth > 0
+    ? trendChartContainerWidth
+    : Math.max(700, trendData.length * 56);
+  const chartLeft = isCompactDashboard ? 28 : 42;
+  const chartRight = chartWidth - (isCompactDashboard ? 14 : 22);
+  const compactLabelStride = isCompactDashboard
+    ? Math.max(1, Math.ceil(trendData.length / Math.max(1, Math.floor((chartRight - chartLeft) / 36))))
+    : 1;
   const chartTop = 20;
   const chartBottom = 166;
   const chartHeight = chartBottom - chartTop;
@@ -256,7 +287,9 @@ export default function Dashboard() {
     return {
       ...point,
       x,
-      showValueLabels: showHistoricalValueLabels ? point.date <= todayDate : point.highlighted,
+      showValueLabels: (showHistoricalValueLabels ? point.date <= todayDate : point.highlighted)
+        && (!isCompactDashboard || index % compactLabelStride === 0 || point.highlighted || index === trendData.length - 1),
+      showAxisLabel: !isCompactDashboard || index % compactLabelStride === 0 || index === trendData.length - 1,
       valueLabelX: trendData.length === 1 ? x : index === trendData.length - 1 ? x - 9 : x + 9,
       valueLabelAnchor: trendData.length === 1 ? "middle" : index === trendData.length - 1 ? "end" : "start",
       weekdayLabel: showDailyLabels
@@ -379,7 +412,7 @@ export default function Dashboard() {
       <div className={`dashboard-summaries${animateDashboardEntrance ? " dashboard-enter dashboard-enter-3" : ""}`}>
         <section className="dashboard-summary" aria-labelledby="activity-summary-title">
           <h3 id="activity-summary-title">Activity Summary</h3>
-          <div className="dashboard-kpis">
+          <div className="dashboard-kpis dashboard-kpis-activity">
             {card(total, "Total Records", "cb", Activity)}
             {card(d.assistance.total, "Technical Assistance", "cc", Wrench)}
             {card(d.tasks.total, "Other Tasks", "cy", ClipboardList)}
@@ -418,12 +451,12 @@ export default function Dashboard() {
         <section className={`panel dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-4" : ""}`}>
           <div className="panelhead"><div><h3>Activity trend</h3>
             <span className="muted">{d.trendSubtitle}</span></div></div>
-          <div style={{ overflowX: "auto" }}>
+          <div ref={trendChartContainerRef} style={{ overflowX: "auto" }}>
             <svg
               role="img"
               aria-label={`Activity trend: ${d.trendSubtitle}`}
               viewBox={`0 0 ${chartWidth} 230`}
-              style={{ display: "block", width: "100%", minWidth: `${chartWidth}px`, height: "230px" }}
+              style={{ display: "block", width: "100%", minWidth: isCompactDashboard ? 0 : `${chartWidth}px`, height: "230px" }}
             >
               {[0, 1, 2, 3].map((step) => {
                 const y = chartTop + (chartHeight * step) / 3;
@@ -453,10 +486,10 @@ export default function Dashboard() {
                     <text className="trend-value trend-value-assistance" x={point.valueLabelX} y={point.assistanceValueY} textAnchor={point.valueLabelAnchor}>{point.assistanceCount}</text>
                     <text className="trend-value trend-value-task" x={point.valueLabelX} y={point.taskValueY} textAnchor={point.valueLabelAnchor}>{point.taskCount}</text>
                   </>}
-                  {showDailyLabels ? <>
+                  {point.showAxisLabel && (showDailyLabels ? <>
                     <text className={point.highlighted ? "trend-label-pulse" : undefined} x={point.x} y="196" textAnchor="middle" fill={point.highlighted ? "var(--trend-highlight)" : "var(--muted)"} fontSize="11" fontWeight={point.highlighted ? 600 : 500}>{point.weekdayLabel}</text>
                     <text className={point.highlighted ? "trend-label-pulse" : undefined} x={point.x} y="212" textAnchor="middle" fill={point.highlighted ? "var(--trend-highlight)" : "var(--muted)"} fontSize="11" fontWeight={point.highlighted ? 600 : 500}>{point.dayLabel}</text>
-                  </> : <text x={point.x} y="204" textAnchor="middle" fill={point.highlighted ? "var(--trend-highlight)" : "var(--muted)"} fontSize="11" fontWeight={point.highlighted ? 600 : 500}>{point.label}</text>}
+                  </> : <text x={point.x} y="204" textAnchor="middle" fill={point.highlighted ? "var(--trend-highlight)" : "var(--muted)"} fontSize="11" fontWeight={point.highlighted ? 600 : 500}>{point.label}</text>)}
                 </g>
                 ))}
               </g>
