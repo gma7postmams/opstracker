@@ -27,7 +27,7 @@ Record visibility is applied to record queries through the shared record-visibil
 
 The admin page exposes the top-level enabled flag, service URL, text-improvement model and timeout, plus MACO enabled/model/temperature/search options. It also provides a connection/model check against the configured server. Settings are read from and written to `data/ai-settings.json` on the server filesystem. Saving settings causes the shared sidebar to re-read the saved configuration without requiring a new login.
 
-In the MACO route, `maco.searchRecords` controls record search, and the route uses `maco.model` and `maco.temperature`; the `showRelatedRecords` option is not consulted there. The AI settings and test API routes currently have no authentication or administrator-role check. Protect the settings file and service endpoint operationally, and do not treat the admin UI as the API authorization boundary.
+In the MACO route, `maco.searchRecords` controls record search, and the route uses `maco.model` and `maco.temperature`; the `showRelatedRecords` option is not consulted there. The shared settings API (`/api/admin/ai`) and connection/model test API (`/api/admin/ai/test`) require an authenticated administrator for every supported method. Settings saves are audit logged with structured previous/updated values for changed settings. AI URL audit values redact URL credentials and credential-like query parameters; API keys and passwords are not included in audit details. The text-improvement endpoint remains unauthenticated, while MACO chat requires an authenticated session.
 
 ## Data handling
 

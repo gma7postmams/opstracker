@@ -1,4 +1,10 @@
 ## 2026-10-23
+- Added Reference No and available record summary fields to record Audit Details summaries, with a Lock Status diff label; audit storage, APIs and diff table rendering are unchanged.
+- Standardized record update, status, endorsement, lock and unlock audit payloads as structured field diffs, retained record summary details for deletes, and excluded sensitive fields from record audit diffs.
+- Upgraded AI/MACO setting and user lifecycle audit events to structured previous/updated diffs shown in the Audit Details table; URL credentials are redacted and user audit details continue to exclude passwords, SMTP passwords, 2FA secrets and tokens.
+- Improved Audit Logs readability with friendly labels for changed fields and human-readable lists for array-valued changes; the details section is labeled Changes. Audit data and APIs are unchanged.
+- Added dedicated audit events for user creation, deletion, deactivation and role changes, recording actor, target and relevant role/status transitions without secrets.
+- Enforced authenticated administrator access for AI/MACO settings reads, writes and connection/model tests, and added audit events for enabled-state, model, URL and other settings changes without recording setting values or credentials.
 - Refined Dashboard Needs Attention titles for Technical Assistance to include the program and location after the requestor; Other Task titles, descriptions, ownership flows and queue behavior are unchanged.
 - Added assignment ownership flows to Dashboard Needs Attention, showing prior assignees and emphasizing the current assignee.
 - Placed ownership flows beneath each Needs Attention description with italic styling and a dash prefix; ownership history and current-owner emphasis are unchanged.

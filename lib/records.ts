@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { logAudit } from "./audit";
+import { logAudit, makeAuditChanges } from "./audit";
 import { RecordType, TYPES, SortKey } from "./recordTypes";
 import { SessionUser, canEdit } from "./permissions";
 
@@ -213,12 +213,7 @@ export async function batchUpdate(
         userId: user.id,
         details: {
           name: user.name,
-          previousStatus: previous.status,
-          nextStatus: updated.status,
-          previousEndDate: previous.endDate?.toISOString().slice(0, 10) ?? null,
-          previousTimeEnded: previous.timeEnded,
-          endDate: updated.endDate,
-          timeEnded: updated.timeEnded,
+          changes: makeAuditChanges(previous, updated, ["status", "endDate", "timeEnded"]),
         },
       })));
   } else {

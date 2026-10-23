@@ -33,6 +33,7 @@ The ordinary-user list visibility rule is based on owner role `USER` or matching
 - The last active administrator cannot be demoted or deleted.
 - Deleting a user sets operational record owner/lock references to null; records remain.
 - Usernames and emails are unique. User creation/update validates passwords with a minimum of eight characters.
+- User creation, deletion, deactivation and role changes are audit logged with the actor, target user and structured role/status transitions. Audit details do not contain passwords, SMTP passwords, 2FA secrets or tokens.
 
 Email 2FA setup and login codes are sent to the user's profile email through their saved Gmail SMTP credentials. The login challenge endpoint validates the submitted username and password before issuing a code. Codes are single-use and expire after 10 minutes; issuance is limited to five per user in a rolling 15-minute window. The initial login challenge bypasses the resend cooldown, while explicit resends are subject to a 60-second cooldown. The Audit Logs page supports the `2FA_ENABLED`, `2FA_DISABLED`, `2FA_CODE_SENT`, `2FA_SUCCESS` and `2FA_FAILURE` actions.
 
@@ -47,7 +48,6 @@ Email 2FA setup and login codes are sent to the user's profile email through the
 
 The following endpoints do not enforce the protections implied by their page location or names; document these as current implementation behavior, not as intended policy:
 
-- `/api/admin/ai` GET/PUT and `/api/admin/ai/test` do not check authentication or administrator role.
 - `/api/ai/improve` does not check authentication.
 - `/api/users/filter` does not check authentication.
 - `/api/dashboard` returns the five newest audit events without applying the current user's audit-log scope, although its record metrics are scoped by owner.

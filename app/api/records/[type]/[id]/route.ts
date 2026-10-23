@@ -1,4 +1,4 @@
-import { logAudit } from "@/lib/audit";
+import { logAudit, makeAuditChanges } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { isRecordType } from "@/lib/recordTypes";
@@ -74,15 +74,16 @@ const updated = await delegateFor(type).update({
   },
 });
 
-await logAudit({
-  action: body.locked ? "LOCK" : "UNLOCK",
-  entityType: type,
-  entityId: updated.refNo,
-  userId: user.id,
-  details: {
-    name: user.name,
-  },
-});
+const changes = makeAuditChanges(record, updated, ["locked"]);
+if (changes.length > 0) {
+  await logAudit({
+    action: body.locked ? "LOCK" : "UNLOCK",
+    entityType: type,
+    entityId: updated.refNo,
+    userId: user.id,
+    details: { name: user.name, changes },
+  });
+}
 
 return NextResponse.json(updated);
 
@@ -163,21 +164,18 @@ const updated = await delegateFor(type).update({
 
 const statusChanged = updated.status !== record.status;
 const assignmentChanged = updated.assigned !== record.assigned;
+const changes = makeAuditChanges(record, updated, [...editableFields]);
+const statusChanges = changes.filter(({ field }) =>
+  field === "status" || (statusChanged && (field === "endDate" || field === "timeEnded"))
+);
+const assignmentChanges = changes.filter(({ field }) => field === "assigned");
 if (statusChanged) {
   await logAudit({
     action: "STATUS_CHANGE",
     entityType: type,
     entityId: updated.refNo,
     userId: user.id,
-    details: {
-      name: user.name,
-      previousStatus: record.status,
-      nextStatus: updated.status,
-      previousEndDate: record.endDate?.toISOString().slice(0, 10) ?? null,
-      previousTimeEnded: record.timeEnded,
-      endDate: updated.endDate,
-      timeEnded: updated.timeEnded,
-    },
+    details: { name: user.name, changes: statusChanges },
   });
 }
 if (assignmentChanged) {
@@ -186,20 +184,20 @@ if (assignmentChanged) {
     entityType: type,
     entityId: updated.refNo,
     userId: user.id,
-    details: {
-      name: user.name,
-      previousAssigned: record.assigned,
-      assigned: updated.assigned,
-    },
+    details: { name: user.name, changes: assignmentChanges },
   });
 }
-if (!statusChanged && !assignmentChanged) {
+const updateChanges = changes.filter(({ field }) =>
+  field !== "status" && field !== "assigned" &&
+  !(statusChanged && (field === "endDate" || field === "timeEnded"))
+);
+if (updateChanges.length > 0) {
   await logAudit({
     action: "UPDATE",
     entityType: type,
     entityId: updated.refNo,
     userId: user.id,
-    details: { recordId: record.id, name: user.name },
+    details: { name: user.name, changes: updateChanges },
   });
 }
 
@@ -236,6 +234,11 @@ await logAudit({
   userId: user.id,
   details: {
     name: user.name,
+    referenceNo: record.refNo,
+    subject: type === "assistance" ? record.clientName : record.activityType,
+    description: type === "assistance" ? record.problem : record.description,
+    assignedTo: record.assigned,
+    recordType: type === "assistance" ? "Technical Assistance" : "Other Tasks",
   },
 });
 

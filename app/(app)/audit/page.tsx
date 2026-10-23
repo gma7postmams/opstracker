@@ -5,9 +5,19 @@ import { Activity, CalendarDays, Clock3, Download, Eye, FilePlus2, Search, Trash
 import { PERIOD_OPTIONS, type Period } from "@/lib/period";
 import { AUDIT_ACTIONS, AUDIT_ACTIONS_BY_CATEGORY, AUDIT_CATEGORIES, getAuditCategory, type AuditCategory } from "@/lib/auditCategories";
 
-function formatAuditValue(value: unknown) {
+function formatAuditValue(value: unknown): string {
   if (value === null || value === undefined || value === "") {
     return "No details recorded";
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => {
+      if (typeof item === "string") return `• ${formatAuditFieldLabel(item)}`;
+      if (item && typeof item === "object") {
+        return `• ${Object.entries(item).map(([key, entry]) => `${formatAuditFieldLabel(key)}: ${formatAuditValue(entry)}`).join(", ")}`;
+      }
+      return `• ${String(item)}`;
+    }).join("\n");
   }
 
   if (typeof value === "string") return value;
@@ -88,7 +98,23 @@ function getAuditStatusLabel(tone: string) {
   return labels[tone] ?? "Recorded";
 }
 
+const AUDIT_FIELD_LABELS: Record<string, string> = {
+  macoEnabled: "MACO Enabled",
+  searchRecords: "Search Records",
+  showRelatedRecords: "Show Related Records",
+  temperature: "Temperature",
+  defaultModel: "Default Model",
+  aiEnabled: "AI Assistance Enabled",
+  ollamaUrl: "Ollama URL",
+  aiModel: "AI Model",
+  role: "Role",
+  isActive: "Status",
+  locked: "Lock Status",
+};
+
 function formatAuditFieldLabel(value: string) {
+  if (AUDIT_FIELD_LABELS[value]) return AUDIT_FIELD_LABELS[value];
+
   return value
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .replace(/[_-]+/g, " ")
@@ -518,6 +544,22 @@ const deleteCount = filteredLogs.filter((log) =>
   const detailObject = details && typeof details === "object" && !Array.isArray(details)
     ? details
     : {};
+  const recordActions = ["CREATE", "UPDATE", "STATUS_CHANGE", "ENDORSED", "LOCK", "UNLOCK", "DELETE"];
+  const isRecordAuditEvent = recordActions.includes(String(selectedLog.action).toUpperCase()) &&
+    ["assistance", "tasks"].includes(String(selectedLog.entityType).toLowerCase());
+  const referenceNo = detailObject.referenceNo ?? detailObject.refNo ?? selectedLog.entityId;
+  const summaryMetadata = detailObject.metadata ?? detailObject.meta;
+  const summaryValues = {
+    ...(summaryMetadata && typeof summaryMetadata === "object" && !Array.isArray(summaryMetadata)
+      ? summaryMetadata
+      : {}),
+    ...detailObject,
+  };
+  const isAssistanceRecord = ["assistance", "technical assistance"].includes(
+    String(detailObject.recordType ?? selectedLog.entityType).toLowerCase()
+  );
+  const summaryKeys = ["referenceNo", "refNo", "recordType", "subject", "clientName", "showGroup", "location", "activityType"];
+  const omittedMetadataKeys = isRecordAuditEvent ? summaryKeys : [];
   const changeKeys = ["changes", "change", "diff", "before", "after"];
   const explicitChanges = detailObject.changes ?? detailObject.change ?? detailObject.diff;
   const changes = explicitChanges ?? (
@@ -525,7 +567,10 @@ const deleteCount = filteredLogs.filter((log) =>
       ? { before: detailObject.before, after: detailObject.after }
       : null
   );
-  const changeRows = Array.isArray(changes)
+  const changedFieldNames = Array.isArray(changes) && changes.every((change) => typeof change === "string")
+    ? changes as string[]
+    : [];
+  const changeRows = Array.isArray(changes) && changedFieldNames.length === 0
     ? changes.map((change, index) => ({
         field: change?.field ?? change?.key ?? change?.name ?? `Change ${index + 1}`,
         oldValue: change?.oldValue ?? change?.old ?? change?.before ?? change?.from,
@@ -564,19 +609,26 @@ const deleteCount = filteredLogs.filter((log) =>
     : [];
   const additionalMetadata = Object.fromEntries(
     Object.entries(detailObject).filter(([key]) =>
-      !["actor", "user", "name", "username", "metadata", "meta", ...changeKeys].includes(key)
+      !["actor", "user", "name", "username", "metadata", "meta", ...changeKeys, ...omittedMetadataKeys].includes(key)
     )
   );
   const explicitMetadata = detailObject.metadata ?? detailObject.meta;
+  const explicitMetadataValues = explicitMetadata && typeof explicitMetadata === "object" && !Array.isArray(explicitMetadata)
+    ? Object.fromEntries(Object.entries(explicitMetadata).filter(([key]) => !omittedMetadataKeys.includes(key)))
+    : null;
   const metadata = {
-    ...(explicitMetadata && typeof explicitMetadata === "object" && !Array.isArray(explicitMetadata)
-      ? explicitMetadata
+    ...(explicitMetadataValues
+      ? explicitMetadataValues
       : explicitMetadata !== undefined ? { value: explicitMetadata } : {}),
     ...additionalMetadata,
   };
   const userName = getAuditUserName(selectedLog);
   const displayValue = (value: unknown) =>
     value === null || value === undefined || value === "" ? "-" : formatAuditValue(value);
+  const displayChangeValue = (value: unknown) =>
+    typeof value === "boolean"
+      ? value ? "Enabled" : "Disabled"
+      : displayValue(value);
   const hasDetailValue = (value: unknown) => {
     if (value === null || value === undefined) return false;
     if (typeof value === "string") return value.trim().length > 0;
@@ -584,6 +636,19 @@ const deleteCount = filteredLogs.filter((log) =>
     if (typeof value === "object") return Object.keys(value).length > 0;
     return true;
   };
+  const getSummaryValue = (...keys: string[]) => keys
+    .map((key) => summaryValues[key])
+    .find(hasDetailValue);
+  const recordSummaryEntries = isRecordAuditEvent
+    ? (isAssistanceRecord
+        ? [
+            { label: "Client", value: getSummaryValue("clientName", "subject") },
+            { label: "Show / Group", value: getSummaryValue("showGroup") },
+            { label: "Location", value: getSummaryValue("location") },
+          ]
+        : [{ label: "Activity Type", value: getSummaryValue("activityType", "subject") }]
+      ).filter(({ value }) => hasDetailValue(value))
+    : [];
   const metadataEntries = Object.entries(metadata).filter(([, value]) => hasDetailValue(value));
   const hasRawDetails = details !== null && details !== undefined && details !== "" &&
     (typeof details !== "object" || Array.isArray(details)) && hasDetailValue(details);
@@ -638,35 +703,43 @@ const deleteCount = filteredLogs.filter((log) =>
           <div className="audit-dialog-summary-grid">
             <div><div className="audit-dialog-label">Event</div><div className="audit-dialog-value">{formatAuditAction(selectedLog.action)}</div></div>
             <div><div className="audit-dialog-label">Category</div><div className="audit-dialog-value">{selectedLog.entityType ? formatAuditAction(selectedLog.entityType) : "System"}</div></div>
+            {isRecordAuditEvent && hasDetailValue(referenceNo) && <div><div className="audit-dialog-label">Reference No</div><div className="audit-dialog-value">{displayValue(referenceNo)}</div></div>}
+            {recordSummaryEntries.map(({ label, value }) => <div key={label}><div className="audit-dialog-label">{label}</div><div className="audit-dialog-value">{displayValue(value)}</div></div>)}
             <div><div className="audit-dialog-label">User</div><div className="audit-dialog-value">{displayValue(userName)}</div></div>
             <div><div className="audit-dialog-label">Date &amp; Time</div><div className="audit-dialog-value audit-dialog-datetime"><Clock3 size={14} aria-hidden="true" />{timestamp}</div></div>
           </div>
         </section>
 
-        {changeRows.length > 0 && (
+        {(changeRows.length > 0 || changedFieldNames.length > 0) && (
           <section className="audit-dialog-section">
             <h3>Changes</h3>
-            <div className="audit-dialog-table-wrap">
-              <table className="table audit-dialog-table">
-                <thead>
-                  <tr><th>Field</th><th>Previous</th><th>Updated</th></tr>
-                </thead>
-                <tbody>
-                  {changeRows.map((change, index) => (
-                    <tr key={`${String(change.field)}-${index}`}>
-                      <td style={{ overflowWrap: "anywhere" }}>{displayValue(change.field)}</td>
-                      <td style={{ overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}>{displayValue(change.oldValue)}</td>
-                      <td style={{ overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}>{displayValue(change.newValue)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {changedFieldNames.length > 0 ? (
+              <ul className="audit-dialog-change-list">
+                {changedFieldNames.map((field) => <li key={field}>{formatAuditFieldLabel(field)}</li>)}
+              </ul>
+            ) : (
+              <div className="audit-dialog-table-wrap">
+                <table className="table audit-dialog-table">
+                  <thead>
+                    <tr><th>Field</th><th>Previous</th><th>Updated</th></tr>
+                  </thead>
+                  <tbody>
+                    {changeRows.map((change, index) => (
+                      <tr key={`${String(change.field)}-${index}`}>
+                        <td style={{ overflowWrap: "anywhere" }}>{formatAuditFieldLabel(String(change.field))}</td>
+                        <td style={{ overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}>{displayChangeValue(change.oldValue)}</td>
+                        <td style={{ overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}>{displayChangeValue(change.newValue)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
         )}
         {hasMetadata && (
           <section className="audit-dialog-section">
-            <h3>Additional details</h3>
+            <h3>Changes</h3>
             {metadataEntries.length > 0 ? (
               <div className="audit-dialog-metadata">
                 {metadataEntries.map(([key, value]) => (

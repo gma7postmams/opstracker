@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
+import { currentUser } from "@/lib/auth";
+import { isAdmin } from "@/lib/permissions";
 
 const SETTINGS_FILE = path.join(
   process.cwd(),
@@ -9,6 +11,10 @@ const SETTINGS_FILE = path.join(
 );
 
 export async function GET() {
+  const user = await currentUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isAdmin(user)) return NextResponse.json({ error: "Administrators only" }, { status: 403 });
+
   try {
     const settings = JSON.parse(
       await fs.readFile(

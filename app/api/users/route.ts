@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/permissions";
 import { userCreateSchema, flatten } from "@/lib/validation";
 import { fullName } from "@/lib/format";
+import { logAudit } from "@/lib/audit";
 
 const PUBLIC = {
   id: true,
@@ -88,6 +89,30 @@ const created = await prisma.user.create({
   },
   select: PUBLIC,
 });
+
+  await logAudit({
+    userId: user.id,
+    action: "USER_CREATED",
+    entityType: "User",
+    entityId: created.username,
+    details: {
+      actor: user.name,
+      targetUser: fullName(created),
+      targetUsername: created.username,
+      changes: [
+        {
+          field: "role",
+          oldValue: null,
+          newValue: created.role === "ADMIN" ? "Administrator" : "User",
+        },
+        {
+          field: "isActive",
+          oldValue: null,
+          newValue: created.active ? "Active" : "Inactive",
+        },
+      ],
+    },
+  });
 
   return NextResponse.json({ ...created, name: fullName(created) }, { status: 201 });
 }

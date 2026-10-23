@@ -148,6 +148,40 @@ if (changedFields.length > 0) {
   });
 }
 
+if (target.role !== updated.role) {
+  await logAudit({
+    userId: actor.id,
+    action: "USER_ROLE_CHANGED",
+    entityType: "User",
+    entityId: updated.username,
+    details: {
+      actor: actor.name,
+      targetUser: fullName(updated),
+      targetUsername: updated.username,
+      changes: [{
+        field: "role",
+        oldValue: target.role === "ADMIN" ? "Administrator" : "User",
+        newValue: updated.role === "ADMIN" ? "Administrator" : "User",
+      }],
+    },
+  });
+}
+
+if (target.active && !updated.active) {
+  await logAudit({
+    userId: actor.id,
+    action: "USER_DEACTIVATED",
+    entityType: "User",
+    entityId: updated.username,
+    details: {
+      actor: actor.name,
+      targetUser: fullName(updated),
+      targetUsername: updated.username,
+      changes: [{ field: "isActive", oldValue: "Active", newValue: "Inactive" }],
+    },
+  });
+}
+
   return NextResponse.json({ ...updated, name: fullName(updated) });
 }
 
@@ -176,5 +210,28 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   // to showing the stored owner as unknown rather than losing the row.
   await prisma.emailVerificationCode.deleteMany({ where: { userId: id } });
   await prisma.user.delete({ where: { id } });
+  await logAudit({
+    userId: actor.id,
+    action: "USER_DELETED",
+    entityType: "User",
+    entityId: target.username,
+    details: {
+      actor: actor.name,
+      targetUser: fullName(target),
+      targetUsername: target.username,
+      changes: [
+        {
+          field: "role",
+          oldValue: target.role === "ADMIN" ? "Administrator" : "User",
+          newValue: null,
+        },
+        {
+          field: "isActive",
+          oldValue: target.active ? "Active" : "Inactive",
+          newValue: "Deleted",
+        },
+      ],
+    },
+  });
   return NextResponse.json({ ok: true });
 }
