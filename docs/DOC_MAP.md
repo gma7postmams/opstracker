@@ -24,32 +24,6 @@ Update:
 - `FEATURES.md` when functionality changes
 - `CHANGELOG.md` for user-visible changes
 
-## AI Assistance
-
-Code:
-- `app/api/ai/**`
-- `components/RecordForm.tsx`
-- `data/ai-settings.json`
-
-Update:
-- `docs/ai.md`
-- `FEATURES.md` when functionality changes
-- `CHANGELOG.md` for user-visible changes
-
-## MACO
-
-Code:
-- `app/(app)/maco/**`
-- `app/api/maco/**`
-- `components/Shell.tsx`
-- `data/ai-settings.json`
-
-Update:
-- `docs/ai.md`
-- `docs/workflow.md`
-- `FEATURES.md` when functionality changes
-- `CHANGELOG.md` for user-visible changes
-
 ## Administration
 
 Code:

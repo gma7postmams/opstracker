@@ -99,14 +99,6 @@ function getAuditStatusLabel(tone: string) {
 }
 
 const AUDIT_FIELD_LABELS: Record<string, string> = {
-  macoEnabled: "MACO Enabled",
-  searchRecords: "Search Records",
-  showRelatedRecords: "Show Related Records",
-  temperature: "Temperature",
-  defaultModel: "Default Model",
-  aiEnabled: "AI Assistance Enabled",
-  ollamaUrl: "Ollama URL",
-  aiModel: "AI Model",
   role: "Role",
   isActive: "Status",
   locked: "Lock Status",

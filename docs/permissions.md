@@ -10,9 +10,6 @@ The shared `(app)` layout redirects unauthenticated visitors to `/login`. Middle
 
 | Capability | `USER` | `ADMIN` |
 |---|---|---|
-| Use AI text improvement and MACO chat | Yes | Yes |
-| View AI feature enabled flags | Yes | Yes |
-| Read or change AI/MACO settings and run connection tests | No | Yes |
 | View record lists | Records owned by a regular user, plus records assigned to the caller | All records |
 | View a record detail | Owner is a regular user or caller is assigned | All records |
 | Edit record content | Owner, or assigned user when unlocked; assigned users have a restricted field set | Any record, including locked records |
@@ -45,7 +42,7 @@ Email 2FA setup and login codes are sent to the user's profile email through the
 - `/api/branding` GET is intentionally public for sign-in rendering; writes require an administrator.
 - Any authenticated user can upload an avatar. Logo and favicon uploads require an administrator. Uploads are limited to 2 MB and allowed image MIME types, with server-generated filenames.
 - `/api/users` GET is available to authenticated users and returns the user directory. Audit list/export routes return all logs to administrators and only the caller's logs to regular users.
-- The report user filter is administrator-only. The feature-flags endpoint, AI text improvement, MACO chat and work-log APIs require a session; AI/MACO settings and connection tests require an administrator.
+- The report user filter is administrator-only. Work-log APIs require a session.
 
 ## Authorization gaps in the current code
 

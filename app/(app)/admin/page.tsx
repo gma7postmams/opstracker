@@ -8,45 +8,16 @@ import BackupPanel from "@/components/BackupPanel";
 import AdminImportPanel from "@/components/AdminImportPanel";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
-import { Activity, Bot, CheckCircle2, CircleAlert, Clock3, FlaskConical, HardDrive, Layers3, MapPin, Palette, Save, Server, Tags } from "lucide-react";
+import { Activity, Clock3, HardDrive, Layers3, MapPin, Palette, Save, Tags } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-type AISettings = {
-  enabled: boolean;
-  url: string;
-  model: string;
-  timeout: number;
-  maco: {
-    enabled: boolean;
-    model: string;
-    temperature: number;
-    searchRecords: boolean;
-    showRelatedRecords: boolean;
-  };
-};
-
-type AdminTab = "system" | "ai-maco" | "branding" | "backup";
+type AdminTab = "system" | "branding" | "backup";
 
 const ADMIN_TABS: { id: AdminTab; label: string }[] = [
   { id: "system", label: "System" },
-  { id: "ai-maco", label: "AI & MACO" },
   { id: "branding", label: "Branding" },
   { id: "backup", label: "Backup" },
 ];
-
-const DEFAULT_AI_SETTINGS: AISettings = {
-  enabled: true,
-  url: "http://172.30.10.76:11434",
-  model: "gpt-oss:20b",
-  timeout: 30000,
-  maco: {
-    enabled: true,
-    model: "qwen3:8b",
-    temperature: 0.2,
-    searchRecords: true,
-    showRelatedRecords: true,
-  },
-};
 
 type MasterdataKind = "LOCATION" | "SHIFT" | "SHOW_GROUP" | "CATEGORY" | "ACTIVITY_TYPE";
 
@@ -76,11 +47,6 @@ export default function Admin() {
   const [resetting, setResetting] = useState(false);
 
   const [saving, setSaving] = useState(false);
-  const [ai, setAi] = useState<AISettings>(DEFAULT_AI_SETTINGS);
-  const [models, setModels] = useState<string[]>([]);
-  const [testingAI, setTestingAI] = useState(false);
-  const [savingAI, setSavingAI] = useState(false);
-  const [aiConnection, setAiConnection] = useState<"unknown" | "connected" | "failed">("unknown");
 
   const loadMaster = useCallback(async () => {
     const d = await (await fetch("/api/masterdata")).json();
@@ -98,81 +64,7 @@ useEffect(() => {
     .then((data) => setB(data))
     .catch(() => toast("Could not load branding"));
 
-  fetch("/api/admin/ai")
-    .then((res) => res.json())
-    .then((data) => setAi({
-      enabled: data.enabled ?? DEFAULT_AI_SETTINGS.enabled,
-      url: data.url ?? DEFAULT_AI_SETTINGS.url,
-      model: data.model ?? DEFAULT_AI_SETTINGS.model,
-      timeout: data.timeout ?? DEFAULT_AI_SETTINGS.timeout,
-      maco: {
-        enabled: data.maco?.enabled ?? DEFAULT_AI_SETTINGS.maco.enabled,
-        model: data.maco?.model ?? DEFAULT_AI_SETTINGS.maco.model,
-        temperature: data.maco?.temperature ?? DEFAULT_AI_SETTINGS.maco.temperature,
-        searchRecords: data.maco?.searchRecords ?? DEFAULT_AI_SETTINGS.maco.searchRecords,
-        showRelatedRecords: data.maco?.showRelatedRecords ?? DEFAULT_AI_SETTINGS.maco.showRelatedRecords,
-      },
-    }))
-    .catch(() => toast("Could not load AI settings"));
-
-  fetch("/api/admin/ai/test")
-    .then((res) => res.json())
-    .then((data) => {
-      if (data.ok) {
-        setModels(data.models ?? []);
-        setAiConnection("connected");
-      } else {
-        setAiConnection("failed");
-      }
-    })
-    .catch(() => setAiConnection("failed"));
-
 }, [loadMaster]);
-
-  async function saveAI() {
-    setSavingAI(true);
-    try {
-      const res = await fetch("/api/admin/ai", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(ai),
-      });
-      if (!res.ok) {
-        toast("Unable to save AI settings");
-        return;
-      }
-      window.dispatchEvent(new Event("opstracker:ai-settings-saved"));
-      toast("AI settings saved");
-    } catch {
-      toast("Unable to save AI settings");
-    } finally {
-      setSavingAI(false);
-    }
-  }
-
-  async function testAI() {
-    setTestingAI(true);
-    try {
-      const res = await fetch("/api/admin/ai/test");
-      const data = await res.json();
-      if (!res.ok || !data.ok) {
-        setModels([]);
-        setAiConnection("failed");
-        toast("Connection failed");
-        return;
-      }
-      const availableModels = data.models ?? [];
-      setModels(availableModels);
-      setAiConnection("connected");
-      toast(`Connected. Found ${availableModels.length} models.`);
-    } catch {
-      setModels([]);
-      setAiConnection("failed");
-      toast("Connection failed");
-    } finally {
-      setTestingAI(false);
-    }
-  }
 
   async function saveBranding() {
     setSaving(true);
@@ -323,99 +215,6 @@ useEffect(() => {
         </div>}
       </section>}
 
-      {activeTab === "ai-maco" && <div className="grid even admin-ai-panels">
-        <section className="panel admin-ai-settings-panel">
-          <div className="panelhead">
-            <div className="admin-ai-heading">
-              <span className="admin-ai-icon"><Server size={17} /></span>
-              <div><h3>AI Settings</h3>
-                <span className="muted">Configure Ollama writing assistance</span></div>
-            </div>
-            <span className={`chip ${aiConnection === "connected" ? "ok" : aiConnection === "failed" ? "bad" : ""}`}>
-              {aiConnection === "connected" ? <CheckCircle2 size={13} /> : <CircleAlert size={13} />}
-              {aiConnection === "connected" ? `Connected · ${models.length} models` : aiConnection === "failed" ? "Disconnected" : "Not tested"}
-            </span>
-          </div>
-
-          <div className="admin-ai-grid">
-            <label className="admin-ai-toggle full">
-              <input type="checkbox" checked={ai.enabled}
-                onChange={(e) => setAi({ ...ai, enabled: e.target.checked })} />
-              <span><b>Enable AI Assistance</b><small>Allow AI-powered writing assistance in record forms.</small></span>
-            </label>
-            <label className="admin-ai-field full">Ollama URL
-              <input type="url" value={ai.url}
-                onChange={(e) => setAi({ ...ai, url: e.target.value })} />
-            </label>
-            <label className="admin-ai-field">Model
-              <select value={ai.model} onChange={(e) => setAi({ ...ai, model: e.target.value })}>
-                {[...new Set([ai.model, ...models])].filter(Boolean).map((model) => (
-                  <option key={model} value={model}>{model}</option>
-                ))}
-              </select>
-            </label>
-            <label className="admin-ai-field">Timeout (ms)
-              <input type="number" min="1" step="1000" value={ai.timeout}
-                onChange={(e) => setAi({ ...ai, timeout: Number(e.target.value) })} />
-            </label>
-            <div className="admin-ai-actions full">
-              <button className="secondary" onClick={testAI} disabled={testingAI}>
-                <FlaskConical size={15} />{testingAI ? "Testing..." : "Test Connection"}
-              </button>
-              <button className="primary" onClick={saveAI} disabled={savingAI}>
-                <Save size={15} />{savingAI ? "Saving..." : "Save AI Settings"}
-              </button>
-            </div>
-            <p className="admin-ai-note full">Connection tests use the saved Ollama URL. Save changes before testing a new URL.</p>
-          </div>
-        </section>
-
-        <section className="panel admin-maco-panel">
-          <div className="panelhead">
-            <div className="admin-ai-heading">
-              <span className="admin-ai-icon maco"><Bot size={17} /></span>
-              <div><h3>MACO Configuration</h3>
-                <span className="muted">MAMS Support Operations Tracker Copilot</span></div>
-            </div>
-          </div>
-
-          <div className="admin-ai-grid">
-            <label className="admin-ai-toggle full">
-              <input type="checkbox" checked={ai.maco.enabled}
-                onChange={(e) => setAi({ ...ai, maco: { ...ai.maco, enabled: e.target.checked } })} />
-              <span><b>Enable MACO</b><small>Make the support operations copilot available.</small></span>
-            </label>
-            <label className="admin-ai-field">Model
-              <select value={ai.maco.model}
-                onChange={(e) => setAi({ ...ai, maco: { ...ai.maco, model: e.target.value } })}>
-                {[...new Set([ai.maco.model, ...models])].filter(Boolean).map((model) => (
-                  <option key={model} value={model}>{model}</option>
-                ))}
-              </select>
-            </label>
-            <label className="admin-ai-field">Temperature
-              <input type="number" min="0" max="1" step="0.1" value={ai.maco.temperature}
-                onChange={(e) => setAi({ ...ai, maco: { ...ai.maco, temperature: Number(e.target.value) } })} />
-            </label>
-            <label className="admin-ai-toggle full">
-              <input type="checkbox" checked={ai.maco.searchRecords}
-                onChange={(e) => setAi({ ...ai, maco: { ...ai.maco, searchRecords: e.target.checked } })} />
-              <span><b>Search Records</b><small>Allow MACO to search assistance and task records.</small></span>
-            </label>
-            <label className="admin-ai-toggle full">
-              <input type="checkbox" checked={ai.maco.showRelatedRecords}
-                onChange={(e) => setAi({ ...ai, maco: { ...ai.maco, showRelatedRecords: e.target.checked } })} />
-              <span><b>Show Related Records</b><small>Include related records with MACO responses.</small></span>
-            </label>
-            <div className="admin-ai-actions full">
-              <button className="primary" onClick={saveAI} disabled={savingAI}>
-                <Save size={15} />{savingAI ? "Saving..." : "Save MACO Settings"}
-              </button>
-            </div>
-          </div>
-        </section>
-      </div>}
-
       {activeTab === "backup" && <section className="admin-section admin-backup">
         <div className="admin-backup-card">
           <div className="panelhead">
@@ -448,8 +247,6 @@ useEffect(() => {
         .admin-section { display: grid; gap: 12px; min-width: 0; }
         .admin-system .panel { border-top: 3px solid var(--card-g-fg); }
         .admin-branding-panel { border-top: 3px solid var(--card-o-fg); }
-        .admin-ai-settings-panel { border-top: 3px solid var(--card-b-fg); }
-        .admin-maco-panel { border-top: 3px solid var(--card-c-fg); }
         .admin-backup-card { padding: 19px; border: 1px solid var(--line); border-top: 3px solid var(--card-y-fg); border-radius: 14px; background: var(--panel); box-shadow: var(--shadow); }
         .system-masterdata-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 14px; }
         .system-tile { display: grid; align-content: start; gap: 12px; min-width: 0; border: 1px solid var(--line); transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease; }
@@ -466,13 +263,8 @@ useEffect(() => {
         .admin-section-title { display: grid; gap: 3px; padding: 2px 1px; }
         .admin-section-title h2 { margin: 0; color: var(--text); font-size: 16px; font-weight: 700; }
         .admin-section-title > span { font-size: 12px; }
-        .admin-ai-panels { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 14px; }
-        .admin-ai-panels > .panel { min-width: 0; }
         .admin-ai-heading { display: flex; align-items: center; gap: 10px; min-width: 0; }
         .admin-ai-icon { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 9px; color: var(--accent); background: var(--pill-blue-bg); }
-        .admin-ai-icon.maco { color: var(--card-c-fg); background: var(--card-c-bg); }
-        .admin-ai-panels .panelhead { align-items: flex-start; }
-        .admin-ai-panels .chip { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
         .admin-ai-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
         .admin-ai-grid .full { grid-column: 1 / -1; }
         .admin-ai-field { display: grid; align-content: start; gap: 6px; min-width: 0; color: var(--muted); font-size: 11px; font-weight: 700; }
@@ -490,14 +282,12 @@ useEffect(() => {
         .admin-page .form label > input:focus, .admin-page .addrow input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
         @media (max-width: 720px) {
           .admin-page { gap: 14px; }
-          .admin-page .grid.even, .admin-ai-panels { grid-template-columns: minmax(0, 1fr); }
+          .admin-page .grid.even { grid-template-columns: minmax(0, 1fr); }
         }
         @media (max-width: 900px) {
           .system-masterdata-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-          .admin-ai-panels { grid-template-columns: minmax(0, 1fr); }
         }
         @media (max-width: 560px) { .system-masterdata-grid { grid-template-columns: minmax(0, 1fr); } }
-        @media (max-width: 560px) { .admin-ai-grid { grid-template-columns: minmax(0, 1fr); } .admin-ai-grid .full { grid-column: auto; } }
       `}</style>
     </div>
   );

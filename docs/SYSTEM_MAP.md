@@ -237,60 +237,9 @@ Documentation Files:
 - `docs/workflow.md`
 - `docs/architecture.md`
 
-## AI Assistance
-
-Purpose: Improve record text using the configured AI service when the feature is enabled.
-
-UI Files:
-- `components/RecordForm.tsx`
-
-API Files:
-- `app/api/ai/improve/route.ts`
-- `app/api/admin/ai/route.ts`
-- `app/api/admin/ai/test/route.ts`
-
-Business Logic:
-- `lib/validation.ts`
-
-Database Tables:
-- No dedicated AI-assistance table; feature settings are stored in a JSON file.
-
-Configuration Files:
-- `data/ai-settings.json`
-
-Documentation Files:
-- `docs/ai.md`
-- `docs/workflow.md`
-
-## MACO
-
-Purpose: Provide the in-app conversational AI assistant.
-
-UI Files:
-- `app/(app)/maco/page.tsx`
-- `components/Shell.tsx` for application navigation
-
-API Files:
-- `app/api/maco/chat/route.ts`
-- `app/api/admin/ai/route.ts`
-- `app/api/admin/ai/test/route.ts`
-
-Business Logic:
-- `data/ai-settings.json` controls the shared AI service and MACO feature settings.
-
-Database Tables:
-- No dedicated MACO table; settings are stored in a JSON file.
-
-Configuration Files:
-- `data/ai-settings.json`
-
-Documentation Files:
-- `docs/ai.md`
-- `docs/workflow.md`
-
 ## Administration
 
-Purpose: Configure master data and AI features, import records, and back up or restore application data.
+Purpose: Configure master data, import records, and back up or restore application data.
 
 UI Files:
 - `app/(app)/admin/page.tsx`
@@ -299,8 +248,6 @@ UI Files:
 - `components/ImportDialog.tsx`
 
 API Files:
-- `app/api/admin/ai/route.ts`
-- `app/api/admin/ai/test/route.ts`
 - `app/api/masterdata/route.ts`
 - `app/api/masterdata/[id]/route.ts`
 - `app/api/import/route.ts`
@@ -323,7 +270,6 @@ Database Tables:
 - `branding`
 
 Configuration Files:
-- `data/ai-settings.json`
 - `prisma/schema.prisma`
 
 Documentation Files:

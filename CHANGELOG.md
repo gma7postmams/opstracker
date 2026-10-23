@@ -1,4 +1,5 @@
 ## 2026-10-23
+- Removed AI text improvement, MACO chat, AI/MACO administration settings, feature flags and their API endpoints. Email 2FA, login improvements, audit enhancements, record workflows, reports and email reporting are unchanged.
 - Enabled authenticated standard-user access to AI text improvement and MACO chat through a feature-flags endpoint that exposes no AI service configuration. AI text improvement now rejects anonymous requests; AI/MACO settings and connection tests remain administrator-only.
 - Updated the 2FA verification greeting to use the validated account first name, then display name, then username; the pre-session request returns these display fields only after successful credential validation. Session structure and authentication/2FA behavior are unchanged.
 - Refined sign-in greetings and slowed the cross-slide between the hero and authentication panels to 550 ms with ease-in-out timing after the existing credential progress animation; verification controls focus the first code field after the transition. Reduced-motion preferences are respected, and authentication, API and 2FA behavior are unchanged.

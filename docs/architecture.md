@@ -12,10 +12,9 @@ The principal pages are:
 | `/assistance` | Technical Assistance records |
 | `/tasks` | Other Task records |
 | `/records/[type]/[id]` | Shared detail route for either record type |
-| `/maco` | MACO chat interface |
 | `/reports` | Summary/tally reports, export and email preview |
 | `/users` | User directory and administrator account management |
-| `/admin` | Master data, imports, branding, AI settings and backup/restore |
+| `/admin` | Master data, imports, branding and backup/restore |
 | `/audit` | Audit log search and export |
 | `/profile` | Current user's profile and email settings |
 
@@ -42,11 +41,9 @@ Important shared modules:
 ## External and filesystem dependencies
 
 - PostgreSQL stores users, records, master data, settings, counters, audit events and work logs.
-- `data/ai-settings.json` stores the AI service URL, model and feature options.
-- AI requests use an Ollama-compatible HTTP API.
 - Nodemailer sends reports and Email 2FA codes through each user's saved Gmail SMTP configuration. Email 2FA is verified before the credentials provider returns a user to NextAuth for JWT session creation.
 - Uploaded images are written to `public/uploads`; the import workbook template is served from `public/templates/`.
 
 ## API areas
 
-The route handlers cover authentication and Email 2FA, dashboard, records and work logs, reports and Excel/email output, users/profile, master data, branding, upload, import, backup/restore, audit, AI text improvement and MACO chat. Authorization is enforced route-by-route; see [permissions.md](permissions.md) for implementation boundaries and known exceptions.
+The route handlers cover authentication and Email 2FA, dashboard, records and work logs, reports and Excel/email output, users/profile, master data, branding, upload, import, backup/restore and audit. Authorization is enforced route-by-route; see [permissions.md](permissions.md) for implementation boundaries and known exceptions.
