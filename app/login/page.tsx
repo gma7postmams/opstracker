@@ -68,6 +68,8 @@ export default function Login() {
   const [progressMode, setProgressMode] = useState<"credentials" | "verification" | null>(null);
   const [progressStage, setProgressStage] = useState(0);
   const [requires2fa, setRequires2fa] = useState(false);
+  const [verificationFirstName, setVerificationFirstName] = useState("");
+  const [verificationDisplayName, setVerificationDisplayName] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [resendCountdown, setResendCountdown] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
@@ -165,6 +167,8 @@ export default function Login() {
       }
       if (challengeResult.requires2fa) {
         await finishProgress(startedAt, true);
+        setVerificationFirstName(typeof challengeResult.firstName === "string" ? challengeResult.firstName : "");
+        setVerificationDisplayName(typeof challengeResult.displayName === "string" ? challengeResult.displayName : "");
         setResendCountdown(typeof challengeResult.retryAfterSeconds === "number" ? challengeResult.retryAfterSeconds : 60);
         setRequires2fa(true);
         setProgressMode(null);
@@ -320,7 +324,7 @@ export default function Login() {
     ? <img className={cls} src={b.logoUrl} alt="" style={{ width: size, height: size }} />
     : <div className={cls}>{b.title.slice(0, 2).toUpperCase()}</div>;
   const enteredName = f.username.trim();
-  const greetingName = enteredName.split(/\s+/)[0] || enteredName;
+  const greetingName = verificationFirstName || verificationDisplayName || enteredName;
   return (
     <MotionConfig reducedMotion="user">
     <div className="loginscreen">

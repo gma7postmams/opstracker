@@ -1,5 +1,6 @@
 ## 2026-10-23
 - Enabled authenticated standard-user access to AI text improvement and MACO chat through a feature-flags endpoint that exposes no AI service configuration. AI text improvement now rejects anonymous requests; AI/MACO settings and connection tests remain administrator-only.
+- Updated the 2FA verification greeting to use the validated account first name, then display name, then username; the pre-session request returns these display fields only after successful credential validation. Session structure and authentication/2FA behavior are unchanged.
 - Refined sign-in greetings and slowed the cross-slide between the hero and authentication panels to 550 ms with ease-in-out timing after the existing credential progress animation; verification controls focus the first code field after the transition. Reduced-motion preferences are respected, and authentication, API and 2FA behavior are unchanged.
 - Changed Dashboard Activity Summary cards to a two-column mobile layout and kept labels intact at word boundaries; desktop layout and card styling are unchanged.
 - Made the Dashboard Activity Trend fit mobile containers without horizontal scrolling while preserving desktop chart sizing and interactions.
