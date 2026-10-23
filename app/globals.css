@@ -228,6 +228,19 @@ header{min-height:84px;background:var(--panel);border-bottom:1px solid var(--lin
 .issue b{font-size:12px}
 .issue b a{color:#1570ef;text-decoration:none}
 .issue small{display:block;color:var(--muted);margin-top:3px}
+.attention-item{padding:13px 9px;border-radius:8px;transition:background-color 160ms ease}
+.attention-item:hover{background:var(--hint-bg)}
+.attention-meta{display:flex;align-items:center;gap:7px}
+.attention-status{font-size:10px;font-weight:700;border-radius:20px;padding:4px 8px}
+.attention-status-open{background:var(--badge-open-bg);color:var(--open)}
+.attention-status-pending{background:var(--badge-pending-bg);color:var(--pending)}
+.attention-age{font-size:11px;font-weight:600;color:var(--text)}
+.attention-meta .pill{float:none;margin:0 0 0 auto}
+.attention-item b{display:block;margin-top:8px}
+.attention-subject{color:var(--text);font-weight:600;margin-left:7px}
+.ownership-flow{display:flex;min-width:0;align-items:baseline;gap:4px;margin-top:7px;overflow:hidden;white-space:nowrap;font-size:11px;font-style:italic}
+.ownership-flow-history{min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-weight:500}
+.ownership-flow-current{flex:0 1 auto;min-width:0;max-width:55%;overflow:hidden;text-overflow:ellipsis;color:var(--accent);font-weight:700}
 .pill{font-size:10px;font-weight:700;border-radius:20px;padding:4px 7px;float:right;margin-left:8px}
 .red{background:var(--pill-red-bg);color:var(--open)}.amber{background:var(--pill-amber-bg);color:var(--pending)}
 .green{background:var(--pill-green-bg);color:var(--closed)}.blue{background:var(--pill-blue-bg);color:var(--accent)}

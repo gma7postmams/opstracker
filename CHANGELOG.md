@@ -1,3 +1,9 @@
+## 2026-10-23
+- Added assignment ownership flows to Dashboard Needs Attention, showing prior assignees and emphasizing the current assignee.
+- Placed ownership flows beneath each Needs Attention description with italic styling and a dash prefix; ownership history and current-owner emphasis are unchanged.
+- Ownership flow labels use usernames to keep the Needs Attention chain compact; ownership history and current-owner emphasis are unchanged.
+- Updated Dashboard Needs Attention to show Open and Close Pending records across all dates, ordered oldest first with an age label. Dashboard period filtering for metrics, categories and activity trends is unchanged.
+
 ## 2026-10-22
 - Refined Audit Logs filters so Action choices are limited to the selected Category and changing Category resets Action to All Actions. Search, period filtering, pagination, export and the Audit API are unchanged.
 - Added an Audit Logs Category filter beside Action for Authentication, User Management, Administration, Reports, Technical Assistance, Other Tasks and System events. Category combines with search/action filtering and is also applied to Excel exports; period filtering and pagination remain unchanged.

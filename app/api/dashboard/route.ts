@@ -196,11 +196,14 @@ export async function GET(request: Request) {
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
 
-  const recordWhere = {
-    ...(range ? { startDate: { gte: range.start, lt: range.end } } : {}),
+  const ownerWhere = {
     ...(user.role === "ADMIN"
       ? filterUserId === null ? {} : { ownerId: filterUserId }
       : { ownerId: user.id }),
+  };
+  const recordWhere = {
+    ...(range ? { startDate: { gte: range.start, lt: range.end } } : {}),
+    ...ownerWhere,
   };
 
   const trendConfig = buildTrendConfig(period, new Date(), range);
@@ -211,7 +214,7 @@ export async function GET(request: Request) {
       : { ownerId: user.id }),
   };
 
-  const [aStatus, tStatus, aTotal, tTotal, cats, aRecent, tRecent, aTrend, tTrend, aOverdue, tOverdue, auditLogs,] = await Promise.all([
+  const [aStatus, tStatus, aTotal, tTotal, cats, aAttention, tAttention, aTrend, tTrend, aOverdue, tOverdue, auditLogs,] = await Promise.all([
 
     prisma.assistance.groupBy({by: ["status"], _count: true, where: recordWhere,}),
     prisma.task.groupBy({by: ["status"], _count: true, where: recordWhere,}),
@@ -221,22 +224,16 @@ export async function GET(request: Request) {
     prisma.assistance.groupBy({ by: ["category"], where: recordWhere, _count: true, orderBy: { _count: { category: "desc",},},}),
 
     prisma.assistance.findMany({
-      where: {
-        ...recordWhere,
-        status: { not: "CLOSED" },
-      },
-      orderBy: [{ priority: "desc" }, { startDate: "desc" }],
-      take: 6,
-      select: { id: true, refNo: true, clientName: true, problem: true, priority: true, status: true },
+      where: { ...ownerWhere, status: { in: ["OPEN", "CLOSE_PENDING"] } },
+      orderBy: { startDate: "asc" },
+      take: 8,
+      select: { id: true, refNo: true, clientName: true, problem: true, assigned: true, priority: true, status: true, startDate: true },
     }),
     prisma.task.findMany({
-      where: {
-        ...recordWhere,
-        status: { not: "CLOSED" },
-      },
-      orderBy: [{ priority: "desc" }, { startDate: "desc" }],
-      take: 6,
-      select: { id: true, refNo: true, activityType: true, description: true, priority: true, status: true },
+      where: { ...ownerWhere, status: { in: ["OPEN", "CLOSE_PENDING"] } },
+      orderBy: { startDate: "asc" },
+      take: 8,
+      select: { id: true, refNo: true, activityType: true, description: true, assigned: true, priority: true, status: true, startDate: true },
     }),
     prisma.assistance.groupBy({ by: ["startDate"], _count: true, where: trendWhere }),
     prisma.task.groupBy({ by: ["startDate"], _count: true, where: trendWhere }),
@@ -263,6 +260,43 @@ prisma.auditLog.findMany({
 }),
 
   ]);
+
+  const attentionRecords = [
+    ...aAttention.map((record) => ({ ...record, type: "assistance" })),
+    ...tAttention.map((record) => ({ ...record, type: "tasks" })),
+  ];
+  const attentionHistory = attentionRecords.length
+    ? await prisma.auditLog.findMany({
+      where: {
+        entityId: { in: attentionRecords.map((record) => record.refNo) },
+        entityType: { in: ["assistance", "tasks"] },
+        action: { in: ["CREATE", "ENDORSED", "ASSIGNMENT_CHANGE"] },
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      select: { entityType: true, entityId: true, action: true, details: true },
+    })
+    : [];
+  const ownershipByRecord = new Map<string, string[]>();
+  const appendOwner = (owners: string[], value: unknown) => {
+    if (typeof value !== "string") return;
+    const owner = value.trim();
+    if (owner && owners[owners.length - 1] !== owner) owners.push(owner);
+  };
+  for (const event of attentionHistory) {
+    if (!event.entityId) continue;
+    const key = `${event.entityType}:${event.entityId}`;
+    const owners = ownershipByRecord.get(key) ?? [];
+    const details = event.details && typeof event.details === "object" && !Array.isArray(event.details)
+      ? event.details as Record<string, unknown>
+      : {};
+    if (event.action === "CREATE") {
+      appendOwner(owners, details.assigned);
+    } else {
+      appendOwner(owners, details.previousAssigned);
+      appendOwner(owners, details.assigned);
+    }
+    ownershipByRecord.set(key, owners);
+  }
 
   const getTrendCounts = (rows: { startDate: Date; _count: number }[]) => {
     const counts = new Map<string, number>();
@@ -304,9 +338,20 @@ prisma.auditLog.findMany({
 
 
   const attention = [
-    ...aRecent.map((r) => ({ ...r, type: "assistance", subject: r.clientName, body: r.problem })),
-    ...tRecent.map((r) => ({ ...r, type: "tasks", subject: r.activityType, body: r.description })),
-  ].slice(0, 8);
+    ...aAttention.map((r) => ({ ...r, type: "assistance", subject: r.clientName, body: r.problem })),
+    ...tAttention.map((r) => ({ ...r, type: "tasks", subject: r.activityType, body: r.description })),
+  ]
+    .sort((left, right) => left.startDate.getTime() - right.startDate.getTime())
+    .slice(0, 8)
+    .map((record) => {
+      const ownershipFlow = ownershipByRecord.get(`${record.type}:${record.refNo}`) ?? [];
+      appendOwner(ownershipFlow, record.assigned);
+      return {
+        ...record,
+        ownershipFlow,
+        ageDays: Math.max(0, Math.floor((today.getTime() - new Date(`${ymd(record.startDate)}T00:00:00.000Z`).getTime()) / 86400000)),
+      };
+    });
 
 console.log("Audit Logs Found:", auditLogs.length);
 

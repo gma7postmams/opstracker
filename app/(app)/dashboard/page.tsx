@@ -69,6 +69,7 @@ export default function Dashboard() {
   const [toDate, setToDate] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
   const [users, setUsers] = useState<DashboardUser[]>([]);
+  const [ownershipUsernames, setOwnershipUsernames] = useState<Record<string, string>>({});
   const [typedGreeting, setTypedGreeting] = useState("");
   const [isTypingGreeting, setIsTypingGreeting] = useState(true);
   const [quoteIndex, setQuoteIndex] = useState(() => new Date().getDate() % QUOTES.length);
@@ -171,6 +172,27 @@ export default function Dashboard() {
 
     return () => controller.abort();
   }, [isAdmin]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/users", { signal: controller.signal })
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`User API failed: ${r.status}`);
+        return r.json();
+      })
+      .then((result: { name?: string; username?: string }[]) => {
+        setOwnershipUsernames(Object.fromEntries(
+          result
+            .filter((user) => user.name && user.username)
+            .map((user) => [user.name!.trim().toLowerCase(), user.username!])
+        ));
+      })
+      .catch((err) => {
+        if (!controller.signal.aborted) console.error("Ownership username load failed:", err);
+      });
+
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -448,16 +470,32 @@ export default function Dashboard() {
 
         <section className={`panel dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-5" : ""}`}>
           <div className="panelhead"><div><h3>Needs attention</h3>
-            <span className="muted">Open and close-pending records</span></div></div>
-          {d.attention.length ? d.attention.map((r: any) => (
-            <div className="issue" key={r.type + r.id}>
-              <span className={`pill ${r.priority === "CRITICAL" || r.priority === "HIGH" ? "red" : r.priority === "LOW" ? "blue" : "amber"}`}>
-                {priorityLabel(r.priority)}
-              </span>
-              <b><Link href={`/records/${r.type}/${r.id}`}>{r.refNo}</Link></b>
+            <span className="muted">All open and close-pending records</span></div></div>
+          {d.attention.length ? d.attention.map((r: any) => {
+            const ownershipFlow = r.ownershipFlow.map((owner: string) =>
+              ownershipUsernames[owner.trim().toLowerCase()] ?? "Unknown"
+            );
+            return (
+            <div className="issue attention-item" key={r.type + r.id}>
+              <div className="attention-meta">
+                <span className={`attention-status ${r.status === "OPEN" ? "attention-status-open" : "attention-status-pending"}`}>
+                  {r.status === "OPEN" ? "Open" : "Close Pending"}
+                </span>
+                <span className="attention-age">{r.ageDays} {r.ageDays === 1 ? "day" : "days"} old</span>
+                <span className={`pill ${r.priority === "CRITICAL" || r.priority === "HIGH" ? "red" : r.priority === "LOW" ? "blue" : "amber"}`}>
+                  {priorityLabel(r.priority)}
+                </span>
+              </div>
+              <b><Link href={`/records/${r.type}/${r.id}`}>{r.refNo}</Link><span className="attention-subject">{r.subject}</span></b>
               <small>{r.body}</small>
+              <div className="ownership-flow" title={ownershipFlow.join(" → ")} aria-label={`Ownership: ${ownershipFlow.join(" to ")}`}>
+                {ownershipFlow.length > 0 && <span aria-hidden="true">- </span>}
+                {ownershipFlow.length > 1 && <span className="ownership-flow-history">{ownershipFlow.slice(0, -1).join(" → ")} →</span>}
+                {ownershipFlow.length > 0 && <strong className="ownership-flow-current">{ownershipFlow[ownershipFlow.length - 1]}</strong>}
+              </div>
             </div>
-          )) : <div className="empty"><b>Nothing open</b>Every record is closed.</div>}
+            );
+          }) : <div className="empty"><b>Nothing open</b>Every record is closed.</div>}
         </section>
       </div>
 
