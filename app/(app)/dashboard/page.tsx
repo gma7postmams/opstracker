@@ -482,6 +482,7 @@ export default function Dashboard() {
                   {r.status === "OPEN" ? "Open" : "Close Pending"}
                 </span>
                 <span className="attention-age">{r.ageDays} {r.ageDays === 1 ? "day" : "days"} old</span>
+                {r.locked && <span className="pill blue">Locked</span>}
                 <span className={`pill ${r.priority === "CRITICAL" || r.priority === "HIGH" ? "red" : r.priority === "LOW" ? "blue" : "amber"}`}>
                   {priorityLabel(r.priority)}
                 </span>

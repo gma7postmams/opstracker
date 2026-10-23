@@ -197,7 +197,10 @@ if (!historyEvents.some((event: any) => event.title === "Reported")) {
                 {isAssistance ? "Technical Assistance" : "Other Task"} · entered by {ownerName}
                 {r.createdAt ? ` · created ${displayDate(new Date(r.createdAt))}` : ""}
               </span></div>
-            <StatusBadge status={r.status} />
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <StatusBadge status={r.status} />
+              {r.locked && <span className="pill blue">Locked</span>}
+            </div>
           </div>
 
           <div className="detail">

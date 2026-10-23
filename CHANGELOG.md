@@ -1,4 +1,5 @@
 ## 2026-10-23
+- Added lock-status badges to Dashboard Needs Attention and record detail headers; lock and unlock behavior is unchanged.
 - Added Reference No and available record summary fields to record Audit Details summaries, with a Lock Status diff label; audit storage, APIs and diff table rendering are unchanged.
 - Standardized record update, status, endorsement, lock and unlock audit payloads as structured field diffs, retained record summary details for deletes, and excluded sensitive fields from record audit diffs.
 - Upgraded AI/MACO setting and user lifecycle audit events to structured previous/updated diffs shown in the Audit Details table; URL credentials are redacted and user audit details continue to exclude passwords, SMTP passwords, 2FA secrets and tokens.
