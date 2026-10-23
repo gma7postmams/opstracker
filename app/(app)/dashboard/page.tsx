@@ -486,7 +486,7 @@ export default function Dashboard() {
                   {priorityLabel(r.priority)}
                 </span>
               </div>
-              <b><Link href={`/records/${r.type}/${r.id}`}>{r.refNo}</Link><span className="attention-subject">{r.subject}</span></b>
+              <b><Link href={`/records/${r.type}/${r.id}`}>{r.refNo}</Link><span className="attention-subject">{r.subject}{r.type === "assistance" && <> / {r.showGroup || "No group"} / {r.location}</>}</span></b>
               <small>{r.body}</small>
               <div className="ownership-flow" title={ownershipFlow.join(" → ")} aria-label={`Ownership: ${ownershipFlow.join(" to ")}`}>
                 {ownershipFlow.length > 0 && <span aria-hidden="true">- </span>}

@@ -1,4 +1,5 @@
 ## 2026-10-23
+- Refined Dashboard Needs Attention titles for Technical Assistance to include the program and location after the requestor; Other Task titles, descriptions, ownership flows and queue behavior are unchanged.
 - Added assignment ownership flows to Dashboard Needs Attention, showing prior assignees and emphasizing the current assignee.
 - Placed ownership flows beneath each Needs Attention description with italic styling and a dash prefix; ownership history and current-owner emphasis are unchanged.
 - Ownership flow labels use usernames to keep the Needs Attention chain compact; ownership history and current-owner emphasis are unchanged.

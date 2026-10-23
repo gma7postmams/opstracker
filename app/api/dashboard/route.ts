@@ -227,7 +227,7 @@ export async function GET(request: Request) {
       where: { ...ownerWhere, status: { in: ["OPEN", "CLOSE_PENDING"] } },
       orderBy: { startDate: "asc" },
       take: 8,
-      select: { id: true, refNo: true, clientName: true, problem: true, assigned: true, priority: true, status: true, startDate: true },
+      select: { id: true, refNo: true, clientName: true, showGroup: true, location: true, problem: true, assigned: true, priority: true, status: true, startDate: true },
     }),
     prisma.task.findMany({
       where: { ...ownerWhere, status: { in: ["OPEN", "CLOSE_PENDING"] } },

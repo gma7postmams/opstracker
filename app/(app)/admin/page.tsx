@@ -466,7 +466,7 @@ useEffect(() => {
         .admin-section-title { display: grid; gap: 3px; padding: 2px 1px; }
         .admin-section-title h2 { margin: 0; color: var(--text); font-size: 16px; font-weight: 700; }
         .admin-section-title > span { font-size: 12px; }
-        .admin-ai-panels { grid-template-columns: minmax(0, 1fr); align-items: stretch; max-width: 960px; }
+        .admin-ai-panels { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 14px; }
         .admin-ai-panels > .panel { min-width: 0; }
         .admin-ai-heading { display: flex; align-items: center; gap: 10px; min-width: 0; }
         .admin-ai-icon { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 9px; color: var(--accent); background: var(--pill-blue-bg); }
@@ -492,7 +492,10 @@ useEffect(() => {
           .admin-page { gap: 14px; }
           .admin-page .grid.even, .admin-ai-panels { grid-template-columns: minmax(0, 1fr); }
         }
-        @media (max-width: 900px) { .system-masterdata-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 900px) {
+          .system-masterdata-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .admin-ai-panels { grid-template-columns: minmax(0, 1fr); }
+        }
         @media (max-width: 560px) { .system-masterdata-grid { grid-template-columns: minmax(0, 1fr); } }
         @media (max-width: 560px) { .admin-ai-grid { grid-template-columns: minmax(0, 1fr); } .admin-ai-grid .full { grid-column: auto; } }
       `}</style>
