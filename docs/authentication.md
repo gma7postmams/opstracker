@@ -48,7 +48,7 @@ Users manage Email 2FA in Account Settings. Enabling it requires requesting and 
 
 ## Login User Experience
 
-Credential submission displays staged progress: 35% “Checking Credentials,” 75% “Validating Username,” and 100% “Credentials Verified.” When 2FA is required, the user sees six separate digit inputs, a resend countdown, and automatic submission after the sixth digit. Invalid codes clear the inputs and return focus to the first input.
+The credentials screen greets users with “Hello there” and “Sign in to access OpsTracker.” Credential submission displays staged progress: 35% “Checking Credentials,” 75% “Validating Username,” and 100% “Credentials Verified.” After a successful 2FA challenge and completion of the existing progress animation, the hero and authentication panels exchange sides over 550 ms with ease-in-out timing. On desktop, verification controls move to the left and the welcome uses the first word of the entered value on the right; because the login screen only has the entered username and does not load account profile data, that value is also the fallback. The verification message states that a code was sent by email and asks the user to enter the six-digit code. On mobile, panels remain in verification-first order. The transition respects reduced-motion preferences. The first of six digit inputs receives focus after the panel transition completes. A resend countdown is shown, and the code submits automatically after the sixth digit. Invalid codes clear the inputs and return focus to the first input.
 
 Code verification displays 35% “Verifying Identity,” 75% “Establishing Secure Session,” and 100% “Secure Access Granted.” Successful progress is held briefly before continuing.
 

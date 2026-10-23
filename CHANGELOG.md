@@ -1,4 +1,5 @@
 ## 2026-10-23
+- Refined sign-in greetings and slowed the cross-slide between the hero and authentication panels to 550 ms with ease-in-out timing after the existing credential progress animation; verification controls focus the first code field after the transition. Reduced-motion preferences are respected, and authentication, API and 2FA behavior are unchanged.
 - Changed Dashboard Activity Summary cards to a two-column mobile layout and kept labels intact at word boundaries; desktop layout and card styling are unchanged.
 - Made the Dashboard Activity Trend fit mobile containers without horizontal scrolling while preserving desktop chart sizing and interactions.
 - Added lock-status badges to Dashboard Needs Attention and record detail headers; lock and unlock behavior is unchanged.

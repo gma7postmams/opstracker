@@ -87,7 +87,9 @@ export default function Login() {
   }, []);
 
   useEffect(() => {
-    if (requires2fa) otpRefs.current[0]?.focus();
+    if (requires2fa && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      otpRefs.current[0]?.focus();
+    }
   }, [requires2fa]);
 
   useEffect(() => {
@@ -317,6 +319,8 @@ export default function Login() {
   const logo = (cls: string, size: number) => b.logoUrl
     ? <img className={cls} src={b.logoUrl} alt="" style={{ width: size, height: size }} />
     : <div className={cls}>{b.title.slice(0, 2).toUpperCase()}</div>;
+  const enteredName = f.username.trim();
+  const greetingName = enteredName.split(/\s+/)[0] || enteredName;
   return (
     <MotionConfig reducedMotion="user">
     <div className="loginscreen">
@@ -329,42 +333,107 @@ export default function Login() {
 
       <main className="login-layout">
         <motion.section
-          className="login-story"
+          className={`login-story${requires2fa ? " login-story-verification" : ""}`}
+          layout
           initial={{ opacity: 0, x: -18 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], layout: { duration: 0.55, ease: "easeInOut" } }}
+          onLayoutAnimationComplete={() => {
+            if (requires2fa) otpRefs.current[0]?.focus();
+          }}
         >
-          <div className="login-brandline">
-            {logo("logotile", 54)}
-            <span>OPS<span className="login-brand-accent">TRACKER</span></span>
-          </div>
-          <div className="login-story-copy">
-            <span className="login-eyebrow"><span /> Operations workspace</span>
-            <h1>{b.title}</h1>
-            <p>{b.tagline}. A shared workspace for support activity, follow-through, and team visibility.</p>
-          </div>
-          <div className="login-feature-list">
-            {FEATURES.map((feature, index) => (
-              <motion.div
-                className="login-feature"
-                key={feature.text}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.14 + index * 0.1, duration: 0.4 }}
-              >
-                <span className="login-feature-icon">{feature.icon}</span>
-                <span>{feature.text}</span>
-              </motion.div>
-            ))}
-          </div>
-          <div className="login-story-foot"><ShieldCheck size={16} /> Private team access</div>
+          {requires2fa ? (
+            <motion.div
+              key="verification-panel"
+              className="login-verification"
+              initial={{ opacity: 0, x: -18 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <button type="button" className="login-back" onClick={useAnotherAccount}>
+                <ArrowLeft size={16} /> Use another account
+              </button>
+              <div className="login-icon-heading"><span><Mail size={20} /></span></div>
+              <h2 className="loginwelcome">Enter your verification code</h2>
+              <p className="login-sub">A verification code has been sent to your email.<br />Enter the 6-digit code to continue.</p>
+
+              <form onSubmit={submit}>
+                <div className={`otp-group${otpInvalid ? " has-error" : ""}${otpSuccess ? " is-success" : ""}`} role="group" aria-label="Six-digit verification code">
+                  {Array.from({ length: 6 }, (_, index) => (
+                    <input
+                      key={index}
+                      ref={(element) => { otpRefs.current[index] = element; }}
+                      className={`otp-digit${verificationCode[index] ? " has-value" : ""}`}
+                      aria-label={`Digit ${index + 1}`}
+                      inputMode="numeric"
+                      autoComplete={index === 0 ? "one-time-code" : "off"}
+                      pattern="[0-9]"
+                      maxLength={1}
+                      disabled={busy || otpSuccess}
+                      aria-invalid={otpInvalid}
+                      value={verificationCode[index] ?? ""}
+                      onChange={(event) => updateOtpDigit(index, event.target.value)}
+                      onKeyDown={(event) => handleOtpKeyDown(index, event)}
+                      onPaste={index === 0 ? handleOtpPaste : undefined}
+                    />
+                  ))}
+                </div>
+                <div className={`login-resend${resendCountdown === 0 ? " is-available" : ""}`} aria-live="polite">
+                  {resendCountdown > 0 ? (
+                    <span>Resend available in {resendCountdown}s</span>
+                  ) : (
+                    <>
+                      <span>Didn't receive the code?</span>
+                      <button type="button" className="forgot" onClick={resendCode} disabled={busy}>
+                        Resend verification code
+                      </button>
+                    </>
+                  )}
+                </div>
+                {error && <div className="err login-error" role="alert">{error}</div>}
+                <button className={`loginbtn${progressMode === "verification" ? ` is-processing progress-${progressStage}${progressStage === 2 ? " is-success" : ""}` : ""}`} disabled={busy || verificationCode.length !== 6} aria-live="polite">
+                  {progressMode === "verification" ? (
+                    <span className="loginbtn-content"><span className="loginbtn-percent">{["35%", "75%", "100%"][progressStage]}</span>{["Verifying Identity...", "Establishing Secure Session...", "✓ Secure Access Granted"][progressStage]}</span>
+                  ) : <span className="loginbtn-content"><Fingerprint size={18} /> Verify and sign in</span>}
+                </button>
+              </form>
+            </motion.div>
+          ) : (
+            <>
+              <div className="login-brandline">
+                {logo("logotile", 54)}
+                <span>OPS<span className="login-brand-accent">TRACKER</span></span>
+              </div>
+              <div className="login-story-copy">
+                <span className="login-eyebrow"><span /> Operations workspace</span>
+                <h1>{b.title}</h1>
+                <p>{b.tagline}. A shared workspace for support activity, follow-through, and team visibility.</p>
+              </div>
+              <div className="login-feature-list">
+                {FEATURES.map((feature, index) => (
+                  <motion.div
+                    className="login-feature"
+                    key={feature.text}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.14 + index * 0.1, duration: 0.4 }}
+                  >
+                    <span className="login-feature-icon">{feature.icon}</span>
+                    <span>{feature.text}</span>
+                  </motion.div>
+                ))}
+              </div>
+              <div className="login-story-foot"><ShieldCheck size={16} /> Private team access</div>
+            </>
+          )}
         </motion.section>
 
         <motion.section
-          className="login-card"
+          className={`login-card${requires2fa ? " login-card-welcome" : ""}`}
+          layout
           initial={{ opacity: 0, y: 16, scale: 0.985 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.5, delay: 0.06, ease: [0.22, 1, 0.36, 1], layout: { duration: 0.55, ease: "easeInOut" } }}
           aria-label="Sign in"
         >
           <div className="login-card-top">
@@ -375,63 +444,20 @@ export default function Login() {
             </div>
           </div>
 
-          <AnimatePresence mode="wait" initial={false}>
+          <div className="login-step-stage">
+          <AnimatePresence mode="popLayout" initial={false}>
             {requires2fa ? (
               <motion.div
-                key="verification"
+                key="welcome"
                 className="login-step-content"
-                initial={{ opacity: 0, x: 20 }}
+                initial={{ opacity: 0, x: 18 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -14 }}
-                transition={{ duration: 0.24 }}
+                exit={{ opacity: 0, x: -18 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
               >
-                <button type="button" className="login-back" onClick={useAnotherAccount}>
-                  <ArrowLeft size={16} /> Use another account
-                </button>
-                <div className="login-icon-heading"><span><Mail size={20} /></span></div>
-                <h2 className="loginwelcome">Check your email</h2>
-                <p className="login-sub">Enter the 6-digit code sent to the email address on your profile.</p>
-
-                <form onSubmit={submit}>
-                  <div className={`otp-group${otpInvalid ? " has-error" : ""}${otpSuccess ? " is-success" : ""}`} role="group" aria-label="Six-digit verification code">
-                    {Array.from({ length: 6 }, (_, index) => (
-                      <input
-                        key={index}
-                        ref={(element) => { otpRefs.current[index] = element; }}
-                        className={`otp-digit${verificationCode[index] ? " has-value" : ""}`}
-                        aria-label={`Digit ${index + 1}`}
-                        inputMode="numeric"
-                        autoComplete={index === 0 ? "one-time-code" : "off"}
-                        pattern="[0-9]"
-                        maxLength={1}
-                        disabled={busy || otpSuccess}
-                        aria-invalid={otpInvalid}
-                        value={verificationCode[index] ?? ""}
-                        onChange={(event) => updateOtpDigit(index, event.target.value)}
-                        onKeyDown={(event) => handleOtpKeyDown(index, event)}
-                        onPaste={index === 0 ? handleOtpPaste : undefined}
-                      />
-                    ))}
-                  </div>
-                  <div className={`login-resend${resendCountdown === 0 ? " is-available" : ""}`} aria-live="polite">
-                    {resendCountdown > 0 ? (
-                      <span>Resend available in {resendCountdown}s</span>
-                    ) : (
-                      <>
-                        <span>Didn't receive the code?</span>
-                        <button type="button" className="forgot" onClick={resendCode} disabled={busy}>
-                          Resend verification code
-                        </button>
-                      </>
-                    )}
-                  </div>
-                  {error && <div className="err login-error" role="alert">{error}</div>}
-                  <button className={`loginbtn${progressMode === "verification" ? ` is-processing progress-${progressStage}${progressStage === 2 ? " is-success" : ""}` : ""}`} disabled={busy || verificationCode.length !== 6} aria-live="polite">
-                    {progressMode === "verification" ? (
-                      <span className="loginbtn-content"><span className="loginbtn-percent">{["35%", "75%", "100%"][progressStage]}</span>{["Verifying Identity...", "Establishing Secure Session...", "✓ Secure Access Granted"][progressStage]}</span>
-                    ) : <span className="loginbtn-content"><Fingerprint size={18} /> Verify and sign in</span>}
-                  </button>
-                </form>
+                <h2 className="loginwelcome">Welcome back, {greetingName} 👋</h2>
+                <p className="login-sub">Enter the verification code sent to your email.</p>
+                <div className="login-security-note"><ShieldCheck size={18} /><span>An additional security check helps keep your account and workspace protected.</span></div>
               </motion.div>
             ) : (
               <motion.div
@@ -439,12 +465,12 @@ export default function Login() {
                 className="login-step-content"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 14 }}
-                transition={{ duration: 0.24 }}
+                exit={{ opacity: 0, x: -24 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
               >
                 <div className="login-icon-heading"><span><KeyRound size={20} /></span></div>
-                <h2 className="loginwelcome">Welcome back</h2>
-                <p className="login-sub">Sign in to continue to your workspace.</p>
+                <h2 className="loginwelcome">Hello there 👋</h2>
+                <p className="login-sub">Sign in to access OpsTracker.</p>
 
                 <form onSubmit={submit}>
                   <div className="loginfield">
@@ -492,6 +518,7 @@ export default function Login() {
               </motion.div>
             )}
           </AnimatePresence>
+          </div>
 
           <div className="login-card-footer">
             <span><ShieldIcon /> Secure and private</span>
