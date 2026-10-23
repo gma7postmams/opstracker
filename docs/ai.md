@@ -6,11 +6,11 @@ OpsTracker has two AI-backed workflows: field text improvement and MACO chat. Bo
 
 Record forms can request a rewrite for problem, resolution, remarks or task description. The server prompt asks for corrected text only, preserving technical terms, IP addresses, hostnames, software names, error messages and reference numbers. The endpoint returns a `suggestion` string. The request timeout defaults to 30 seconds and can be set in the AI settings file.
 
-If the top-level `enabled` setting is false, record forms hide their text-improvement actions and `/api/ai/improve` returns a service-unavailable response. The endpoint does not require a signed-in session.
+If the top-level `enabled` setting is false, record forms hide their text-improvement actions and `/api/ai/improve` returns a service-unavailable response. Text improvement requires an authenticated session and is available to both `USER` and `ADMIN` roles.
 
 ## MACO chat
 
-The MACO page is available only when the saved `maco.enabled` setting is true. Otherwise, it shows an administrator-disabled message, and `/api/maco/chat` rejects requests with a service-unavailable response. The sidebar reads the saved settings and updates after an admin saves AI & MACO settings. The chat route requires an authenticated session and uses the configured `maco.model` and `maco.temperature` values.
+The MACO page is available to authenticated users when the saved `maco.enabled` setting is true. Otherwise, it shows an administrator-disabled message, and `/api/maco/chat` rejects requests with a service-unavailable response. The sidebar reads the saved settings and updates after an admin saves AI & MACO settings. The chat route requires an authenticated session and uses the configured `maco.model` and `maco.temperature` values.
 
 The route classifies questions and gathers relevant live context from OpsTracker before calling the model. Depending on the question, context can include:
 
@@ -25,9 +25,9 @@ Record visibility is applied to record queries through the shared record-visibil
 
 ## Settings and service checks
 
-The admin page exposes the top-level enabled flag, service URL, text-improvement model and timeout, plus MACO enabled/model/temperature/search options. It also provides a connection/model check against the configured server. Settings are read from and written to `data/ai-settings.json` on the server filesystem. Saving settings causes the shared sidebar to re-read the saved configuration without requiring a new login.
+The authenticated `/api/features` endpoint returns only the `aiEnabled` and `macoEnabled` flags for feature visibility; it does not expose service configuration. The admin page exposes the top-level enabled flag, service URL, text-improvement model and timeout, plus MACO enabled/model/temperature/search options. It also provides a connection/model check against the configured server. Settings and connection/model tests remain administrator-only. Settings are read from and written to `data/ai-settings.json` on the server filesystem. Saving settings causes the shared sidebar to re-read the saved configuration without requiring a new login.
 
-In the MACO route, `maco.searchRecords` controls record search, and the route uses `maco.model` and `maco.temperature`; the `showRelatedRecords` option is not consulted there. The shared settings API (`/api/admin/ai`) and connection/model test API (`/api/admin/ai/test`) require an authenticated administrator for every supported method. Settings saves are audit logged with structured previous/updated values for changed settings. AI URL audit values redact URL credentials and credential-like query parameters; API keys and passwords are not included in audit details. The text-improvement endpoint remains unauthenticated, while MACO chat requires an authenticated session.
+In the MACO route, `maco.searchRecords` controls record search, and the route uses `maco.model` and `maco.temperature`; the `showRelatedRecords` option is not consulted there. The shared settings API (`/api/admin/ai`) and connection/model test API (`/api/admin/ai/test`) require an authenticated administrator for every supported method. Settings saves are audit logged with structured previous/updated values for changed settings. AI URL audit values redact URL credentials and credential-like query parameters; API keys and passwords are not included in audit details. Both text improvement and MACO chat require an authenticated session; standard users do not receive AI configuration or connection-test details.
 
 ## Data handling
 

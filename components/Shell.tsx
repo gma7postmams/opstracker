@@ -50,9 +50,9 @@ export default function Shell({ branding, user, children }: Props) {
 
   useEffect(() => {
     const loadSettings = () => {
-      fetch("/api/admin/ai")
+      fetch("/api/features")
         .then((res) => res.json())
-        .then((settings) => setMacoEnabled(settings.maco?.enabled === true))
+        .then((features) => setMacoEnabled(features.macoEnabled === true))
         .catch(() => setMacoEnabled(false));
     };
 

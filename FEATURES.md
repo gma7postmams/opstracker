@@ -88,7 +88,7 @@ Reference numbers are generated as `TA-YYYY-NNNNN` or `OT-YYYY-NNNNN`. A per-typ
 
 - Text improvement sends a supplied text string to an Ollama-compatible `/api/generate` endpoint and returns a suggested edit.
 - MACO accepts conversational questions, builds live context from OpsTracker records and selected system data, then asks the configured model for a response. Responses can include source categories and record references.
-- The saved `enabled` setting controls record-writing assistance visibility and endpoint availability. The saved `maco.enabled` setting controls MACO sidebar visibility, page availability and chat endpoint use; saving AI & MACO settings refreshes sidebar visibility without signing out. AI/MACO settings and connection/model test APIs require an authenticated administrator. Changes generate `AI_ENABLED`, `AI_DISABLED`, `AI_MODEL_CHANGED`, `AI_URL_CHANGED`, `AI_SETTINGS_UPDATED`, `MACO_ENABLED`, `MACO_DISABLED`, `MACO_MODEL_CHANGED` and `MACO_SETTINGS_UPDATED` events as applicable, with structured previous/updated values in audit details and URL credentials redacted.
+- Both features are available to authenticated `USER` and `ADMIN` accounts when enabled. The authenticated `/api/features` endpoint returns only the enabled flags for visibility; `/api/ai/improve` and `/api/maco/chat` require a session. AI/MACO settings and connection/model test APIs remain administrator-only. Changes generate `AI_ENABLED`, `AI_DISABLED`, `AI_MODEL_CHANGED`, `AI_URL_CHANGED`, `AI_SETTINGS_UPDATED`, `MACO_ENABLED`, `MACO_DISABLED`, `MACO_MODEL_CHANGED` and `MACO_SETTINGS_UPDATED` events as applicable, with structured previous/updated values in audit details and URL credentials redacted.
 
 ## UI and themes
 

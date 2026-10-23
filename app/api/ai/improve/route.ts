@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { currentUser } from "@/lib/auth";
 import { promises as fs } from "fs";
 import path from "path";
 
@@ -21,6 +22,11 @@ error messages and reference numbers unchanged.
 
 
 export async function POST(req: NextRequest) {
+  const user = await currentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   let body: unknown;
   try {
     body = await req.json();

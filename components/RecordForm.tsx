@@ -151,10 +151,10 @@ useEffect(() => {
       }
     });
 
-  fetch("/api/admin/ai")
+  fetch("/api/features")
     .then((r) => r.json())
-    .then((cfg) => {
-      setAiEnabled(cfg.enabled);
+    .then((features) => {
+      setAiEnabled(features.aiEnabled === true);
     });
 }, []);
 

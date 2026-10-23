@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -31,6 +32,7 @@ const loadingStatuses = [
 ];
 
 export default function MACOPage() {
+  const { data: session } = useSession();
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -105,46 +107,43 @@ export default function MACOPage() {
     return () => window.clearInterval(timer);
   }, [greeting]);
 
-    useEffect(() => {
-      async function loadAIStatus() {
-        try {
-          const settingsResponse = await fetch("/api/admin/ai");
-          const settings = await settingsResponse.json();
-          if (!settingsResponse.ok || settings.maco?.enabled !== true) {
-            setMacoEnabled(false);
-            return;
-          }
-          setMacoEnabled(true);
-
-          const test =
-            await fetch("/api/admin/ai/test");
-
-          const status =
-            await test.json();
-
-          setAiStatus({
-            model:
-              settings.maco?.model ??
-              "Unknown",
-            url:
-              settings.url ?? "",
-            online:
-              status.success ??
-              status.ok ??
-              false,
-          });
-        } catch {
-          setAiStatus({
-            model: "Unknown",
-            url: "",
-            online: false,
-          });
-          setMacoEnabled(false);
-        }
+  useEffect(() => {
+    async function loadFeatures() {
+      try {
+        const response = await fetch("/api/features");
+        const features = await response.json();
+        setMacoEnabled(response.ok && features.macoEnabled === true);
+      } catch {
+        setMacoEnabled(false);
       }
+    }
 
-      loadAIStatus();
-    }, []);          
+    loadFeatures();
+  }, []);
+
+  useEffect(() => {
+    if (session?.user.role !== "ADMIN") return;
+
+    async function loadAIStatus() {
+      try {
+        const settingsResponse = await fetch("/api/admin/ai");
+        const settings = await settingsResponse.json();
+        if (!settingsResponse.ok) return;
+
+        const testResponse = await fetch("/api/admin/ai/test");
+        const status = await testResponse.json();
+        setAiStatus({
+          model: settings.maco?.model ?? "Unknown",
+          url: settings.url ?? "",
+          online: testResponse.ok && (status.success ?? status.ok ?? false),
+        });
+      } catch {
+        setAiStatus({ model: "Unknown", url: "", online: false });
+      }
+    }
+
+    loadAIStatus();
+  }, [session?.user.role]);
 
   async function askMACO() {
 
@@ -393,7 +392,7 @@ export default function MACOPage() {
           {/* INPUT */}
           <div className="maco-composer-area">
 
-          <div
+            {session?.user.role === "ADMIN" && <div
               className="maco-status"
           >
 
@@ -430,7 +429,7 @@ export default function MACOPage() {
             >
               {aiStatus.model}
             </span>
-          </div>
+          </div>}
 
 
             <div
