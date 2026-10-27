@@ -33,7 +33,7 @@ NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="a-long-random-secret"
 ```
 
-The repository does not include an `.env.example`. Apply the checked-in migrations and seed initial accounts and master data:
+Use `.env.example` as a starting point for local application settings. Apply the checked-in migrations and seed initial accounts and master data:
 
 ```bash
 npm install
@@ -57,7 +57,7 @@ The production server listens on the Next.js default port unless configured othe
 
 ## Docker deployment
 
-The production Docker image uses Next.js standalone output and runs as an unprivileged user. On an Ubuntu VM with Docker Engine and the Compose plugin installed, create a root `.env` file with the following values. Use a strong generated `NEXTAUTH_SECRET` and URL-encode any reserved characters in the database password used in `DATABASE_URL`.
+The production Docker image uses Next.js standalone output and runs as an unprivileged user. On an Ubuntu VM with Docker Engine and the Compose plugin installed, create a root `.env.production` file with the following values. Local Docker testing uses `.env.docker`. Keep secrets out of source control. Use a strong generated `NEXTAUTH_SECRET` and URL-encode any reserved characters in the database password used in `DATABASE_URL`.
 
 ```env
 POSTGRES_DB=opslog
@@ -74,15 +74,23 @@ SEED_DEMO_USER=false
 For a first deployment, run the one-time seed job, then start the application:
 
 ```bash
-docker compose --profile seed run --rm seed
-docker compose up -d --build
+make prod-seed
+make prod-up
 ```
 
-The seed job waits for PostgreSQL, applies pending migrations, and runs `npm run db:seed`. Its dedicated build target includes the development dependencies needed by `tsx`; those dependencies are not included in the optimized standalone app image. The job is not part of the normal `up` lifecycle, so it will not reseed on subsequent restarts. The seed uses upserts and does not replace passwords for existing accounts. Set `SEED_ADMIN_PASSWORD` in `.env` before the first run; the script otherwise falls back to the weak default `admin123`. Seeded team accounts also have per-user default passwords (`<username>123`); change them after initial login. Keep `SEED_DEMO_USER=false` unless a generic demo account is specifically needed.
+The seed job waits for PostgreSQL, applies pending migrations, and runs `npm run db:seed`. Its dedicated build target includes the development dependencies needed by `tsx`; those dependencies are not included in the optimized standalone app image. The job is not part of the normal `up` lifecycle, so it will not reseed on subsequent restarts. The seed uses upserts and does not replace passwords for existing accounts. Set `SEED_ADMIN_PASSWORD` in `.env.production` before the first run; the script otherwise falls back to the weak default `admin123`. Seeded team accounts also have per-user default passwords (`<username>123`); change them after initial login. Keep `SEED_DEMO_USER=false` unless a generic demo account is specifically needed.
 
-For later deployments, `docker compose up -d --build` is sufficient. The app container runs `prisma migrate deploy` before starting Next.js; the command applies pending checked-in migrations and is safe to repeat on container restarts. Back up the database before deploying schema changes; for multi-instance deployments, run migrations once as a deployment job before starting application replicas.
+For later deployments, run `make prod-update`. The app container runs `prisma migrate deploy` before starting Next.js; the command applies pending checked-in migrations and is safe to repeat on container restarts. Back up the database before deploying schema changes; for multi-instance deployments, run migrations once as a deployment job before starting application replicas.
 
 Compose persists PostgreSQL data in the `postgres_data` named volume and uploaded images in the `uploads` named volume mounted at `/app/public/uploads`. Back up both volumes as part of the deployment's recovery plan. A host bind mount such as `./uploads:/app/public/uploads` can replace the upload volume when host-managed backups are preferred; create that directory and make it writable by container UID 1001 first. Keep port 3000 behind a TLS-terminating reverse proxy and restrict VM firewall access to the proxy.
+
+## Makefile usage
+
+Run `make help` to list targets and their descriptions. Development and database commands include `make install`, `make dev`, `make build`, `make lint`, `make test`, `make prisma-generate`, `make prisma-migrate`, `make prisma-reset`, and `make seed`.
+
+Local Docker targets use `.env.docker`: `make docker-build`, `make docker-up`, `make docker-down`, `make docker-logs`, `make docker-restart`, and `make docker-seed`. Production targets use `.env.production`: `make prod-build`, `make prod-up`, `make prod-down`, `make prod-logs`, `make prod-seed`, and `make prod-update`. The `down` commands preserve named volumes.
+
+Utilities are `make status`, `make clean`, `make backup-db`, and `make backup-uploads`. Status and backup targets operate on the local Docker stack; backups are written to `backups/` by default. Override paths and the Compose command with Make variables, for example `make prod-up ENV_PROD=/path/to/.env.production`. `make test` runs an npm test script if configured, then runs the TypeScript checker. The project currently has no test script, and its existing `npm run lint` command uses `next lint`, which is not supported by the installed Next.js 16 CLI.
 
 ## Operational data
 

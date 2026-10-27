@@ -1,4 +1,5 @@
 ## 2026-10-27
+- Added Makefile commands for development, Prisma, local and production Docker operations, and local backups; fixed Docker startup so the migration entrypoint is executable.
 - Added a one-time Docker Compose seed job using an isolated build target with `tsx`; first deployment can seed after migrations without adding development tooling to the production app image.
 - Added a production Docker and Compose deployment for the standalone Next.js app, including PostgreSQL health gating, Prisma migrations on startup, and persistent database and upload volumes.
 
