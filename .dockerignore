@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.example
+*.log
+*.tsbuildinfo
+.DS_Store
+opslog_backup.sql
+public/uploads/*
+!public/uploads/.gitkeep

@@ -44,6 +44,10 @@ Important shared modules:
 - Nodemailer sends reports and Email 2FA codes through each user's saved Gmail SMTP configuration. Email 2FA is verified before the credentials provider returns a user to NextAuth for JWT session creation.
 - Uploaded images are written to `public/uploads`; the import workbook template is served from `public/templates/`.
 
+## Production deployment
+
+The Docker deployment builds Next.js standalone output in a multi-stage Node 22 image and runs the app as a non-root user. Docker Compose provides PostgreSQL 16, waits for its health check, and runs `prisma migrate deploy` before the app server starts. A separate, opt-in seed target includes the development dependencies required by `tsx`; it runs migrations and seed data as a one-shot job without adding those tools to the app image. PostgreSQL data and `public/uploads` are persisted in separate named volumes; back up both independently. The app expects `DATABASE_URL`, `NEXTAUTH_URL` and `NEXTAUTH_SECRET` at runtime.
+
 ## API areas
 
 The route handlers cover authentication and Email 2FA, dashboard, records and work logs, reports and Excel/email output, users/profile, master data, branding, upload, import, backup/restore and audit. Authorization is enforced route-by-route; see [permissions.md](permissions.md) for implementation boundaries and known exceptions.

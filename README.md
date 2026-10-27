@@ -55,6 +55,35 @@ npm run start
 
 The production server listens on the Next.js default port unless configured otherwise. Ensure the database is migrated and `DATABASE_URL`, `NEXTAUTH_URL`, and `NEXTAUTH_SECRET` are set in the runtime environment.
 
+## Docker deployment
+
+The production Docker image uses Next.js standalone output and runs as an unprivileged user. On an Ubuntu VM with Docker Engine and the Compose plugin installed, create a root `.env` file with the following values. Use a strong generated `NEXTAUTH_SECRET` and URL-encode any reserved characters in the database password used in `DATABASE_URL`.
+
+```env
+POSTGRES_DB=opslog
+POSTGRES_USER=opslog
+POSTGRES_PASSWORD=replace-with-a-strong-password
+DATABASE_URL=postgresql://opslog:replace-with-a-strong-password@db:5432/opslog?schema=public
+NEXTAUTH_URL=https://ops.example.com
+NEXTAUTH_SECRET=replace-with-a-long-random-secret
+APP_PORT=3000
+SEED_ADMIN_PASSWORD=replace-with-a-unique-bootstrap-password
+SEED_DEMO_USER=false
+```
+
+For a first deployment, run the one-time seed job, then start the application:
+
+```bash
+docker compose --profile seed run --rm seed
+docker compose up -d --build
+```
+
+The seed job waits for PostgreSQL, applies pending migrations, and runs `npm run db:seed`. Its dedicated build target includes the development dependencies needed by `tsx`; those dependencies are not included in the optimized standalone app image. The job is not part of the normal `up` lifecycle, so it will not reseed on subsequent restarts. The seed uses upserts and does not replace passwords for existing accounts. Set `SEED_ADMIN_PASSWORD` in `.env` before the first run; the script otherwise falls back to the weak default `admin123`. Seeded team accounts also have per-user default passwords (`<username>123`); change them after initial login. Keep `SEED_DEMO_USER=false` unless a generic demo account is specifically needed.
+
+For later deployments, `docker compose up -d --build` is sufficient. The app container runs `prisma migrate deploy` before starting Next.js; the command applies pending checked-in migrations and is safe to repeat on container restarts. Back up the database before deploying schema changes; for multi-instance deployments, run migrations once as a deployment job before starting application replicas.
+
+Compose persists PostgreSQL data in the `postgres_data` named volume and uploaded images in the `uploads` named volume mounted at `/app/public/uploads`. Back up both volumes as part of the deployment's recovery plan. A host bind mount such as `./uploads:/app/public/uploads` can replace the upload volume when host-managed backups are preferred; create that directory and make it writable by container UID 1001 first. Keep port 3000 behind a TLS-terminating reverse proxy and restrict VM firewall access to the proxy.
+
 ## Operational data
 
 Administrators can download or restore a versioned JSON database backup from Administration. The file includes user password hashes and must be protected. It excludes uploaded assets; preserve `public/uploads` separately. Imports accept `.xlsx`, `.xlsm`, and `.csv` files up to 10 MB. The import scope defaults to both the `Technical Assistance` and `Other Tasks` worksheets, with either worksheet available individually from any record page; additional tabs such as `WorkLogs` are ignored. Preview and completion summaries show counts per worksheet, and warnings identify their worksheet. Preview dates match the dates imported; Excel date/time serials are normalized before validation. Closed rows need `End Date` and `Time Ended`; close-pending rows receive the current date/time for missing end fields. Both fields are included in the downloadable template. Optional `Assigned To` values are matched by user full name; unknown or ambiguous names remain unassigned with a preview warning. Imported records are owned by the importer, and `Accountable Person` values are ignored. Report workbooks include a WorkLogs worksheet for exported entries.

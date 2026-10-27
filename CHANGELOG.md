@@ -1,3 +1,7 @@
+## 2026-10-27
+- Added a one-time Docker Compose seed job using an isolated build target with `tsx`; first deployment can seed after migrations without adding development tooling to the production app image.
+- Added a production Docker and Compose deployment for the standalone Next.js app, including PostgreSQL health gating, Prisma migrations on startup, and persistent database and upload volumes.
+
 ## 2026-10-23
 - Removed AI text improvement, MACO chat, AI/MACO administration settings, feature flags and their API endpoints. Email 2FA, login improvements, audit enhancements, record workflows, reports and email reporting are unchanged.
 - Enabled authenticated standard-user access to AI text improvement and MACO chat through a feature-flags endpoint that exposes no AI service configuration. AI text improvement now rejects anonymous requests; AI/MACO settings and connection tests remain administrator-only.
