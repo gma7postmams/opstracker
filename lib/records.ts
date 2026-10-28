@@ -81,7 +81,7 @@ export function buildOrderBy(type: RecordType, sort: SortKey = "date", dir: "asc
   if (sort === "category") {
     return type === "assistance"
       ? [{ category: dir }]
-      : [{ startDate: "desc" }, { timeStarted: "desc" }];
+      : [{ activityType: dir }];
   }
   return [{ [sort]: dir }];
 }

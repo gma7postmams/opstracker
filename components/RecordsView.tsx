@@ -41,24 +41,6 @@ interface Props {
 const STATUSES = ["OPEN", "CLOSE_PENDING", "CLOSED"];
 const emptyFilters = { q: "", status: "all", location: "all", category: "all", shift: "all", from: "", to: "" };
 
-function formatElapsedDuration(startAt: Date, now: number) {
-  if (Number.isNaN(startAt.getTime())) return "—";
-
-  const totalSeconds = Math.max(0, Math.floor((now - startAt.getTime()) / 1000));
-  const days = Math.floor(totalSeconds / 86400);
-  const hours = Math.floor((totalSeconds % 86400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  const parts = [];
-
-  if (days) parts.push(`${days}d`);
-  if (hours || days) parts.push(`${hours}h`);
-  if (minutes || hours || days) parts.push(`${minutes}m`);
-  if (seconds || parts.length === 0) parts.push(`${seconds}s`);
-
-  return parts.join(" ");
-}
-
 function formatElapsedMinutes(startAt: Date, endAt: number) {
   if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt)) return "—";
 
@@ -108,7 +90,7 @@ function summaryMessage(workLogMessage?: string | null, legacyMessage?: string |
 }
 
 export default function RecordsView(props: Props) {
-  const { type, label, singular, subjectHeader, subjectField, bodyField } = props;
+  const { type, label, singular, subjectField, bodyField } = props;
   const showLocation = type === "assistance";
   const { data: session } = useSession();
   const isAdmin = session?.user.role === "ADMIN";
@@ -413,20 +395,20 @@ export default function RecordsView(props: Props) {
 
       <section className="panel table crm-table-wrap">
         {rows.length ? (
-          <table>
+          <table className={showLocation ? "crm-assistance-table" : "crm-task-table"}>
             <colgroup>
               <col className="crm-col-select" />
-              <col className={showLocation ? "crm-col-assistance-id" : "crm-col-id"} />
-              <col className={showLocation ? "crm-col-assistance-date" : "crm-col-date"} />
+              <col className={showLocation ? "crm-col-assistance-id" : "crm-col-task-id"} />
+              <col className={showLocation ? "crm-col-assistance-date" : "crm-col-task-date"} />
               {showLocation && <col className="crm-col-category" />}
               {showLocation && <col className="crm-col-assistance-location" />}
-              <col className={showLocation ? "crm-col-assistance-activity" : "crm-col-activity"} />
-              <col className={showLocation ? "crm-col-assistance-priority" : "crm-col-priority"} />
-              {showLocation && <col className="crm-col-assistance-status" />}
-              <col className={showLocation ? "crm-col-assistance-duration" : "crm-col-duration"} />
-              {!showLocation && <col className="crm-col-status" />}
-              <col className={showLocation ? "crm-col-assistance-assigned" : "crm-col-assigned"} />
-              <col className={showLocation ? "crm-col-assistance-accountable" : "crm-col-accountable"} />
+              {!showLocation && <col className="crm-col-task-type" />}
+              <col className={showLocation ? "crm-col-assistance-activity" : "crm-col-task-description"} />
+              <col className={showLocation ? "crm-col-assistance-priority" : "crm-col-task-priority"} />
+              <col className={showLocation ? "crm-col-assistance-status" : "crm-col-task-status"} />
+              <col className={showLocation ? "crm-col-assistance-duration" : "crm-col-task-duration"} />
+              <col className={showLocation ? "crm-col-assistance-assigned" : "crm-col-task-assigned"} />
+              <col className={showLocation ? "crm-col-assistance-accountable" : "crm-col-task-accountable"} />
             </colgroup>
             <thead>
               <tr>
@@ -434,14 +416,14 @@ export default function RecordsView(props: Props) {
                   <input type="checkbox" checked={allOn} onChange={toggleAll} aria-label="Select all visible records" />
                 </th>
                 {th("refNo", "ID")}
-                {th("date", showLocation ? "Date / Shift" : "Start Date")}
+                {th("date", "Date / Shift")}
                 {showLocation && th("category", "Category")}
                 {showLocation && th("location", "Location / Show")}
-                {th("subject", showLocation ? "Client / Problem" : subjectHeader)}
+                {!showLocation && th("category", "Activity Type")}
+                {showLocation ? th("subject", "Client / Problem") : <th>Description</th>}
                 {th("priority", "Priority")}
-                {showLocation && th("status", "Status")}
+                {th("status", "Status")}
                 {th("timeStarted", "Duration")}
-                {!showLocation && th("status", "Status")}
                 {th("assigned", "Assigned To")}
                 <th>Accountable Person</th>
               </tr>
@@ -461,38 +443,33 @@ export default function RecordsView(props: Props) {
                     <b><Link href={`/records/${type}/${r.id}`}>{r.refNo}</Link></b>
                     {r.locked && <small>🔒 Locked</small>}
                   </td>
-                  <td>{showLocation ? formatListDate(r.startDate) : String(r.startDate).slice(0, 10)}<small>{r.shift}</small></td>
+                  <td>{formatListDate(r.startDate)}<small>{r.shift}</small></td>
                   {showLocation && <td><span className="crm-category" title={r.category ?? ""}>{r.category || "—"}</span></td>}
                   {showLocation && <td>{r.location}<small>{r.showGroup}</small></td>}
-                  <td className="crm-activity-cell">
-                    <b className="crm-title-clamp">{r[subjectField]}</b>
-                    {type === "assistance" ? (
-                      <>
-                        <small className="crm-description-clamp"><strong className="crm-content-label">Problem:</strong> {r[bodyField]}</small>
-                      </>
-                    ) : (
+                  {!showLocation && <td><span className="crm-category" title={r.activityType ?? ""}>{r.activityType || "—"}</span></td>}
+                    {showLocation ? <td className="crm-activity-cell">
+                      <b className="crm-title-clamp">{r[subjectField]}</b>
+                      <small className="crm-description-clamp"><strong className="crm-content-label">Problem:</strong> {r[bodyField]}</small>
+                      {summaryMessage(r.latestResolutionWorkLog?.message, r.resolution) && <small className="crm-description-clamp"><strong className="crm-content-label">Resolution:</strong> {summaryMessage(r.latestResolutionWorkLog?.message, r.resolution)}</small>}
+                      {summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) && <small className="crm-remarks-clamp"><strong>Remark:</strong> {summaryMessage(r.latestRemarkWorkLog?.message, r.remarks)}</small>}
+                      {!summaryMessage(r.latestResolutionWorkLog?.message, r.resolution) && !summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) && r.latestWorkLog?.message?.trim() ? (
+                        <small className="crm-description-clamp"><strong className="crm-content-label">Update:</strong> {r.latestWorkLog.message.trim()}</small>
+                      ) : null}
+                      {!summaryMessage(r.latestResolutionWorkLog?.message, r.resolution) && !summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) && !r.latestWorkLog?.message?.trim() && (
+                        <small className="crm-description-clamp"><strong className="crm-content-label">Update:</strong> No updates yet</small>
+                      )}
+                    </td> : <td className="crm-activity-cell">
                       <small className="crm-description-clamp"><strong className="crm-content-label">Description:</strong> {r[bodyField]}</small>
-                    )}
-                    {summaryMessage(r.latestResolutionWorkLog?.message, r.resolution) && <small className="crm-description-clamp"><strong className="crm-content-label">Resolution:</strong> {summaryMessage(r.latestResolutionWorkLog?.message, r.resolution)}</small>}
-                    {summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) && <small className="crm-remarks-clamp"><strong>Remark:</strong> {summaryMessage(r.latestRemarkWorkLog?.message, r.remarks)}</small>}
-                    {!summaryMessage(r.latestResolutionWorkLog?.message, r.resolution) && !summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) && r.latestWorkLog?.message?.trim() ? (
-                      <small className="crm-description-clamp"><strong className="crm-content-label">Update:</strong> {r.latestWorkLog.message.trim()}</small>
-                    ) : null}
-                    {!summaryMessage(r.latestResolutionWorkLog?.message, r.resolution) && !summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) && !r.latestWorkLog?.message?.trim() && (
-                      <small className="crm-description-clamp"><strong className="crm-content-label">Update:</strong> No updates yet</small>
-                    )}
-                  </td>
+                      {summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) && <small className="crm-remarks-clamp"><strong>Remark:</strong> {summaryMessage(r.latestRemarkWorkLog?.message, r.remarks)}</small>}
+                      {!summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) && r.latestWorkLog?.message?.trim() && <small className="crm-description-clamp"><strong className="crm-content-label">Update:</strong> {r.latestWorkLog.message.trim()}</small>}
+                      {!summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) && !r.latestWorkLog?.message?.trim() && <small className="crm-description-clamp"><strong className="crm-content-label">Update:</strong> No updates yet</small>}
+                    </td>}
                   <td><span className={`crm-priority crm-priority-${String(r.priority).toLowerCase()}`}><ArrowDownWideNarrow size={13} aria-hidden="true" />{priorityLabel(r.priority)}</span></td>
-                  {showLocation && <td><span className={`crm-status crm-status-${String(r.status).toLowerCase()}`}><CircleDot size={13} aria-hidden="true" />{statusLabel(r.status)}</span></td>}
-                  <td>{showLocation ? (() => {
+                  <td><span className={`crm-status crm-status-${String(r.status).toLowerCase()}`}><CircleDot size={13} aria-hidden="true" />{statusLabel(r.status)}</span></td>
+                  <td>{(() => {
                     const duration = assistanceDuration(r, now);
                     return <><strong className="crm-duration-value">{duration.elapsed}</strong><small className="crm-duration-range">{duration.range}</small></>;
-                  })() : r.status === "OPEN" && !r.timeEnded
-                    ? `${formatTime12Hour(r.timeStarted)} • ${formatElapsedDuration(new Date(`${String(r.startDate).slice(0, 10)}T${r.timeStarted}:00`), now)}`
-                    : r.timeEnded
-                      ? `${formatTime12Hour(r.timeStarted)} – ${formatTime12Hour(r.timeEnded)}`
-                      : `Since ${formatTime12Hour(r.timeStarted)}`}</td>
-                  {!showLocation && <td><span className={`crm-status crm-status-${String(r.status).toLowerCase()}`}><CircleDot size={13} aria-hidden="true" />{statusLabel(r.status)}</span></td>}
+                  })()}</td>
                   <td>{r.assigned}</td>
                   <td>{fullName(r.owner)}</td>
                 </tr>
@@ -593,6 +570,16 @@ export default function RecordsView(props: Props) {
         .crm-col-accountable { width: 9%; }
         .crm-col-assistance-assigned { width: 8%; }
         .crm-col-assistance-accountable { width: 8%; }
+        .crm-col-task-id { width: 8%; }
+        .crm-col-task-date { width: 9%; }
+        .crm-col-task-type { width: 10%; }
+        .crm-col-task-description { width: 36%; }
+        .crm-col-task-priority { width: 7%; }
+        .crm-col-task-status { width: 8%; }
+        .crm-col-task-duration { width: 9%; }
+        .crm-col-task-assigned { width: 8%; }
+        .crm-col-task-accountable { width: 9%; }
+        .crm-task-table { min-width: 1180px !important; }
         .crm-table-wrap thead { position: sticky; top: 0; z-index: 2; }
         .crm-table-wrap thead th { background: var(--panel); box-shadow: 0 1px 0 var(--border); }
         .crm-table-wrap .selcol input[type="checkbox"] { appearance: none; display: inline-grid; place-content: center; width: 16px; height: 16px; margin: 0; border: 1px solid color-mix(in srgb, var(--border) 55%, var(--text)); border-radius: 4px; background: color-mix(in srgb, var(--panel) 94%, #237a75); color: #fff; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease; }

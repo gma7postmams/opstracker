@@ -1,4 +1,5 @@
 ## 2026-10-28
+- Refactored the Other Tasks table into separate sortable Activity Type, Priority and Status badges and a wide Description column with Remark summary. Date / Shift and elapsed-duration formatting now match Technical Assistance, including cross-midnight ranges; Location and Show / Group remain omitted.
 - Refactored the Technical Assistance list columns, placed Category after Date / Shift, made Category sortable, separated its Category, Priority and Status badges, and added stacked date/shift, location/show and elapsed-duration details. Added a Category filter for Technical Assistance; Other Tasks is unchanged.
 - Removed Location and Show / Group from Other Task forms, record displays, report details and exports. Existing task values remain stored, but task create/edit validation and payloads no longer include these fields.
 - Added searchable master-data fields for all five kinds to Technical Assistance and Other Task forms. Authenticated users can create active values with the inline plus control; new values are audited, immediately available and selected.
