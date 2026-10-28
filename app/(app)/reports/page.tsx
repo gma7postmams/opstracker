@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useToast } from "@/components/Toast";
 import { useSession } from "next-auth/react";
-import { Activity, CheckCircle2, CircleDot, Clock3, UsersRound } from "lucide-react";
+import { Activity, AlertCircle, Check, CheckCircle2, CircleDot, Clock3, LoaderCircle, Send, UsersRound } from "lucide-react";
 
 
 const formatDate = (date: Date) => {
@@ -167,13 +167,64 @@ export default function Reports() {
 
 
 const [emailResult, setEmailResult] = useState<{
-  success: boolean;
+  success: true;
+  recipient: string;
+  sentAt: string;
+  assistance: number;
+  tasks: number;
+  participation: number;
+} | {
+  success: false;
   message: string;
+  details?: string;
 } | null>(null);
 
 const [sendingEmail, setSendingEmail] = useState(false);
+const [sendProgress, setSendProgress] = useState(0);
+const sendingEmailRef = useRef(false);
+const sendDialogRef = useRef<HTMLDivElement>(null);
 const [preview, setPreview] = useState<any>(null);
 const [sendingPreview, setSendingPreview] = useState(false);
+
+useEffect(() => {
+  if (!sendingEmail && !emailResult) return;
+  const dialog = sendDialogRef.current;
+  if (!dialog) return;
+  dialog.focus();
+
+  const handleDialogKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      if (!sendingEmail) {
+        setEmailResult(null);
+        setPreview(null);
+      }
+      return;
+    }
+    if (event.key !== "Tab") return;
+
+    const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+    ));
+    if (!focusable.length) {
+      event.preventDefault();
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog)) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
+  document.addEventListener("keydown", handleDialogKeyDown);
+  return () => document.removeEventListener("keydown", handleDialogKeyDown);
+}, [sendingEmail, emailResult]);
 
 async function previewEmail() {
   setSendingPreview(true);
@@ -205,34 +256,62 @@ async function previewEmail() {
 
 
 async function sendEmail() {
+  if (sendingEmailRef.current) return;
+  sendingEmailRef.current = true;
   setSendingEmail(true);
+  setEmailResult(null);
+  setSendProgress(0);
+
+  const progressAnimation = async () => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    setSendProgress(1);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    setSendProgress(2);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  };
 
   try {
-    const res = await fetch("/api/reports/email", {
+    const request = fetch("/api/reports/email", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(getReportFilters(f, dateRangePreset, scope)),
-    });
+    }).then(async (res) => ({ res, out: await res.json() }))
+      .catch((requestError) => ({ requestError }));
+    const [response] = await Promise.all([request, progressAnimation()]);
 
-    const out = await res.json();
+    if ("requestError" in response) throw response.requestError;
+    const { res, out } = response;
 
     if (!res.ok) {
       setEmailResult({
         success: false,
         message: out.error || "Failed to send email",
+        details: out.details,
       });
       return;
     }
 
+    setSendProgress(3);
     setEmailResult({
       success: true,
-      message: out.message || "Report emailed successfully",
+      recipient: preview?.recipients ?? "",
+      sentAt: new Date().toLocaleString(),
+      assistance: s?.assistance ?? 0,
+      tasks: s?.tasks ?? 0,
+      participation: d?.contributionSummary?.participationCount ?? 0,
     });
-
+    setPreview(null);
+    toast(`✅ Activity Report Sent · Delivered to: ${preview?.recipients ?? "recipient"}`);
+  } catch (error) {
+    setEmailResult({
+      success: false,
+      message: error instanceof Error ? error.message : "Unable to complete email delivery.",
+    });
   } finally {
     setSendingEmail(false);
+    sendingEmailRef.current = false;
   }
 }
 
@@ -304,6 +383,38 @@ const activeFilters =
         .report-page .participation-detail-list li { padding:8px 0; border-top:1px solid var(--border); }
         .report-page .participation-detail-list li > strong { display:block; margin-bottom:3px; }
         .report-page .email-preview-frame { display:block; width:100%; height:70vh; min-height:520px; border:1px solid #dfe5eb; }
+        .report-page .send-overlay { position:fixed; inset:0; z-index:10001; display:grid; place-items:center; padding:20px; background:rgba(9,16,29,.58); animation:send-fade-in .2s ease both; }
+        .report-page .send-dialog { width:min(440px,100%); padding:28px; border:1px solid var(--border); border-radius:14px; background:var(--panel); color:var(--text); box-shadow:0 24px 70px rgba(0,0,0,.28); animation:send-scale-in .24s cubic-bezier(.2,.8,.2,1) both; outline:none; }
+        .report-page .send-title { display:flex; align-items:center; gap:11px; margin:0; font-size:19px; line-height:1.3; }
+        .report-page .send-title-icon { display:grid; flex:0 0 38px; width:38px; height:38px; place-items:center; border-radius:10px; color:#087f72; background:color-mix(in srgb,#0b8d7e 14%,var(--panel)); }
+        .report-page .send-steps { display:grid; gap:16px; margin:27px 0 23px; padding:0; list-style:none; }
+        .report-page .send-step { display:flex; align-items:center; gap:11px; min-height:22px; color:var(--muted); font-size:14px; }
+        .report-page .send-step.is-done { color:var(--text); }
+        .report-page .send-step.is-active { color:var(--text); font-weight:650; }
+        .report-page .send-step-icon { display:grid; flex:0 0 22px; width:22px; height:22px; place-items:center; border:1px solid var(--border); border-radius:50%; color:var(--muted); }
+        .report-page .send-step.is-done .send-step-icon { border-color:#0b8d7e; color:#0b8d7e; background:color-mix(in srgb,#0b8d7e 13%,var(--panel)); }
+        .report-page .send-step.is-active .send-step-icon { border-color:color-mix(in srgb,#0b8d7e 55%,var(--border)); color:#0b8d7e; }
+        .report-page .send-spinner { animation:send-spin .9s linear infinite; }
+        .report-page .send-recipient { overflow-wrap:anywhere; padding-top:15px; border-top:1px solid var(--border); color:var(--muted); font-size:12px; }
+        .report-page .send-recipient strong { display:block; margin-top:5px; color:var(--text); font-size:13px; font-weight:600; }
+        .report-page .delivery-result { text-align:center; }
+        .report-page .delivery-icon { display:grid; width:62px; height:62px; margin:0 auto 16px; place-items:center; border-radius:50%; color:#07856f; background:color-mix(in srgb,#0b9a7a 15%,var(--panel)); animation:send-success-pop .42s cubic-bezier(.2,.8,.2,1) both; }
+        .report-page .delivery-icon.is-error { color:var(--err-fg); background:var(--err-bg); animation:none; }
+        .report-page .delivery-result h3 { margin:0; font-size:20px; }
+        .report-page .delivery-result > p { margin:8px 0 18px; color:var(--muted); line-height:1.5; overflow-wrap:anywhere; }
+        .report-page .delivery-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:18px 0; text-align:left; }
+        .report-page .delivery-stat { min-width:0; padding:11px 9px; border:1px solid var(--border); border-radius:8px; background:var(--hint-bg); }
+        .report-page .delivery-stat span { display:block; color:var(--muted); font-size:10px; line-height:1.35; }
+        .report-page .delivery-stat strong { display:block; margin-top:5px; font-size:18px; }
+        .report-page .delivery-sent { margin:0 0 18px; color:var(--muted); font-size:12px; }
+        .report-page .delivery-error-detail { padding:11px 12px; border:1px solid color-mix(in srgb,var(--err-fg) 30%,var(--border)); border-radius:8px; background:var(--err-bg); color:var(--err-fg); font-size:12px; text-align:left; overflow-wrap:anywhere; }
+        .report-page .delivery-actions { display:flex; justify-content:center; gap:9px; margin-top:22px; }
+        .toastwrap { z-index:10002; }
+        @keyframes send-fade-in { from { opacity:0; } to { opacity:1; } }
+        @keyframes send-scale-in { from { opacity:0; transform:translateY(8px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+        @keyframes send-success-pop { 0% { opacity:0; transform:scale(.62); } 70% { transform:scale(1.08); } 100% { opacity:1; transform:scale(1); } }
+        @keyframes send-spin { to { transform:rotate(360deg); } }
+        @media(prefers-reduced-motion:reduce) { .report-page .send-overlay,.report-page .send-dialog,.report-page .delivery-icon,.report-page .send-spinner { animation:none; } }
         @media(max-width:760px) { .report-page .report-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .report-page .report-actions { flex-direction:row; flex-wrap:wrap; width:100%; justify-content:flex-end; } }
         @media(max-width:480px) { .report-page .report-kpi { padding:13px 12px 12px 15px; } .report-page .report-kpi strong { font-size:24px; } }
       `}</style>
@@ -530,6 +641,8 @@ const activeFilters =
   </h2>
 
   <button
+    type="button"
+    disabled={sendingEmail}
     onClick={() => setPreview(null)}
     style={{
       border: "none",
@@ -585,6 +698,7 @@ const activeFilters =
       >
         <button
           className="secondary"
+          disabled={sendingEmail}
           onClick={() => setPreview(null)}
         >
           Close
@@ -592,97 +706,100 @@ const activeFilters =
 
 	<button
 	  className="primary"
-	  disabled={sendingEmail}
+    disabled={sendingEmail || sendingEmailRef.current}
 	  onClick={async () => {
-	    await sendEmail();
-
-	    setPreview(null);
+      await sendEmail();
 	  }}
 	>
-	  {sendingEmail
-	    ? "📧 Generating report and sending email..."
-	    : "Send Email"}
+    <Send size={15} aria-hidden="true" /> Send Email
 	</button>
 
       </div>
-
-        {sendingEmail && (
-          <div
-            style={{
-              marginTop: 10,
-              color: "var(--muted)",
-              fontSize: "14px",
-            }}
-          >
-            Preparing attachment and sending email...
-          </div>
-        )}
-
 
     </div>
   </div>
 )}
 
 
-{emailResult && (
-  <div
-    style={{
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0,0,0,0.5)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 9999,
-    }}
-  >
-  <div
-    style={{
-      background: "var(--panel)",
-      color: "var(--text)",
-      padding: "24px",
-      borderRadius: "12px",
-      minWidth: "420px",
-      maxWidth: "600px",
-      boxShadow: "0 10px 25px rgba(0,0,0,0.25)",
-    }}
-  >
-
-    <h3>
-      {emailResult.success
-        ? "✅ Email Delivered"
-        : "❌ Email Delivery Failed"}
-    </h3>
-
-    <p>
-      {emailResult.success
-        ? "Your MAMS Support Activity Report has been sent successfully."
-        : emailResult.message}
-    </p>
-
-    {emailResult.success && (
-
-      <p
-        style={{
-          marginTop: "10px",
-          marginBottom: "24px",
-          padding: "8px 12px",
-          background: "var(--hint-bg)",
-          borderRadius: "8px",
-        }}
-      >
-        📧 {emailResult.message.replace("Report emailed successfully to ", "")}
-      </p>
-
-    )}
-
-    <button
-      className="primary"
-      onClick={() => setEmailResult(null)}
+{sendingEmail && (
+  <div className="send-overlay">
+    <div
+      ref={sendDialogRef}
+      className="send-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="send-dialog-title"
+      aria-describedby="send-dialog-recipient"
+      aria-busy="true"
+      tabIndex={-1}
     >
-      Close
-    </button>
-      
+      <h2 className="send-title" id="send-dialog-title">
+        <span className="send-title-icon"><Send size={19} aria-hidden="true" /></span>
+        Sending Activity Report
+      </h2>
+      <ol className="send-steps" aria-live="polite">
+        {["Preparing report data", "Building report", "Sending email"].map((step, index) => {
+          const complete = sendProgress > index;
+          const active = sendProgress === index;
+          return (
+            <li
+              className={`send-step${complete ? " is-done" : ""}${active ? " is-active" : ""}`}
+              key={step}
+              aria-label={`${step}: ${complete ? "complete" : active ? "in progress" : "waiting"}`}
+            >
+              <span className="send-step-icon" aria-hidden="true">
+                {complete ? <Check size={14} /> : active ? <LoaderCircle size={14} className="send-spinner" /> : null}
+              </span>
+              <span>{step}</span>
+            </li>
+          );
+        })}
+      </ol>
+      <div className="send-recipient" id="send-dialog-recipient">
+        Recipient
+        <strong>{preview?.recipients}</strong>
+      </div>
+    </div>
+  </div>
+)}
+
+{emailResult && (
+  <div className="send-overlay">
+    <div
+      ref={sendDialogRef}
+      className="send-dialog delivery-result"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delivery-result-title"
+      tabIndex={-1}
+    >
+      {emailResult.success ? (
+        <>
+          <div className="delivery-icon" aria-hidden="true"><CheckCircle2 size={34} /></div>
+          <h3 id="delivery-result-title">Report Delivered</h3>
+          <p>Delivered to {emailResult.recipient}</p>
+          <div className="delivery-stats" aria-label="Report summary">
+            <div className="delivery-stat"><span>Technical Assistance</span><strong>{emailResult.assistance}</strong></div>
+            <div className="delivery-stat"><span>Other Tasks</span><strong>{emailResult.tasks}</strong></div>
+            <div className="delivery-stat"><span>Participation</span><strong>{emailResult.participation}</strong></div>
+          </div>
+          <div className="delivery-sent">Sent: <time>{emailResult.sentAt}</time></div>
+          <div className="delivery-actions">
+            <button className="primary" onClick={() => setEmailResult(null)}>Close</button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="delivery-icon is-error" aria-hidden="true"><AlertCircle size={34} /></div>
+          <h3 id="delivery-result-title">Unable to Send Report</h3>
+          <p>{emailResult.message}</p>
+          {emailResult.details && <div className="delivery-error-detail">Server response: {emailResult.details}</div>}
+          <div className="delivery-actions">
+            <button className="primary" onClick={sendEmail}>Retry</button>
+            <button className="secondary" onClick={() => { setEmailResult(null); setPreview(null); }}>Close</button>
+          </div>
+        </>
+      )}
     </div>
   </div>
 )}

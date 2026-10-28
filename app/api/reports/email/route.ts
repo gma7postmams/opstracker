@@ -142,24 +142,42 @@ const formatStatusLabel = (value: string) => ({
 }[value] ?? value);
 
 const tableStyle = "width:100%;border-collapse:collapse;table-layout:fixed;";
-const cellStyle = "padding:8px 7px;border-bottom:1px solid #e3e8ee;color:#273444;font-family:Arial,sans-serif;font-size:11px;line-height:15px;vertical-align:top;word-break:break-word;overflow-wrap:anywhere;";
-const headerCellStyle = "padding:9px 7px;background:#edf3f4;border-bottom:1px solid #d7e0e5;color:#435564;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;text-align:left;";
+const cellStyle = "padding:10px 8px;border-bottom:1px solid #e3e8ee;color:#273444;font-family:Arial,sans-serif;font-size:11px;line-height:16px;vertical-align:top;word-break:break-word;overflow-wrap:anywhere;";
+const refNoCellStyle = `${cellStyle}word-break:normal;overflow-wrap:normal;white-space:nowrap;`;
+const headerCellStyle = "padding:9px 8px;background:#f3f6f7;border-bottom:1px solid #d7e0e5;color:#435564;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;text-align:left;";
 const tableHead = () => `<tr>${["Ref No", "Details", "Status", "Owner", "Assigned"].map((label) =>
-  `<th style="${headerCellStyle}">${label}</th>`).join("")}</tr>`;
+  `<th style="${headerCellStyle}${label === "Ref No" ? "white-space:nowrap;" : ""}">${label}</th>`).join("")}</tr>`;
 const renderReportDetails = (record: Record<string, any>, recordType: "assistance" | "tasks") => {
-  const details = buildReportRecordDetails(record, recordType);
-  const header = details.header
-    ? `<div style="font-weight:bold;margin-bottom:4px;">${escapeHtml(details.header)}</div>`
+  const reportDetails = buildReportRecordDetails(record, recordType);
+  const details = recordType === "assistance"
+    ? [
+        { label: "Problem", value: record.problem },
+        { label: "Investigation", value: record.latestInvestigationWorkLog?.message },
+        { label: "Resolution", value: record.latestResolutionWorkLog?.message || record.resolution },
+        { label: "Remarks", value: record.latestRemarkWorkLog?.message || record.remarks },
+      ]
+    : [
+        { label: "Activity Type", value: record.activityType },
+        { label: "Description", value: record.description },
+        { label: "Investigation", value: record.latestInvestigationWorkLog?.message },
+        { label: "Resolution", value: record.latestResolutionWorkLog?.message || record.resolution },
+        { label: "Remarks", value: record.latestRemarkWorkLog?.message || record.remarks },
+      ];
+  const header = reportDetails.header
+    ? `<tr><td style="padding:0 0 6px;color:#263947;font-family:Arial,sans-serif;font-size:14px;font-weight:700;line-height:21px;">${escapeHtml(reportDetails.header)}</td></tr>`
     : "";
-  const sections = details.sections.map(({ label, value }) =>
-    `<div><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</div>`).join("");
-  return `${header}${sections}`;
+  const sections = details
+    .map(({ label, value }) => ({ label, value: typeof value === "string" ? value.trim() : "" }))
+    .filter(({ value }) => value)
+    .map(({ label, value }) =>
+      `<tr><td style="padding:6px 0 2px;color:#273444;font-family:Arial,sans-serif;font-size:13px;line-height:20px;vertical-align:top;"><span style="color:#165d59;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;line-height:20px;text-transform:uppercase;">${escapeHtml(label)}:</span> <span style="font-family:Arial,sans-serif;font-size:13px;line-height:20px;">${escapeHtml(value)}</span></td></tr>`).join("");
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed;">${header}${sections}</table>`;
 };
 const assistanceRows = assistanceWithLogs.length
   ? assistanceWithLogs.map((row) => {
       const details = renderReportDetails(row, "assistance");
       return `<tr>
-        <td style="${cellStyle}">${escapeHtml(row.refNo)}</td>
+        <td style="${refNoCellStyle}">${escapeHtml(row.refNo)}</td>
         <td style="${cellStyle}">${details}</td>
         <td style="${cellStyle}">${escapeHtml(formatStatusLabel(row.status))}</td>
         <td style="${cellStyle}">${escapeHtml(formatReportOwner(row.owner))}</td>
@@ -171,7 +189,7 @@ const taskRows = tasksWithLogs.length
   ? tasksWithLogs.map((row) => {
       const details = renderReportDetails(row, "tasks");
       return `<tr>
-        <td style="${cellStyle}">${escapeHtml(row.refNo)}</td>
+        <td style="${refNoCellStyle}">${escapeHtml(row.refNo)}</td>
         <td style="${cellStyle}">${details}</td>
         <td style="${cellStyle}">${escapeHtml(formatStatusLabel(row.status))}</td>
         <td style="${cellStyle}">${escapeHtml(formatReportOwner(row.owner))}</td>
@@ -200,57 +218,48 @@ const statusCounts = {
   pending: allRows.filter((row) => row.status === "CLOSE_PENDING").length,
   closed: allRows.filter((row) => row.status === "CLOSED").length,
 };
-const summaryCard = (label: string, value: number, color: string, icon: string) => `
-  <td class="summary-cell" width="33.33%" align="center" valign="middle" style="width:33.33%;padding:4px 3px;vertical-align:middle;">
-    <table class="summary-card" role="presentation" width="170" height="78" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:170px;height:78px;table-layout:fixed;border:1px solid #e3e8ee;border-left:4px solid ${color};border-radius:7px;background-color:#ffffff;background-image:linear-gradient(180deg,#ffffff 0%,#f8fafb 100%);box-shadow:0 2px 7px rgba(32,53,67,.10);">
-      <tr>
-        <td height="36" align="center" valign="middle" style="height:36px;padding:5px 5px 0;vertical-align:middle;">
-          <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-            <tr>
-              <td width="18" valign="middle" style="width:18px;padding:0 4px 0 0;color:${color};font-family:'Segoe UI Symbol',Arial,sans-serif;font-size:12px;font-weight:bold;line-height:15px;vertical-align:middle;"><span aria-hidden="true">${icon}</span></td>
-              <td valign="middle" style="padding:0;color:#536575;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;line-height:13px;vertical-align:middle;">${label}</td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-      <tr><td height="34" align="center" valign="middle" style="height:34px;padding:0 7px 5px;color:${color};font-family:Arial,sans-serif;font-size:20px;font-weight:bold;line-height:24px;text-align:center;vertical-align:middle;">${value}</td></tr>
+const summaryMetric = (label: string, value: number) => `
+  <td width="33%" align="center" valign="middle" style="width:33%;padding:3px 8px 7px;vertical-align:middle;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed;">
+      <tr><td align="center" style="padding:0 2px 3px;border-bottom:1px solid #dfe6e8;color:#20343d;font-family:Arial,sans-serif;font-size:24px;font-weight:bold;line-height:27px;text-align:center;">${value}</td></tr>
+      <tr><td align="center" style="padding:4px 2px 0;color:#64747d;font-family:Arial,sans-serif;font-size:11px;font-weight:600;letter-spacing:0.5px;line-height:14px;text-align:center;">${escapeHtml(label.toUpperCase())}</td></tr>
     </table>
   </td>`;
 
-const emailWidth = 1100;
+const summaryHeadingStyle = "padding:9px 5px 1px;color:#263947;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;line-height:17px;";
 
 const emailHtml = `
 <!doctype html>
 <html lang="en">
-<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>MAMS Support Activity Report</title><style type="text/css">@media only screen and (max-width:600px){.summary-card{width:100% !important;max-width:100% !important}.summary-cell{padding:4px 2px !important}}</style></head>
-<body style="margin:0;padding:0;background-color:#f1f4f5;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f1f4f5" style="width:100%;background-color:#f1f4f5;border-collapse:collapse;">
-    <tr><td align="center" style="padding:20px 10px;">
-      <table role="presentation" width="${emailWidth}" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:95%;max-width:${emailWidth}px;background-color:#ffffff;border-collapse:collapse;font-family:Arial,sans-serif;">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>MAMS Support Activity Report</title></head>
+<body style="margin:0;padding:0;background-color:#ffffff;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:100%;background-color:#ffffff;border-collapse:collapse;">
+    <tr><td align="center" style="padding:12px 10px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:100%;background-color:#ffffff;border-collapse:collapse;font-family:Arial,sans-serif;">
         <tr><td bgcolor="#165d59" style="padding:24px 22px;background-color:#165d59;color:#ffffff;">
           <div style="font-family:Arial,sans-serif;font-size:23px;line-height:29px;font-weight:bold;">MAMS Support Activity Report</div>
           <div style="padding-top:9px;font-family:Arial,sans-serif;font-size:13px;line-height:20px;color:#e2f1ef;">Reporting period: ${escapeHtml(reportingPeriod)}</div>
           <div style="font-family:Arial,sans-serif;font-size:12px;line-height:19px;color:#e2f1ef;">Prepared by ${escapeHtml(actor.name)} &nbsp;|&nbsp; Generated ${escapeHtml(generatedAt)}</div>
         </td></tr>
-        <tr><td style="padding:19px 16px 4px;">
+        <tr><td style="padding:12px 16px 4px;">
           ${(activity !== "all" || status !== "all") ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;"><tr><td style="padding:10px 12px;background-color:#f2f7f7;border-left:3px solid #59a59d;color:#435564;font-family:Arial,sans-serif;font-size:12px;line-height:19px;">${activity !== "all" ? `<strong>Activity:</strong> ${escapeHtml(activity)} &nbsp;&nbsp;` : ""}${status !== "all" ? `<strong>Status:</strong> ${escapeHtml(status)}` : ""}</td></tr></table>` : ""}
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed;">
-            <tr><td colspan="3" style="padding:10px 5px 4px;color:#263947;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Activity Summary</td></tr>
-            <tr>${summaryCard("Technical Assistance", assistanceWithLogs.length, "#0786a3", "&#8984;")}${summaryCard("Other Tasks", tasksWithLogs.length, "#b77914", "&#9776;")}${summaryCard("Total Records", totalRecords, "#2563a8", "&#9638;")}</tr>
-            <tr><td colspan="3" style="padding:14px 5px 4px;color:#263947;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Contribution Summary: ${escapeHtml(contributionSummary.userName)}</td></tr>
-            <tr>${summaryCard("Owned Records", contributionSummary.owned, "#0786a3", "&#9733;")}${summaryCard("Assigned Records", contributionSummary.assigned, "#b77914", "&#9744;")}${summaryCard("Participation Count", contributionSummary.participationCount, "#2563a8", "&#10003;")}</tr>
-            <tr><td colspan="3" style="padding:10px 5px 4px;color:#263947;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Status Summary</td></tr>
-            <tr>${summaryCard("Open", statusCounts.open, "#c74646", "&#9675;")}${summaryCard("Close Pending", statusCounts.pending, "#b77914", "&#9684;")}${summaryCard("Closed", statusCounts.closed, "#34845e", "&#10003;")}</tr>
+            <tr><td colspan="3" style="${summaryHeadingStyle}">Activity Summary</td></tr>
+            <tr>${summaryMetric("Technical Assistance", assistanceWithLogs.length)}${summaryMetric("Other Tasks", tasksWithLogs.length)}${summaryMetric("Total Records", totalRecords)}</tr>
+            <tr><td colspan="3" style="${summaryHeadingStyle}">Contribution Summary</td></tr>
+            <tr>${summaryMetric("Owned Records", contributionSummary.owned)}${summaryMetric("Assigned Records", contributionSummary.assigned)}${summaryMetric("Participation", contributionSummary.participationCount)}</tr>
+            <tr><td colspan="3" style="${summaryHeadingStyle}">Status Summary</td></tr>
+            <tr>${summaryMetric("Open", statusCounts.open)}${summaryMetric("Close Pending", statusCounts.pending)}${summaryMetric("Closed", statusCounts.closed)}</tr>
           </table>
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${tableStyle}margin-top:22px;">
-            <colgroup><col width="12%"><col width="46%"><col width="12%"><col width="15%"><col width="15%"></colgroup>
-            <tr><td colspan="5" style="padding:0 0 9px;color:#165d59;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Technical assistance details</td></tr>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${tableStyle}margin-top:14px;">
+            <colgroup><col width="14%"><col width="58%"><col width="8%"><col width="10%"><col width="10%"></colgroup>
+            <tr><td colspan="5" style="padding:0 0 9px;color:#165d59;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;line-height:21px;">TECHNICAL ASSISTANCE RECORDS</td></tr>
             ${tableHead()}
             ${assistanceRows}
           </table>
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${tableStyle}margin-top:22px;">
-            <colgroup><col width="12%"><col width="46%"><col width="12%"><col width="15%"><col width="15%"></colgroup>
-            <tr><td colspan="5" style="padding:0 0 9px;color:#165d59;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Other task details</td></tr>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${tableStyle}margin-top:18px;">
+            <colgroup><col width="14%"><col width="58%"><col width="8%"><col width="10%"><col width="10%"></colgroup>
+            <tr><td colspan="5" style="padding:0 0 9px;color:#165d59;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;line-height:21px;">OTHER TASK RECORDS</td></tr>
             ${tableHead()}
             ${taskRows}
           </table>
@@ -313,6 +322,11 @@ return NextResponse.json({
 
 } catch (error: any) {
   console.error(error);
+  const details = [
+    typeof error?.responseCode === "number" ? `SMTP ${error.responseCode}` : null,
+    typeof error?.response === "string" ? error.response : null,
+    typeof error?.code === "string" ? error.code : null,
+  ].filter(Boolean).join(" · ").slice(0, 500);
 
   await logAudit({
     userId: actor.id,
@@ -333,6 +347,7 @@ return NextResponse.json({
   return NextResponse.json(
     {
       error: "Failed to send email.",
+      ...(details ? { details } : {}),
     },
     {
       status: 500,
