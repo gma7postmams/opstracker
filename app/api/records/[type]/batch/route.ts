@@ -36,7 +36,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ typ
     return NextResponse.json(await batchDelete(type, ids, user));
   }
 
-  const patchParsed = batchPatchSchema.safeParse(patch ?? {});
+  const patchBody = type === "tasks"
+    ? Object.fromEntries(Object.entries(patch ?? {}).filter(([key]) => key !== "location" && key !== "showGroup"))
+    : patch ?? {};
+  const patchParsed = batchPatchSchema.safeParse(patchBody);
   if (!patchParsed.success) {
     return NextResponse.json({ error: "Validation failed", fields: flatten(patchParsed.error) }, { status: 400 });
   }

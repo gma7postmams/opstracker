@@ -10,8 +10,6 @@ const shared = {
   startDate: dateValue,
   endDate: z.union([dateValue, z.literal(""), z.null()]).optional(),
   shift: z.string().min(1, "Shift is required"),
-  location: z.string().min(1, "Location is required"),
-  showGroup: z.string().optional().nullable(),
   priority: priorityEnum.default("NORMAL"),
   timeStarted: z.string().regex(HHMM, "Use a 24-hour HH:MM time"),
   timeEnded: z.union([z.string().regex(HHMM), z.literal(""), z.null()]).optional(),
@@ -44,6 +42,8 @@ const timeRules = (v: any, ctx: z.RefinementCtx) => {
 
 export const assistanceSchema = z.object({
   ...shared,
+  location: z.string().min(1, "Location is required"),
+  showGroup: z.string().optional().nullable(),
   clientName: z.string().min(1, "Client name is required"),
   problem: z.string().min(1, "Problem is required"),
   category: z.string().min(1, "Category is required"),

@@ -16,6 +16,12 @@ async function load(type: string, id: string) {
   return record ? { type, record } : null;
 }
 
+function visibleRecord(type: string, record: Record<string, any>) {
+  return type === "tasks"
+    ? Object.fromEntries(Object.entries(record).filter(([key]) => key !== "location" && key !== "showGroup"))
+    : record;
+}
+
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ type: string; id: string }> }) {
   const p = await params;
   const user = await currentUser();
@@ -32,7 +38,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ typ
     select: { id: true, action: true, details: true, createdAt: true },
   });
   return NextResponse.json({
-    ...record,
+    ...visibleRecord(type, record),
     activityHistory,
     canEdit: canEdit(user, record),
     canEditOriginal: canEdit(user, record) && (isAdmin(user) || record.ownerId === user.id),
@@ -47,7 +53,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ty
   if (!found) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const { type, record } = found;
 
-  const body = await req.json();
+  const requestBody = await req.json();
+  const body = type === "tasks"
+    ? Object.fromEntries(Object.entries(requestBody).filter(([key]) => key !== "location" && key !== "showGroup"))
+    : requestBody;
 
   if (typeof body.status === "string" && body.status !== record.status) {
     const allowedTransitions: Record<string, string[]> = {
@@ -85,7 +94,7 @@ if (changes.length > 0) {
   });
 }
 
-return NextResponse.json(updated);
+return NextResponse.json(visibleRecord(type, updated));
 
 
   }
@@ -93,11 +102,14 @@ return NextResponse.json(updated);
   if (!canEdit(user, record)) {
     return NextResponse.json({ error: editBlockedReason(user, record) }, { status: 403 });
   }
+  if (!Object.keys(body).length) return NextResponse.json(visibleRecord(type, record));
 
   const canEditOriginal = isAdmin(user) || record.ownerId === user.id;
   const editableFields = canEditOriginal
     ? new Set([
-        "startDate", "endDate", "shift", "location", "showGroup", "priority",
+        "startDate", "endDate", "shift",
+        ...(type === "assistance" ? ["location", "showGroup"] : []),
+        "priority",
         "timeStarted", "timeEnded", "status", "assigned", "accountable", "remarks",
         ...(type === "assistance"
           ? ["clientName", "problem", "category", "resolution"]
@@ -201,7 +213,7 @@ if (updateChanges.length > 0) {
   });
 }
 
-return NextResponse.json(updated);
+return NextResponse.json(visibleRecord(type, updated));
 
 }
 

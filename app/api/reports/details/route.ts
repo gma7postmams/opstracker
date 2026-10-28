@@ -101,8 +101,6 @@ export async function GET(req: NextRequest) {
             updatedAt: true,
             startDate: true,
             shift: true,
-            location: true,
-            showGroup: true,
             activityType: true,
             description: true,
             priority: true,

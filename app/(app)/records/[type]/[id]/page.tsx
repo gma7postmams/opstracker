@@ -177,8 +177,8 @@ if (!historyEvents.some((event: any) => event.title === "Reported")) {
   const fields: [string, any][] = [
     ["Start Date", startDateText],
     ["Shift", r.shift],
-    ["Location", r.location],
-    ["Show / Group", r.showGroup],
+    ...(isAssistance ? [["Location", r.location] as [string, any]] : []),
+    ...(isAssistance ? [["Show / Group", r.showGroup] as [string, any]] : []),
     isAssistance ? ["Client", r.clientName] : ["Activity type", r.activityType],
     isAssistance ? ["Category", r.category] : ["Priority", priorityLabel(r.priority)],
     ...(isAssistance ? [["Priority", priorityLabel(r.priority)] as [string, any]] : []),

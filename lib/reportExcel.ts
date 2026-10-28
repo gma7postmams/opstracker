@@ -257,8 +257,6 @@ export async function buildReportWorkbook(data: {
     "Ref No",
     "Date",
     "Shift",
-    "Location",
-    "Show Group",
     "Activity Type",
     "Description",
     "Priority",
@@ -277,7 +275,7 @@ export async function buildReportWorkbook(data: {
 
   taskSheet.autoFilter = {
     from: "A1",
-    to: "Q1",
+    to: "O1",
   };
 
   data.tasks.forEach((r) => {
@@ -285,8 +283,6 @@ export async function buildReportWorkbook(data: {
       r.refNo,
       new Date(r.startDate).toLocaleDateString(),
       r.shift,
-      r.location,
-      r.showGroup,
       r.activityType,
       r.description,
       r.priority,
@@ -302,7 +298,7 @@ export async function buildReportWorkbook(data: {
     ]);
   });
 
-  colorStatusColumn(taskSheet, 9, 2);
+  colorStatusColumn(taskSheet, 7, 2);
   autoFit(taskSheet);
 
   //
@@ -382,7 +378,7 @@ export async function buildReportWorkbook(data: {
       new Date(r.startDate).toLocaleDateString(),
       r.status,
       r.priority,
-      r.location,
+      "",
       formatReportOwner(r.owner),
       r.assigned,
       r.description,

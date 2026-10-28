@@ -87,7 +87,9 @@ function processRows(
       timeEnded: normalizeTime(raw.timeEnded) || "",
       status: normalizeStatus(raw.status),
       priority: normalizePriority(raw.priority),
-      showGroup: raw.showGroup || null,
+      ...(type === "assistance"
+        ? { location: raw.location || "", showGroup: raw.showGroup || null }
+        : {}),
       remarks: raw.remarks || null,
       assigned: assigned || importerName,
       accountable: importerName,
@@ -261,7 +263,7 @@ export async function POST(req: NextRequest) {
         await tx.assistance.create({ data: recordData as any });
         assistanceImported++;
       } else {
-        await tx.task.create({ data: recordData as any });
+        await tx.task.create({ data: { ...recordData, location: "" } as any });
         taskImported++;
       }
     }

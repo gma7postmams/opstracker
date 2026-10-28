@@ -45,8 +45,8 @@ const [saving, setSaving] = useState(false);
       : record?.date ? String(record.date).slice(0, 10) : todayLocal(),
     endDate: record?.endDate ? String(record.endDate).slice(0, 10) : "",
     shift: record?.shift ?? "",
-    location: record?.location ?? "",
-    showGroup: record?.showGroup ?? "",
+    ...(type === "assistance" ? { location: record?.location ?? "" } : {}),
+    ...(type === "assistance" ? { showGroup: record?.showGroup ?? "" } : {}),
     priority: record?.priority ?? "NORMAL",
     timeStarted: record?.timeStarted ?? nowHHMM(),
     timeEnded: record?.timeEnded ?? "",
@@ -131,13 +131,15 @@ useEffect(() => {
     setSaving(true);
     setErrors({});
 
+    const { location, showGroup, ...formFields } = form;
+
 	const payload = record && canEditOriginal
   ? {
       startDate: form.startDate,
       endDate: form.endDate || null,
       shift: form.shift,
-      location: form.location,
-      showGroup: form.showGroup || null,
+      ...(isAssistance ? { location } : {}),
+      ...(isAssistance ? { showGroup: showGroup || null } : {}),
       priority: form.priority,
       timeStarted: form.timeStarted,
       timeEnded: form.timeEnded || null,
@@ -158,10 +160,11 @@ useEffect(() => {
           timeEnded: form.timeEnded || null,
         }
       : {
-          ...form,
+          ...formFields,
+          ...(isAssistance ? { location } : {}),
+          ...(isAssistance ? { showGroup: showGroup || null } : {}),
           endDate: form.endDate || null,
           timeEnded: form.timeEnded || null,
-          showGroup: form.showGroup || null,
         };
     const url = record ? `/api/records/${type}/${record.id}` : `/api/records/${type}`;
     const res = await fetch(url, {
@@ -233,6 +236,19 @@ useEffect(() => {
         ) : (
           <>
         <div className="sectionlabel">Activity details</div>
+        {isAssistance && (
+          <label>Location
+            <SearchableMasterField
+              kind="LOCATION"
+              label="Location"
+              placeholder="Select a location"
+              options={master.LOCATION ?? []}
+              value={form.location}
+              onChange={(value) => set("location", value)}
+              onCreated={onMasterDataChange}
+            />{err("location")}
+          </label>
+        )}
         <label>Shift
           <SearchableMasterField
             kind="SHIFT"
@@ -249,32 +265,21 @@ useEffect(() => {
             onCreated={onMasterDataChange}
           />{err("shift")}
         </label>
-        <label>Location
-          <SearchableMasterField
-            kind="LOCATION"
-            label="Location"
-            placeholder="Select a location"
-            options={master.LOCATION ?? []}
-            value={form.location}
-            onChange={(value) => set("location", value)}
-            onCreated={onMasterDataChange}
-          />{err("location")}
-        </label>
-        <label>Show / Group
-          <SearchableMasterField
-            kind="SHOW_GROUP"
-            label="Show / Group"
-            placeholder="Select a show or group"
-            options={master.SHOW_GROUP ?? []}
-            value={form.showGroup ?? ""}
-            allowEmpty
-            onChange={(value) => set("showGroup", value)}
-            onCreated={onMasterDataChange}
-          />
-        </label>
 
         {isAssistance ? (
           <>
+            <label>Show / Group
+              <SearchableMasterField
+                kind="SHOW_GROUP"
+                label="Show / Group"
+                placeholder="Select a show or group"
+                options={master.SHOW_GROUP ?? []}
+                value={form.showGroup ?? ""}
+                allowEmpty
+                onChange={(value) => set("showGroup", value)}
+                onCreated={onMasterDataChange}
+              />
+            </label>
             <label>Client name<input value={form.clientName} onChange={(e) => set("clientName", e.target.value)} required />{err("clientName")}</label>
             <label>Category
               <SearchableMasterField

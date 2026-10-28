@@ -4,8 +4,9 @@ import Modal from "./Modal";
 
 const KEEP = "";
 
-export default function BatchEditDialog({ count, master, onClose, onApply }: {
+export default function BatchEditDialog({ count, master, showLocation, onClose, onApply }: {
   count: number; master: Record<string, string[]>;
+  showLocation: boolean;
   onClose: () => void; onApply: (patch: any) => void;
 }) {
   const [patch, setPatch] = useState<any>({});
@@ -48,12 +49,14 @@ export default function BatchEditDialog({ count, master, onClose, onApply }: {
               <option key={p} value={p}>{p[0] + p.slice(1).toLowerCase()}</option>)}
           </select>
         </label>
-        <label>Location
-          <select onChange={(e) => set("location", e.target.value)} defaultValue={KEEP}>
-            <option value={KEEP}>— leave unchanged —</option>
-            {(master.LOCATION ?? []).map((v) => <option key={v}>{v}</option>)}
-          </select>
-        </label>
+        {showLocation && (
+          <label>Location
+            <select onChange={(e) => set("location", e.target.value)} defaultValue={KEEP}>
+              <option value={KEEP}>— leave unchanged —</option>
+              {(master.LOCATION ?? []).map((v) => <option key={v}>{v}</option>)}
+            </select>
+          </label>
+        )}
         <label>Shift
           <select onChange={(e) => set("shift", e.target.value)} defaultValue={KEEP}>
             <option value={KEEP}>— leave unchanged —</option>

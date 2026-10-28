@@ -18,6 +18,7 @@ export default function ImportDialog({ scope, onClose, onDone }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<any>(null);
   const [busy, setBusy] = useState(false);
+  const showLocationInPreview = preview?.sample?.some((row: any) => row.type === "assistance");
 
   function reset(f: File | null) {
     setFile(f);
@@ -149,11 +150,11 @@ export default function ImportDialog({ scope, onClose, onDone }: Props) {
 
           {preview.valid > 0 && preview.sample?.length > 0 && (
             <table className="minitable spacedtop">
-              <thead><tr><th>Date</th><th>Location</th><th>Started</th><th>Status</th><th>Assigned</th></tr></thead>
+              <thead><tr><th>Date</th>{showLocationInPreview && <th>Location</th>}<th>Started</th><th>Status</th><th>Assigned</th></tr></thead>
               <tbody>
                 {preview.sample.map((r: any, i: number) => (
                   <tr key={i}>
-                    <td>{String(r.startDate ?? r.date ?? "").slice(0, 10)}</td><td>{r.location}</td><td>{formatTime12Hour(r.timeStarted)}</td>
+                    <td>{String(r.startDate ?? r.date ?? "").slice(0, 10)}</td>{showLocationInPreview && <td>{r.type === "assistance" ? r.location : ""}</td>}<td>{formatTime12Hour(r.timeStarted)}</td>
                     <td>{r.status}</td><td>{r.assigned}</td>
                   </tr>
                 ))}

@@ -20,7 +20,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
     {
       q: s.get("q") ?? undefined,
       status: s.get("status") ?? undefined,
-      location: s.get("location") ?? undefined,
+      location: p.type === "assistance" ? s.get("location") ?? undefined : undefined,
       shift: s.get("shift") ?? undefined,
       from: s.get("from") ?? undefined,
       to: s.get("to") ?? undefined,
@@ -41,7 +41,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
   );
 
   const rows = await addReportWorkLogSummaries(data.rows, p.type);
-  return NextResponse.json({ ...data, rows });
+  const visibleRows = p.type === "tasks"
+    ? rows.map((row) => Object.fromEntries(Object.entries(row).filter(([key]) => key !== "location" && key !== "showGroup")))
+    : rows;
+  return NextResponse.json({ ...data, rows: visibleRows });
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
@@ -63,6 +66,7 @@ const record = await prisma.$transaction(async (tx) => {
   const normalized = normalizeTimes(parsed.data);
   const data = {
     ...normalized,
+    location: type === "tasks" ? "" : normalized.location,
     startDate: new Date(normalized.startDate),
     endDate: normalized.endDate ? new Date(normalized.endDate) : null,
   };
@@ -82,6 +86,9 @@ await logAudit({
 });
 
 
-return NextResponse.json(record, { status: 201 });
+const visibleRecord = p.type === "tasks"
+  ? Object.fromEntries(Object.entries(record).filter(([key]) => key !== "location" && key !== "showGroup"))
+  : record;
+return NextResponse.json(visibleRecord, { status: 201 });
 
 }

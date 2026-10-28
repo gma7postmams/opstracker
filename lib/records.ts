@@ -48,7 +48,7 @@ export function buildWhere(type: RecordType, query: ListQuery) {
   const where: any = {};
 
   if (query.status && query.status !== "all") where.status = query.status;
-  if (query.location && query.location !== "all") where.location = query.location;
+  if (type === "assistance" && query.location && query.location !== "all") where.location = query.location;
   if (query.shift && query.shift !== "all") where.shift = query.shift;
   if (query.from || query.to) {
     where.startDate = {};
@@ -62,7 +62,9 @@ export function buildWhere(type: RecordType, query: ListQuery) {
     // Search only user-visible columns — never owner ids or lock flags, or
     // searching "admin" would match every record that user happened to enter.
     where.OR = [
-      { refNo: like }, { location: like }, { showGroup: like },
+      { refNo: like },
+      ...(type === "assistance" ? [{ location: like }] : []),
+      ...(type === "assistance" ? [{ showGroup: like }] : []),
       { assigned: like }, { accountable: like }, { remarks: like },
       ...cfg.ownFields.map((f) => ({ [f]: like })),
     ];

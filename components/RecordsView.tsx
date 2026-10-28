@@ -64,6 +64,7 @@ function summaryMessage(workLogMessage?: string | null, legacyMessage?: string |
 
 export default function RecordsView(props: Props) {
   const { type, label, singular, subjectHeader, subjectField, bodyField } = props;
+  const showLocation = type === "assistance";
   const { data: session } = useSession();
   const isAdmin = session?.user.role === "ADMIN";
   const toast = useToast();
@@ -291,12 +292,14 @@ export default function RecordsView(props: Props) {
             {STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
           </select>
         </label>
-        <label className="flabel"><span className="crm-filter-label"><MapPin size={14} aria-hidden="true" /> LOCATION</span>
-          <select value={filters.location} onChange={(e) => setFilter("location", e.target.value)}>
-            <option value="all">All Locations</option>
-            {(master.LOCATION ?? []).map((v) => <option key={v}>{v}</option>)}
-          </select>
-        </label>
+        {showLocation && (
+          <label className="flabel"><span className="crm-filter-label"><MapPin size={14} aria-hidden="true" /> LOCATION</span>
+            <select value={filters.location} onChange={(e) => setFilter("location", e.target.value)}>
+              <option value="all">All Locations</option>
+              {(master.LOCATION ?? []).map((v) => <option key={v}>{v}</option>)}
+            </select>
+          </label>
+        )}
         <label className="flabel">SHIFT
           <select value={filters.shift} onChange={(e) => setFilter("shift", e.target.value)}>
             <option value="all">All Shifts</option>
@@ -361,7 +364,7 @@ export default function RecordsView(props: Props) {
               <col className="crm-col-select" />
               <col className="crm-col-id" />
               <col className="crm-col-date" />
-              <col className="crm-col-location" />
+              {showLocation && <col className="crm-col-location" />}
               <col className="crm-col-activity" />
               <col className="crm-col-priority" />
               <col className="crm-col-duration" />
@@ -376,7 +379,7 @@ export default function RecordsView(props: Props) {
                 </th>
                 {th("refNo", "ID")}
                 {th("date", "Start Date")}
-                {th("location", "Location")}
+                {showLocation && th("location", "Location")}
                 {th("subject", subjectHeader)}
                 {th("priority", "Priority")}
                 {th("timeStarted", "Duration")}
@@ -401,7 +404,7 @@ export default function RecordsView(props: Props) {
                     {r.locked && <small>🔒 Locked</small>}
                   </td>
                   <td>{String(r.startDate).slice(0, 10)}<small>{r.shift}</small></td>
-                  <td>{r.location}<small>{r.showGroup}</small></td>
+                  {showLocation && <td>{r.location}<small>{r.showGroup}</small></td>}
                   <td className="crm-activity-cell">
                     <b className="crm-title-clamp">{r[subjectField]}</b>
                     {type === "assistance" ? (
@@ -468,6 +471,7 @@ export default function RecordsView(props: Props) {
       {showBatch && (
         <BatchEditDialog
           count={selected.size} master={master}
+          showLocation={showLocation}
           onClose={() => setShowBatch(false)}
           onApply={(patch) => batch("update", patch)}
         />
