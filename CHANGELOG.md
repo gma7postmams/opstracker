@@ -1,3 +1,6 @@
+## 2026-10-28
+- Added interactive local and production database restore commands with newest-first SQL backup selection and explicit confirmation.
+
 ## 2026-10-27
 - Added Makefile commands for development, Prisma, local and production Docker operations, and local backups; fixed Docker startup so the migration entrypoint is executable.
 - Added a one-time Docker Compose seed job using an isolated build target with `tsx`; first deployment can seed after migrations without adding development tooling to the production app image.

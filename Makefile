@@ -8,7 +8,7 @@ BACKUP_DIR ?= backups
 .PHONY: help install dev build lint test prisma-generate prisma-migrate prisma-reset seed \
 	docker-build docker-up docker-down docker-logs docker-restart docker-seed \
 	prod-build prod-up prod-down prod-logs prod-seed prod-update \
-	status clean backup-db backup-uploads
+	status clean backup-db backup-uploads restore-db prod-restore-db
 
 ##@ Development
 help: ## Show available commands
@@ -93,6 +93,38 @@ backup-db: ## Dump the local Docker PostgreSQL database to BACKUP_DIR
 	@set -eu; file="$(BACKUP_DIR)/opslog-db-$$(date +%Y%m%d-%H%M%S).sql"; \
 	$(COMPOSE) --env-file $(ENV_DOCKER) exec -T db sh -c 'pg_dump -U "$$POSTGRES_USER" "$$POSTGRES_DB"' > "$$file"; \
 	printf 'Database backup written to %s\n' "$$file"
+
+restore-db: ## Restore the local Docker PostgreSQL database from a BACKUP_DIR SQL file
+	@set -eu; \
+	files=$$(ls -1t "$(BACKUP_DIR)"/*.sql 2>/dev/null || true); \
+	if [ -z "$$files" ]; then printf 'No SQL backups found in %s\n' "$(BACKUP_DIR)" >&2; exit 1; fi; \
+	printf '%s\n' "$$files" | awk '{ printf "  %d) %s\n", NR, $$0 }'; \
+	printf 'Select backup number: '; IFS= read -r choice; \
+	case "$$choice" in ''|*[!0-9]*) printf 'Invalid selection.\n' >&2; exit 1 ;; esac; \
+	selected=$$(printf '%s\n' "$$files" | awk -v choice="$$choice" 'NR == choice { print; exit }'); \
+	if [ -z "$$selected" ]; then printf 'Invalid selection.\n' >&2; exit 1; fi; \
+	printf 'Selected backup: %s\n' "$$selected"; \
+	printf 'Type YES to continue: '; IFS= read -r confirmation; \
+	if [ "$$confirmation" != YES ]; then printf 'Restore aborted.\n'; exit 1; fi; \
+	$(COMPOSE) --env-file $(ENV_DOCKER) exec -T db sh -c 'psql -v ON_ERROR_STOP=1 -U "$$POSTGRES_USER" "$$POSTGRES_DB" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"'; \
+	$(COMPOSE) --env-file $(ENV_DOCKER) exec -T db sh -c 'psql -v ON_ERROR_STOP=1 -U "$$POSTGRES_USER" "$$POSTGRES_DB"' < "$$selected"; \
+	printf 'Restore completed successfully.\n'
+
+prod-restore-db: ## Restore the production Docker PostgreSQL database from a BACKUP_DIR SQL file
+	@set -eu; \
+	files=$$(ls -1t "$(BACKUP_DIR)"/*.sql 2>/dev/null || true); \
+	if [ -z "$$files" ]; then printf 'No SQL backups found in %s\n' "$(BACKUP_DIR)" >&2; exit 1; fi; \
+	printf '%s\n' "$$files" | awk '{ printf "  %d) %s\n", NR, $$0 }'; \
+	printf 'Select backup number: '; IFS= read -r choice; \
+	case "$$choice" in ''|*[!0-9]*) printf 'Invalid selection.\n' >&2; exit 1 ;; esac; \
+	selected=$$(printf '%s\n' "$$files" | awk -v choice="$$choice" 'NR == choice { print; exit }'); \
+	if [ -z "$$selected" ]; then printf 'Invalid selection.\n' >&2; exit 1; fi; \
+	printf 'Selected backup: %s\n' "$$selected"; \
+	printf 'Type YES to continue: '; IFS= read -r confirmation; \
+	if [ "$$confirmation" != YES ]; then printf 'Restore aborted.\n'; exit 1; fi; \
+	$(COMPOSE) --env-file $(ENV_PROD) exec -T db sh -c 'psql -v ON_ERROR_STOP=1 -U "$$POSTGRES_USER" "$$POSTGRES_DB" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"'; \
+	$(COMPOSE) --env-file $(ENV_PROD) exec -T db sh -c 'psql -v ON_ERROR_STOP=1 -U "$$POSTGRES_USER" "$$POSTGRES_DB"' < "$$selected"; \
+	printf 'Restore completed successfully.\n'
 
 backup-uploads: ## Archive local Docker uploads to BACKUP_DIR
 	@mkdir -p "$(BACKUP_DIR)"
