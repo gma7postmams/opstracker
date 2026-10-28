@@ -1,4 +1,5 @@
 ## 2026-10-28
+- Fixed production delivery of runtime-created avatars and branding images in standalone Docker deployments.
 - Added interactive local and production database restore commands with newest-first SQL backup selection and explicit confirmation.
 
 ## 2026-10-27

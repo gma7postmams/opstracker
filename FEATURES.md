@@ -73,7 +73,7 @@ Reference numbers are generated as `TA-YYYY-NNNNN` or `OT-YYYY-NNNNN`. A per-typ
 - Users can disable Email 2FA on their own account. Administrators can disable it for another account as a recovery action. Enable/disable, code delivery, successful verification and failed verification are audit logged.
 - Administrators manage locations, shifts, show/groups, assistance categories, activity types, branding, imports and JSON backups/restores.
 - Master-data values are retired (marked inactive), not deleted; new records use active values.
-- Avatars, logos and favicons are stored as files under `public/uploads`, not in the JSON backup.
+- Avatars, logos and favicons are stored as uniquely named files under `public/uploads` and served at `/uploads/<filename>`, including files created at runtime; they are not in the JSON backup.
 
 ## Import
 

@@ -82,7 +82,7 @@ The seed job waits for PostgreSQL, applies pending migrations, and runs `npm run
 
 For later deployments, run `make prod-update`. The app container runs `prisma migrate deploy` before starting Next.js; the command applies pending checked-in migrations and is safe to repeat on container restarts. Back up the database before deploying schema changes; for multi-instance deployments, run migrations once as a deployment job before starting application replicas.
 
-Compose persists PostgreSQL data in the `postgres_data` named volume and uploaded images in the `uploads` named volume mounted at `/app/public/uploads`. Back up both volumes as part of the deployment's recovery plan. A host bind mount such as `./uploads:/app/public/uploads` can replace the upload volume when host-managed backups are preferred; create that directory and make it writable by container UID 1001 first. Keep port 3000 behind a TLS-terminating reverse proxy and restrict VM firewall access to the proxy.
+Compose persists PostgreSQL data in the `postgres_data` named volume and uploaded images in the `uploads` named volume mounted at `/app/public/uploads`. The `/uploads/[filename]` route reads from that volume at runtime, including files created after the standalone build. Back up both volumes as part of the deployment's recovery plan. A host bind mount such as `./uploads:/app/public/uploads` can replace the upload volume when host-managed backups are preferred; create that directory and make it writable by container UID 1001 first. Keep port 3000 behind a TLS-terminating reverse proxy and restrict VM firewall access to the proxy.
 
 ## Makefile usage
 

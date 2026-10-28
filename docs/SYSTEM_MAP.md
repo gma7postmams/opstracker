@@ -289,6 +289,7 @@ UI Files:
 API Files:
 - `app/api/branding/route.ts`
 - `app/api/upload/route.ts`
+- `app/uploads/[filename]/route.ts`
 
 Business Logic:
 - `lib/branding.ts`
