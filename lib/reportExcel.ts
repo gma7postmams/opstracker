@@ -169,7 +169,7 @@ export async function buildReportWorkbook(data: {
   styleHeader(contributionHeader);
   summary.addRow(["Owned Records", data.contributionSummary.owned]);
   summary.addRow(["Assigned Records", data.contributionSummary.assigned]);
-  summary.addRow(["Participated Records", data.contributionSummary.participated]);
+  summary.addRow(["Participation Count", data.contributionSummary.participationCount]);
 
   autoFit(summary);
 

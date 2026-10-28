@@ -9,7 +9,51 @@ export interface ReportContributionSummary {
   userName: string;
   owned: number;
   assigned: number;
-  participated: number;
+  participationCount: number;
+}
+
+export interface ReportParticipationRow {
+  userName: string;
+  owned: number;
+  participationCount: number;
+}
+
+export function buildReportParticipationRows(
+  records: Array<{ ownerId: number | null; assigned: string; accountable: string }>,
+  users: Array<{ id: number; firstName: string; middleInitial?: string | null; surname: string }>,
+): ReportParticipationRow[] {
+  const rows = users.map((user) => ({
+    id: user.id,
+    userName: fullName(user),
+    owned: 0,
+    participationCount: 0,
+  }));
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const byName = new Map<string, typeof rows>();
+
+  for (const row of rows) {
+    const matches = byName.get(row.userName) ?? [];
+    matches.push(row);
+    byName.set(row.userName, matches);
+  }
+
+  for (const record of records) {
+    if (record.ownerId != null) {
+      const owner = byId.get(record.ownerId);
+      if (owner) owner.owned += 1;
+    }
+
+    if (record.assigned !== record.accountable) {
+      for (const participant of byName.get(record.assigned) ?? []) {
+        participant.participationCount += 1;
+      }
+    }
+  }
+
+  return rows
+    .filter((row) => row.owned > 0 || row.participationCount > 0)
+    .sort((a, b) => a.userName.localeCompare(b.userName))
+    .map(({ userName, owned, participationCount }) => ({ userName, owned, participationCount }));
 }
 
 export const WORK_LOG_TYPE_ORDER = ["INVESTIGATION", "RESOLUTION", "REMARK"] as const;
@@ -126,13 +170,7 @@ export async function getReportContributionSummary(
     delegate.count({ where: { AND: [where, { assigned: contributor.name }] } }),
     delegate.count({
       where: {
-        AND: [where, {
-          OR: [
-            { ownerId: contributor.id },
-            { assigned: contributor.name },
-            { workLogs: { some: { createdById: contributor.id } } },
-          ],
-        }],
+        AND: [where, { assigned: contributor.name }, { NOT: { accountable: contributor.name } }],
       },
     }),
   ]);
@@ -142,7 +180,7 @@ export async function getReportContributionSummary(
     userName: contributor.name,
     owned: perType.reduce((total, counts) => total + counts[0], 0),
     assigned: perType.reduce((total, counts) => total + counts[1], 0),
-    participated: perType.reduce((total, counts) => total + counts[2], 0),
+    participationCount: perType.reduce((total, counts) => total + counts[2], 0),
   };
 }
 

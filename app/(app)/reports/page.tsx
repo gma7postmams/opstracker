@@ -283,6 +283,7 @@ const activeFilters =
         .report-page .report-history .status.pending { color:#b45309; border-color:#fde68a; background:#fffbeb; }
         .report-page .report-history .status.closed { color:#15803d; border-color:#bbf7d0; background:#f0fdf4; }
         .report-page .report-history tfoot td { background:var(--hint-bg); }
+        .report-page .report-participation td:last-child,.report-page .report-participation th:last-child { text-align:right; }
         .report-page .email-preview-frame { display:block; width:100%; height:70vh; min-height:520px; border:1px solid #dfe5eb; }
         @media(max-width:760px) { .report-page .report-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .report-page .report-actions { flex-direction:row; flex-wrap:wrap; width:100%; justify-content:flex-end; } }
         @media(max-width:480px) { .report-page .report-kpi { padding:13px 12px 12px 15px; } .report-page .report-kpi strong { font-size:24px; } }
@@ -374,8 +375,8 @@ const activeFilters =
               <strong>{totalRecords}</strong><small>{s.assistance} assistance · {s.tasks} other tasks</small>
             </div>
             <div className="report-kpi" style={{ "--kpi-accent": "#0f766e" } as React.CSSProperties}>
-              <div className="report-kpi-top"><span>Participated Records</span><span className="report-kpi-icon"><UsersRound size={16} aria-hidden="true" /></span></div>
-              <strong>{d.contributionSummary.participated}</strong><small>Owned, assigned, or contributed</small>
+              <div className="report-kpi-top"><span>Participation Count</span><span className="report-kpi-icon"><UsersRound size={16} aria-hidden="true" /></span></div>
+              <strong>{d.contributionSummary.participationCount}</strong><small>Assigned to this user, excluding the accountable person</small>
             </div>
             <div className="report-kpi" style={{ "--kpi-accent": "#2563eb" } as React.CSSProperties}>
               <div className="report-kpi-top"><span>Open</span><span className="report-kpi-icon"><CircleDot size={16} aria-hidden="true" /></span></div>
@@ -403,6 +404,25 @@ const activeFilters =
             <Tally title="Combined tally" note="Assistance and tasks by owner and assignee"
               rows={d.tallies.combined} accent="#06aed4" days={d.range.days} />
           )}
+          <div className="panel spaced report-history report-participation">
+            <div className="panelhead"><div><h3>Participation Summary</h3></div></div>
+            <div className="table">
+              {d.participationSummary.length ? (
+                <table>
+                  <thead><tr><th>User</th><th>Owned Records</th><th>Participation Count</th></tr></thead>
+                  <tbody>
+                    {d.participationSummary.map((row: { userName: string; owned: number; participationCount: number }) => (
+                      <tr key={row.userName}>
+                        <td><b>{row.userName}</b></td>
+                        <td>{row.owned}</td>
+                        <td>{row.participationCount}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : <div className="empty">No owned records or participation counts in this range.</div>}
+            </div>
+          </div>
         </>
       )}
 

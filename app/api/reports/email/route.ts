@@ -244,7 +244,7 @@ const emailHtml = `
             <tr><td colspan="3" style="padding:10px 5px 4px;color:#263947;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Activity Summary</td></tr>
             <tr>${summaryCard("Technical Assistance", assistanceWithLogs.length, "#0786a3", "&#8984;")}${summaryCard("Other Tasks", tasksWithLogs.length, "#b77914", "&#9776;")}${summaryCard("Total Records", totalRecords, "#2563a8", "&#9638;")}</tr>
             <tr><td colspan="3" style="padding:14px 5px 4px;color:#263947;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Contribution Summary: ${escapeHtml(contributionSummary.userName)}</td></tr>
-            <tr>${summaryCard("Owned Records", contributionSummary.owned, "#0786a3", "&#9733;")}${summaryCard("Assigned Records", contributionSummary.assigned, "#b77914", "&#9744;")}${summaryCard("Participated Records", contributionSummary.participated, "#2563a8", "&#10003;")}</tr>
+            <tr>${summaryCard("Owned Records", contributionSummary.owned, "#0786a3", "&#9733;")}${summaryCard("Assigned Records", contributionSummary.assigned, "#b77914", "&#9744;")}${summaryCard("Participation Count", contributionSummary.participationCount, "#2563a8", "&#10003;")}</tr>
             <tr><td colspan="3" style="padding:10px 5px 4px;color:#263947;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Status Summary</td></tr>
             <tr>${summaryCard("Open", statusCounts.open, "#c74646", "&#9675;")}${summaryCard("Close Pending", statusCounts.pending, "#b77914", "&#9684;")}${summaryCard("Closed", statusCounts.closed, "#34845e", "&#10003;")}</tr>
           </table>

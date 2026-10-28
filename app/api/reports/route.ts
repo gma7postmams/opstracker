@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { minutesBetween } from "@/lib/format";
-import { applyReportScope, formatReportOwner, getReportContributionSummary, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
+import { applyReportScope, buildReportParticipationRows, formatReportOwner, getReportContributionSummary, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
 
 interface Row {
   owner: string; assigned: string; total: number; closed: number; open: number; pending: number;
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
   if (status !== "all") where.status = status;
 
   const select = {
-    assigned: true, status: true, startDate: true, endDate: true,
+    ownerId: true, assigned: true, accountable: true, status: true, startDate: true, endDate: true,
     timeStarted: true, timeEnded: true, priority: true,
     owner: { select: reportOwnerSelect },
   };
@@ -83,11 +83,18 @@ export async function GET(req: NextRequest) {
 
   const combined = [...assistance, ...tasks];
   const closed = combined.filter((r) => r.status === "CLOSED").length;
-  const contributionSummary = await getReportContributionSummary(reportWhere, user, activity, userId);
+  const [contributionSummary, users] = await Promise.all([
+    getReportContributionSummary(reportWhere, user, activity, userId),
+    prisma.user.findMany({
+      select: { id: true, firstName: true, middleInitial: true, surname: true },
+    }),
+  ]);
+  const participationSummary = buildReportParticipationRows(combined, users);
 
   return NextResponse.json({
     range: { from, to, days },
     contributionSummary,
+    participationSummary,
     summary: {
       assistance: assistance.length,
       tasks: tasks.length,
