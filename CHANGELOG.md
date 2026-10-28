@@ -1,4 +1,5 @@
 ## 2026-10-28
+- Reordered the Technical Assistance create and edit forms to show Shift before Location; Other Tasks and existing field behavior are unchanged.
 - Improved report email readability in previews and sent messages with 14px record headers, inline `LABEL: value` details at 13px with 20px line height, clearer section spacing and emphasized record-type headings. Outlook-safe tables and report calculations are unchanged.
 - Redesigned report email sending with staged progress, duplicate-submission protection, a delivery summary and toast, and retryable errors with available SMTP diagnostics. Report generation, recipient selection, preview, and calculations are unchanged.
 - Redesigned email previews and sent reports with compact table-based CRM metrics, more readable KPI labels, a name-free Contribution Summary heading, wider record details and a wider single-line Ref No column. Report filters and calculations are unchanged.

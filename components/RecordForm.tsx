@@ -236,19 +236,6 @@ useEffect(() => {
         ) : (
           <>
         <div className="sectionlabel">Activity details</div>
-        {isAssistance && (
-          <label>Location
-            <SearchableMasterField
-              kind="LOCATION"
-              label="Location"
-              placeholder="Select a location"
-              options={master.LOCATION ?? []}
-              value={form.location}
-              onChange={(value) => set("location", value)}
-              onCreated={onMasterDataChange}
-            />{err("location")}
-          </label>
-        )}
         <label>Shift
           <SearchableMasterField
             kind="SHIFT"
@@ -265,6 +252,19 @@ useEffect(() => {
             onCreated={onMasterDataChange}
           />{err("shift")}
         </label>
+        {isAssistance && (
+          <label>Location
+            <SearchableMasterField
+              kind="LOCATION"
+              label="Location"
+              placeholder="Select a location"
+              options={master.LOCATION ?? []}
+              value={form.location}
+              onChange={(value) => set("location", value)}
+              onCreated={onMasterDataChange}
+            />{err("location")}
+          </label>
+        )}
 
         {isAssistance ? (
           <>
