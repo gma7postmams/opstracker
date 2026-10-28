@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isAdmin } from "@/lib/permissions";
 import { masterDataSchema, flatten } from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
 
@@ -21,12 +20,11 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const user = await currentUser();
-  if (!user || !isAdmin(user)) return NextResponse.json({ error: "Administrators only" }, { status: 403 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const parsed = masterDataSchema.safeParse(await req.json());
   if (!parsed.success) {
     return NextResponse.json({ error: "Validation failed", fields: flatten(parsed.error) }, { status: 400 });
   }
-
 const exists = await prisma.masterData.findUnique({
   where: {
     kind_value: {

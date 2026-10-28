@@ -2,7 +2,7 @@
 
 ## Create and track records
 
-Users create Technical Assistance records at `/assistance` or Other Task records at `/tasks`. Required fields include the activity date, shift, location, the type-specific subject/details, start time, assignee and accountable person. Show/group and remarks are optional. The server validates record data and creates an owner link to the signed-in account.
+Users create Technical Assistance records at `/assistance` or Other Task records at `/tasks`. Required fields include the activity date, shift, location, the type-specific subject/details, start time, assignee and accountable person. Shift, Location and Show / Group are searchable in both forms; Technical Assistance also has Category, while Other Tasks has Activity Type. Authenticated users can add a value with each field's adjacent plus button; this creates or restores an active, audited MasterData entry, adds it to the dropdown immediately and selects it. Show / Group is optional. Remarks are optional. The server validates record data and creates an owner link to the signed-in account.
 
 The Technical Assistance and Other Tasks list content columns show their respective client/problem or description, followed by the latest Resolution and Remark work logs. Each summary falls back to the corresponding legacy Resolution or Remarks field when no typed log exists. If neither Resolution nor Remark is available, the latest work log is shown as Update; with no available information, the list shows “Update: No updates yet.” Show/group and location remain in their separate table columns.
 

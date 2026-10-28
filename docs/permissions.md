@@ -17,7 +17,9 @@ The shared `(app)` layout redirects unauthenticated visitors to `/login`. Middle
 | Delete work logs | Author may delete their own; record owner may delete any work log on their record | Any work log |
 | Lock/unlock records | No | Yes |
 | Import records for multiple assignees | No | Yes |
-| Manage users, roles, master data, branding, backup/restore | No | Yes |
+| Manage users, roles, branding, backup/restore | No | Yes |
+| Add master data | All kinds | All kinds |
+| Retire master data | No | Yes |
 
 An unlocked record owner or assigned user can pass the base edit check. A caller editing a record they do not own is limited to assigned person, status, priority, end date and end time. The owner (and an administrator) can edit the full record except that owner identity is not an editable field. A lock blocks non-admin edits. Batch operations skip records the caller cannot edit.
 
@@ -40,6 +42,7 @@ Email 2FA setup and login codes are sent to the user's profile email through the
 ## Other boundaries
 
 - `/api/branding` GET is intentionally public for sign-in rendering; writes require an administrator.
+- Authenticated users may add any of the five master-data kinds through the applicable record-form fields; retiring values requires an administrator. Record owners with content-edit permission may set or change Show / Group and the type-specific Category or Activity Type fields.
 - Any authenticated user can upload an avatar. Logo and favicon uploads require an administrator. Uploads are limited to 2 MB and allowed image MIME types, with server-generated filenames.
 - `/api/users` GET is available to authenticated users and returns the user directory. Audit list/export routes return all logs to administrators and only the caller's logs to regular users.
 - The report user filter is administrator-only. Work-log APIs require a session.

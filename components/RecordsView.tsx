@@ -456,6 +456,11 @@ export default function RecordsView(props: Props) {
       {showForm && (
         <RecordForm
           type={type} singular={singular} master={master} record={showForm.record}
+          isAdmin={isAdmin}
+          onMasterDataChange={(kind, value) => setMaster((current) => ({
+            ...current,
+            [kind]: Array.from(new Set([...(current[kind] ?? []), value])),
+          }))}
           onClose={() => setShowForm(null)}
           onSaved={() => { setShowForm(null); load(); toast("Record saved"); }}
         />

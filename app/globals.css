@@ -494,6 +494,25 @@ hr{border:0;border-top:1px solid var(--line);margin:19px 0}
   box-shadow:0 0 0 4px rgba(59,130,246,.12);
 }
 
+.master-field-control{display:grid;gap:7px;min-width:0}
+.master-combobox-row{display:flex;gap:7px;min-width:0}
+.master-combobox{position:relative;display:block;flex:1;min-width:0}
+.form .master-combobox input{padding-right:34px}
+.master-combobox-options{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:60;
+  max-height:220px;overflow:auto;border:1px solid var(--line2);border-radius:8px;
+  background:var(--modal-bg);box-shadow:0 8px 20px #10182824;padding:4px}
+.master-combobox-option{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  min-height:36px;padding:8px 10px;border-radius:5px;color:var(--text);font-size:13px;font-weight:400;
+  cursor:pointer;overflow-wrap:anywhere}
+.master-combobox-option:hover,.master-combobox-option.active{background:var(--hint-bg)}
+.master-combobox-empty{display:block;padding:9px 10px;color:var(--muted);font-size:12px;font-weight:400}
+.master-add-toggle{width:44px;min-width:44px;display:grid;place-items:center;border:1px solid var(--line2);
+  border-radius:8px;background:var(--panel);color:var(--text)}
+.master-add-toggle:hover{background:var(--hint-bg)}
+.master-add-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px}
+.form .master-add-row input{padding:9px 11px}
+.master-add-row button{padding:8px 13px}
+
 .time-control{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
 .form .time-control input{min-width:0}
 .form .time-control .time-now{padding:10px 12px}

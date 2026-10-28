@@ -1,4 +1,5 @@
 ## 2026-10-28
+- Added searchable master-data fields for all five kinds to Technical Assistance and Other Task forms. Authenticated users can create active values with the inline plus control; new values are audited, immediately available and selected.
 - Fixed production delivery of runtime-created avatars and branding images in standalone Docker deployments.
 - Added interactive local and production database restore commands with newest-first SQL backup selection and explicit confirmation.
 

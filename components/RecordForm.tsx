@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Modal from "./Modal";
+import SearchableMasterField from "./SearchableMasterField";
 
 const nowHHMM = () => {
   const now = new Date();
@@ -24,11 +25,13 @@ interface Props {
   master: Record<string, string[]>;
   record?: any;
   canEditOriginal?: boolean;
+  isAdmin: boolean;
+  onMasterDataChange: (kind: "LOCATION" | "SHIFT" | "SHOW_GROUP" | "CATEGORY" | "ACTIVITY_TYPE", value: string) => void;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export default function RecordForm({ type, singular, master, record, canEditOriginal = false, onClose, onSaved }: Props) {
+export default function RecordForm({ type, singular, master, record, canEditOriginal = false, isAdmin, onMasterDataChange, onClose, onSaved }: Props) {
   const isAssistance = type === "assistance";
 
 const [people, setPeople] = useState<string[]>([]);
@@ -231,36 +234,58 @@ useEffect(() => {
           <>
         <div className="sectionlabel">Activity details</div>
         <label>Shift
-          <select value={form.shift} onChange={(e) => {
-            set("shift", e.target.value);
-            if (!record) {
-              try { window.localStorage.setItem("record-form-last-shift", e.target.value); } catch {}
-            }
-          }}>
-            <option value="">Select a shift</option>
-            {(master.SHIFT ?? []).map((v) => <option key={v}>{v}</option>)}
-          </select>{err("shift")}
+          <SearchableMasterField
+            kind="SHIFT"
+            label="Shift"
+            placeholder="Select a shift"
+            options={master.SHIFT ?? []}
+            value={form.shift}
+            onChange={(value) => {
+              set("shift", value);
+              if (!record) {
+                try { window.localStorage.setItem("record-form-last-shift", value); } catch {}
+              }
+            }}
+            onCreated={onMasterDataChange}
+          />{err("shift")}
         </label>
         <label>Location
-          <select value={form.location} onChange={(e) => set("location", e.target.value)}>
-            <option value="">Select a location</option>
-            {(master.LOCATION ?? []).map((v) => <option key={v}>{v}</option>)}
-          </select>{err("location")}
+          <SearchableMasterField
+            kind="LOCATION"
+            label="Location"
+            placeholder="Select a location"
+            options={master.LOCATION ?? []}
+            value={form.location}
+            onChange={(value) => set("location", value)}
+            onCreated={onMasterDataChange}
+          />{err("location")}
         </label>
         <label>Show / Group
-          <select value={form.showGroup ?? ""} onChange={(e) => set("showGroup", e.target.value)}>
-            <option value="">— none —</option>
-            {(master.SHOW_GROUP ?? []).map((v) => <option key={v}>{v}</option>)}
-          </select>
+          <SearchableMasterField
+            kind="SHOW_GROUP"
+            label="Show / Group"
+            placeholder="Select a show or group"
+            options={master.SHOW_GROUP ?? []}
+            value={form.showGroup ?? ""}
+            allowEmpty
+            onChange={(value) => set("showGroup", value)}
+            onCreated={onMasterDataChange}
+          />
         </label>
 
         {isAssistance ? (
           <>
             <label>Client name<input value={form.clientName} onChange={(e) => set("clientName", e.target.value)} required />{err("clientName")}</label>
             <label>Category
-              <select value={form.category} onChange={(e) => set("category", e.target.value)}>
-                {(master.CATEGORY ?? []).map((v) => <option key={v}>{v}</option>)}
-              </select>{err("category")}
+              <SearchableMasterField
+                kind="CATEGORY"
+                label="Category"
+                placeholder="Select a category"
+                options={master.CATEGORY ?? []}
+                value={form.category}
+                onChange={(value) => set("category", value)}
+                onCreated={onMasterDataChange}
+              />{err("category")}
             </label>
 
             <label className="full">Problem
@@ -291,11 +316,17 @@ useEffect(() => {
         ) : (
           <>
             <label>Activity type
-              <select value={form.activityType} onChange={(e) => set("activityType", e.target.value)}>
-                {(master.ACTIVITY_TYPE ?? []).map((v) => <option key={v}>{v}</option>)}
-              </select>{err("activityType")}
+              <SearchableMasterField
+                kind="ACTIVITY_TYPE"
+                label="Activity type"
+                placeholder="Select an activity type"
+                options={master.ACTIVITY_TYPE ?? []}
+                value={form.activityType}
+                onChange={(value) => set("activityType", value)}
+                onCreated={onMasterDataChange}
+              />{err("activityType")}
             </label>
-            <div />
+            {isAdmin && <div />}
 
 <label className="full">Description
   <textarea

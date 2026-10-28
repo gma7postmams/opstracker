@@ -361,6 +361,11 @@ if (!historyEvents.some((event: any) => event.title === "Reported")) {
         <RecordForm
           type={type as any} singular={isAssistance ? "Assistance" : "Task"}
           master={master} record={r} canEditOriginal={r.canEditOriginal}
+          isAdmin={isAdmin}
+          onMasterDataChange={(kind, value) => setMaster((current) => ({
+            ...current,
+            [kind]: Array.from(new Set([...(current[kind] ?? []), value])),
+          }))}
           onClose={() => setEditing(false)}
           onSaved={() => { setEditing(false); load(); toast("Record updated"); }}
         />

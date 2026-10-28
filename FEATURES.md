@@ -36,6 +36,7 @@ Reference numbers are generated as `TA-YYYY-NNNNN` or `OT-YYYY-NNNNN`. A per-typ
 
 ## Record operations
 
+- Technical Assistance and Other Task forms use searchable comboboxes for Shift, Location and Show / Group; Technical Assistance also has Category, and Other Tasks has Activity Type. Authenticated users can add values with each field's adjacent plus control; new active master-data values are audited, immediately added to the list and selected. Show / Group is optional.
 - Lists support text search, status/location/shift filters, and the shared Today, Yesterday, This Week, This Month, This Year, All Records and Custom period filter, plus sorting and pagination. From and To date inputs appear only for Custom. The user filter defaults to the signed-in user, with All Users available as a manual selection. The Assigned To column is followed by Accountable Person, which displays the record owner's full name.
 - Open records show the start time and a live elapsed-time counter in the list, and Started plus a live elapsed-time counter on the detail page, refreshed every second. Closed records retain their final calculated duration; reports and exports are unchanged.
 - Locked records show a Locked indicator in Technical Assistance and Other Tasks lists, Dashboard Needs Attention, and the record detail header beside the status badge. Lock and unlock controls and behavior are unchanged.
@@ -71,7 +72,7 @@ Reference numbers are generated as `TA-YYYY-NNNNN` or `OT-YYYY-NNNNN`. A per-typ
 - Roles are `ADMIN` and `USER`. Administrators manage accounts; users can update their own profile and password.
 - Profiles include names, email, username, role, avatar, optional Gmail report settings, and optional Email Two-Factor Authentication. Enabling 2FA requires a six-digit email code; codes expire after 10 minutes and are single-use. Code issuance is limited to five per user in a rolling 15-minute window. The initial login challenge bypasses the 60-second resend cooldown; explicit resends are subject to the cooldown, and the login page displays the remaining time and any server-provided retry delay.
 - Users can disable Email 2FA on their own account. Administrators can disable it for another account as a recovery action. Enable/disable, code delivery, successful verification and failed verification are audit logged.
-- Administrators manage locations, shifts, show/groups, assistance categories, activity types, branding, imports and JSON backups/restores.
+- Administrators manage all master-data kinds, branding, imports and JSON backups/restores. Authenticated users can add values for all five master-data kinds from the applicable record-form fields; only administrators can retire master-data values.
 - Master-data values are retired (marked inactive), not deleted; new records use active values.
 - Avatars, logos and favicons are stored as uniquely named files under `public/uploads` and served at `/uploads/<filename>`, including files created at runtime; they are not in the JSON backup.
 
