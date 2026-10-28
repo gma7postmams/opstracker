@@ -1,4 +1,5 @@
 ## 2026-10-28
+- Kept Clear Selection with the bulk record actions on Technical Assistance and Other Tasks, preventing the label from wrapping while retaining responsive toolbar wrapping.
 - Reordered the Technical Assistance create and edit forms to show Shift before Location; Other Tasks and existing field behavior are unchanged.
 - Improved report email readability in previews and sent messages with 14px record headers, inline `LABEL: value` details at 13px with 20px line height, clearer section spacing and emphasized record-type headings. Outlook-safe tables and report calculations are unchanged.
 - Redesigned report email sending with staged progress, duplicate-submission protection, a delivery summary and toast, and retryable errors with available SMTP diagnostics. Report generation, recipient selection, preview, and calculations are unchanged.

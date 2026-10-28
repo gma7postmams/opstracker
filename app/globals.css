@@ -318,7 +318,8 @@ select.action-control {height: 40px; border-radius: 999px; padding: 0 14px;}
 .bulkbar button:hover{background:#2a3646}
 .bulkbar button.danger{background:#7a271a;border-color:#912018}
 .bulkbar button.danger:hover{background:#912018}
-.bulkbar .x{background:transparent;border:0;color:#98a2b3;margin-left:auto}
+.bulkbar .x{width:auto;height:auto;align-self:center;background:transparent;border:0;color:#98a2b3;
+  margin-left:0;white-space:nowrap}
 
 /* tables */
 .table{padding:0;overflow-x:auto}
