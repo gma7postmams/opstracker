@@ -1,4 +1,6 @@
 ## 2026-10-28
+- Applied consistent owner and delegated-work detail rules to the Reports page, Participation Summary details, report-details API, email previews and sent reports, and Excel detail sheets. Owner reports omit Investigation (and Other Tasks omit Resolution); delegated details include only populated work-log sections. Participation counts, filters and sorting are unchanged.
+
 - Revised Reports participation counts to count an Assigned To user only when they differ from the Accountable Person, consistently across Technical Assistance and Other Tasks. Added a per-user Participation Summary table with owned-record and participation counts; ownership counts and the My Records visibility scope are unchanged.
 - Refactored the Other Tasks table into separate sortable Activity Type, Priority and Status badges and a wide Description column with Remark summary. Date / Shift and elapsed-duration formatting now match Technical Assistance, including cross-midnight ranges; Location and Show / Group remain omitted.
 - Refactored the Technical Assistance list columns, placed Category after Date / Shift, made Category sortable, separated its Category, Priority and Status badges, and added stacked date/shift, location/show and elapsed-duration details. Added a Category filter for Technical Assistance; Other Tasks is unchanged.

@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { formatReportOwner, ReportContributionSummary } from "@/lib/reports";
+import { buildReportRecordDetails, formatReportOwner, formatReportRecordDetails, ReportContributionSummary } from "@/lib/reports";
 
 function styleHeader(row: ExcelJS.Row) {
   row.eachCell((cell) => {
@@ -88,16 +88,6 @@ function colorStatusColumn(
       };
     }
   }
-}
-
-function formatWorkLog(log: any) {
-  return log
-    ? `${new Date(log.createdAt).toLocaleString()} - ${log.createdByName}: ${log.message}`
-    : "";
-}
-
-function formatRecentWorkLogs(logs: any[]) {
-  return logs.map((log) => `${log.type} - ${formatWorkLog(log)}`).join("\n");
 }
 
 export async function buildReportWorkbook(data: {
@@ -189,29 +179,20 @@ export async function buildReportWorkbook(data: {
     "Ref No",
     "Date",
     "Shift",
-    "Location",
-    "Show Group",
-    "Client Name",
-    "Problem",
     "Category",
-    "Resolution",
     "Priority",
     "Status",
     "Owner",
     "Assigned",
     "Accountable",
-    "Remarks",
-    "Latest Investigation Work Log",
-    "Latest Resolution Work Log",
-    "Latest Remark Work Log",
-    "Recent Work Log Entries",
+    "Details",
   ]);
 
   styleHeader(taHeader);
 
   ta.autoFilter = {
     from: "A1",
-    to: "S1",
+    to: "J1",
   };
 
   data.assistance.forEach((r) => {
@@ -219,26 +200,17 @@ export async function buildReportWorkbook(data: {
       r.refNo,
       new Date(r.startDate).toLocaleDateString(),
       r.shift,
-      r.location,
-      r.showGroup,
-      r.clientName,
-      r.problem,
       r.category,
-      r.resolution,
       r.priority,
       r.status,
       formatReportOwner(r.owner),
       r.assigned,
       r.accountable,
-      r.remarks,
-      formatWorkLog(r.latestInvestigationWorkLog),
-      formatWorkLog(r.latestResolutionWorkLog),
-      formatWorkLog(r.latestRemarkWorkLog),
-      formatRecentWorkLogs(r.recentWorkLogs ?? []),
+      formatReportRecordDetails(buildReportRecordDetails(r, "assistance")),
     ]);
   });
 
-  colorStatusColumn(ta, 11, 2);
+  colorStatusColumn(ta, 6, 2);
   autoFit(ta);
 
   //
@@ -257,25 +229,19 @@ export async function buildReportWorkbook(data: {
     "Ref No",
     "Date",
     "Shift",
-    "Activity Type",
-    "Description",
     "Priority",
     "Status",
     "Owner",
     "Assigned",
     "Accountable",
-    "Remarks",
-    "Latest Investigation Work Log",
-    "Latest Resolution Work Log",
-    "Latest Remark Work Log",
-    "Recent Work Log Entries",
+    "Details",
   ]);
 
   styleHeader(taskHeader);
 
   taskSheet.autoFilter = {
     from: "A1",
-    to: "O1",
+    to: "I1",
   };
 
   data.tasks.forEach((r) => {
@@ -283,22 +249,16 @@ export async function buildReportWorkbook(data: {
       r.refNo,
       new Date(r.startDate).toLocaleDateString(),
       r.shift,
-      r.activityType,
-      r.description,
       r.priority,
       r.status,
       formatReportOwner(r.owner),
       r.assigned,
       r.accountable,
-      r.remarks,
-      formatWorkLog(r.latestInvestigationWorkLog),
-      formatWorkLog(r.latestResolutionWorkLog),
-      formatWorkLog(r.latestRemarkWorkLog),
-      formatRecentWorkLogs(r.recentWorkLogs ?? []),
+      formatReportRecordDetails(buildReportRecordDetails(r, "tasks")),
     ]);
   });
 
-  colorStatusColumn(taskSheet, 7, 2);
+  colorStatusColumn(taskSheet, 5, 2);
   autoFit(taskSheet);
 
   //
@@ -352,7 +312,7 @@ export async function buildReportWorkbook(data: {
     "Location",
     "Owner",
     "Assigned",
-    "Description",
+    "Details",
   ]);
 
   styleHeader(combinedHeader);
@@ -367,7 +327,7 @@ export async function buildReportWorkbook(data: {
       r.location,
       formatReportOwner(r.owner),
       r.assigned,
-      r.problem,
+      formatReportRecordDetails(buildReportRecordDetails(r, "assistance")),
     ]);
   });
 
@@ -381,7 +341,7 @@ export async function buildReportWorkbook(data: {
       "",
       formatReportOwner(r.owner),
       r.assigned,
-      r.description,
+      formatReportRecordDetails(buildReportRecordDetails(r, "tasks")),
     ]);
   });
 

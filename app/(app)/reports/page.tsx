@@ -46,6 +46,19 @@ interface Row {
   avgPerDay: string; avgMinutes: number | null;
 }
 
+function ReportDetailContent({ details }: {
+  details: { header: string; sections: Array<{ label: string; value: string }> };
+}) {
+  return (
+    <>
+      {details.header && <strong>{details.header}</strong>}
+      {details.sections.map((section) => (
+        <div key={section.label}><b>{section.label}:</b> {section.value}</div>
+      ))}
+    </>
+  );
+}
+
 
 function Tally({ title, note, rows, accent, days }: {
   title: string; note: string; rows: Row[]; accent: string; days: number;
@@ -284,6 +297,12 @@ const activeFilters =
         .report-page .report-history .status.closed { color:#15803d; border-color:#bbf7d0; background:#f0fdf4; }
         .report-page .report-history tfoot td { background:var(--hint-bg); }
         .report-page .report-participation td:last-child,.report-page .report-participation th:last-child { text-align:right; }
+        .report-page .report-details-content { min-width:260px; white-space:normal; line-height:1.55; }
+        .report-page .report-details-content > strong { display:block; margin-bottom:3px; }
+        .report-page .participation-detail summary { cursor:pointer; color:var(--accent); font-weight:650; }
+        .report-page .participation-detail-list { margin:8px 0 0; padding:0; list-style:none; text-align:left; }
+        .report-page .participation-detail-list li { padding:8px 0; border-top:1px solid var(--border); }
+        .report-page .participation-detail-list li > strong { display:block; margin-bottom:3px; }
         .report-page .email-preview-frame { display:block; width:100%; height:70vh; min-height:520px; border:1px solid #dfe5eb; }
         @media(max-width:760px) { .report-page .report-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .report-page .report-actions { flex-direction:row; flex-wrap:wrap; width:100%; justify-content:flex-end; } }
         @media(max-width:480px) { .report-page .report-kpi { padding:13px 12px 12px 15px; } .report-page .report-kpi strong { font-size:24px; } }
@@ -404,18 +423,64 @@ const activeFilters =
             <Tally title="Combined tally" note="Assistance and tasks by owner and assignee"
               rows={d.tallies.combined} accent="#06aed4" days={d.range.days} />
           )}
+          <div className="panel spaced report-history">
+            <div className="panelhead"><div><h3>Report Details</h3></div></div>
+            <div className="table">
+              {d.reportRecords.length ? (
+                <table>
+                  <thead><tr><th>Ref No</th><th>Activity</th><th>Status</th><th>Owner</th><th>Assigned</th><th>Details</th></tr></thead>
+                  <tbody>
+                    {d.reportRecords.map((record: {
+                      refNo: string; recordType: string; status: string; owner: string; assigned: string;
+                      details: { header: string; sections: Array<{ label: string; value: string }> };
+                    }) => (
+                      <tr key={`${record.recordType}-${record.refNo}`}>
+                        <td><b>{record.refNo}</b></td>
+                        <td>{record.recordType}</td>
+                        <td>{record.status}</td>
+                        <td>{record.owner}</td>
+                        <td>{record.assigned}</td>
+                        <td className="report-details-content"><ReportDetailContent details={record.details} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : <div className="empty">No records in this range.</div>}
+            </div>
+          </div>
           <div className="panel spaced report-history report-participation">
             <div className="panelhead"><div><h3>Participation Summary</h3></div></div>
             <div className="table">
               {d.participationSummary.length ? (
                 <table>
-                  <thead><tr><th>User</th><th>Owned Records</th><th>Participation Count</th></tr></thead>
+                  <thead><tr><th>User</th><th>Owned Records</th><th>Participation Count</th><th>Delegated Work Details</th></tr></thead>
                   <tbody>
-                    {d.participationSummary.map((row: { userName: string; owned: number; participationCount: number }) => (
+                    {d.participationSummary.map((row: {
+                      userName: string; owned: number; participationCount: number;
+                      delegatedWork: Array<{
+                        refNo: string; recordType: "assistance" | "tasks"; header: string;
+                        sections: Array<{ label: string; value: string }>;
+                      }>;
+                    }) => (
                       <tr key={row.userName}>
                         <td><b>{row.userName}</b></td>
                         <td>{row.owned}</td>
                         <td>{row.participationCount}</td>
+                        <td>
+                          {row.delegatedWork.length ? (
+                            <details className="participation-detail">
+                              <summary>View {row.delegatedWork.length} record{row.delegatedWork.length === 1 ? "" : "s"}</summary>
+                              <ul className="participation-detail-list">
+                                {row.delegatedWork.map((work) => (
+                                  <li key={`${work.recordType}-${work.refNo}`}>
+                                    <strong>{work.refNo} · {work.recordType === "assistance" ? "Technical Assistance" : "Other Tasks"}</strong>
+                                    <ReportDetailContent details={work} />
+                                  </li>
+                                ))}
+                              </ul>
+                            </details>
+                          ) : "—"}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

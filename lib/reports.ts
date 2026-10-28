@@ -16,10 +16,69 @@ export interface ReportParticipationRow {
   userName: string;
   owned: number;
   participationCount: number;
+  delegatedWork: Array<{
+    refNo: string;
+    recordType: "assistance" | "tasks";
+    header: string;
+    sections: ReportDetailSection[];
+  }>;
+}
+
+export interface ReportDetailSection {
+  label: string;
+  value: string;
+}
+
+export function buildReportRecordDetails(
+  record: Record<string, any>,
+  recordType: "assistance" | "tasks",
+) {
+  const isOwner = record.assigned === record.accountable;
+  const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
+  const sections: ReportDetailSection[] = [];
+  const addSection = (label: string, value: unknown) => {
+    const cleanValue = text(value);
+    if (cleanValue) sections.push({ label, value: cleanValue });
+  };
+
+  if (recordType === "assistance") {
+    const header = [record.clientName, record.showGroup, record.location]
+      .map(text)
+      .filter(Boolean)
+      .join(" / ");
+    addSection("Problem", record.problem);
+    if (!isOwner) addSection("Investigation", record.latestInvestigationWorkLog?.message);
+    addSection("Resolution", record.latestResolutionWorkLog?.message || record.resolution);
+    addSection("Remarks", record.latestRemarkWorkLog?.message || record.remarks);
+    return { header, sections };
+  }
+
+  addSection("Activity Type", record.activityType);
+  addSection("Description", record.description);
+  if (!isOwner) addSection("Investigation", record.latestInvestigationWorkLog?.message);
+  if (!isOwner) addSection("Resolution", record.latestResolutionWorkLog?.message || record.resolution);
+  addSection("Remarks", record.latestRemarkWorkLog?.message || record.remarks);
+  return { header: "", sections };
+}
+
+export function formatReportRecordDetails(details: {
+  header: string;
+  sections: ReportDetailSection[];
+}) {
+  return [
+    details.header,
+    ...details.sections.map(({ label, value }) => `${label}: ${value}`),
+  ].filter(Boolean).join("\n");
 }
 
 export function buildReportParticipationRows(
-  records: Array<{ ownerId: number | null; assigned: string; accountable: string }>,
+  records: Array<Record<string, any> & {
+    ownerId: number | null;
+    assigned: string;
+    accountable: string;
+    refNo: string;
+    recordType: "assistance" | "tasks";
+  }>,
   users: Array<{ id: number; firstName: string; middleInitial?: string | null; surname: string }>,
 ): ReportParticipationRow[] {
   const rows = users.map((user) => ({
@@ -27,6 +86,7 @@ export function buildReportParticipationRows(
     userName: fullName(user),
     owned: 0,
     participationCount: 0,
+    delegatedWork: [] as ReportParticipationRow["delegatedWork"],
   }));
   const byId = new Map(rows.map((row) => [row.id, row]));
   const byName = new Map<string, typeof rows>();
@@ -46,6 +106,11 @@ export function buildReportParticipationRows(
     if (record.assigned !== record.accountable) {
       for (const participant of byName.get(record.assigned) ?? []) {
         participant.participationCount += 1;
+        participant.delegatedWork.push({
+          refNo: record.refNo,
+          recordType: record.recordType,
+          ...buildReportRecordDetails(record, record.recordType),
+        });
       }
     }
   }
@@ -53,7 +118,12 @@ export function buildReportParticipationRows(
   return rows
     .filter((row) => row.owned > 0 || row.participationCount > 0)
     .sort((a, b) => a.userName.localeCompare(b.userName))
-    .map(({ userName, owned, participationCount }) => ({ userName, owned, participationCount }));
+    .map(({ userName, owned, participationCount, delegatedWork }) => ({
+      userName,
+      owned,
+      participationCount,
+      delegatedWork,
+    }));
 }
 
 export const WORK_LOG_TYPE_ORDER = ["INVESTIGATION", "RESOLUTION", "REMARK"] as const;
@@ -81,8 +151,8 @@ export function formatReportOwner(owner?: {
 }
 
 export async function getReportWorkLogsForExport(
-  assistance: Array<{ id: number; refNo: string }>,
-  tasks: Array<{ id: number; refNo: string }>,
+  assistance: Array<{ id: number; refNo: string; assigned: string; accountable: string }>,
+  tasks: Array<{ id: number; refNo: string; assigned: string; accountable: string }>,
 ) {
   const conditions = [
     ...(assistance.length ? [{ assistanceId: { in: assistance.map((record) => record.id) } }] : []),
@@ -98,20 +168,35 @@ export async function getReportWorkLogsForExport(
       message: true,
       createdAt: true,
       createdByName: true,
+      assistanceId: true,
+      taskId: true,
       assistance: { select: { refNo: true } },
       task: { select: { refNo: true } },
     },
   });
 
-  return logs.map((log) => ({
-    parentRecordNo: log.assistance?.refNo ?? log.task?.refNo ?? "",
-    recordType: log.assistance ? "Technical Assistance" : "Other Tasks",
-    createdAt: log.createdAt,
-    createdBy: log.createdByName,
-    investigate: log.type === "INVESTIGATION" ? log.message : "",
-    resolution: log.type === "RESOLUTION" ? log.message : "",
-    remarks: log.type === "REMARK" ? log.message : "",
-  }));
+  const assistanceOwnerById = new Map(assistance.map((record) => [record.id, record.assigned === record.accountable]));
+  const taskOwnerById = new Map(tasks.map((record) => [record.id, record.assigned === record.accountable]));
+
+  return logs.flatMap((log) => {
+    const isAssistance = Boolean(log.assistance);
+    const isOwner = isAssistance
+      ? assistanceOwnerById.get(log.assistanceId!) === true
+      : taskOwnerById.get(log.taskId!) === true;
+    if (isOwner && (log.type === "INVESTIGATION" || (!isAssistance && log.type === "RESOLUTION"))) {
+      return [];
+    }
+
+    return [{
+      parentRecordNo: log.assistance?.refNo ?? log.task?.refNo ?? "",
+      recordType: isAssistance ? "Technical Assistance" : "Other Tasks",
+      createdAt: log.createdAt,
+      createdBy: log.createdByName,
+      investigate: log.type === "INVESTIGATION" ? log.message : "",
+      resolution: log.type === "RESOLUTION" ? log.message : "",
+      remarks: log.type === "REMARK" ? log.message : "",
+    }];
+  });
 }
 
 export function resolveReportScope(scope: string | null | undefined, user: SessionUser): ReportScope {
@@ -369,6 +454,7 @@ export async function addReportTimelineSummaries<T extends {
       participants,
       latestResolution: latestResolutionLog?.message || record.resolution || "",
       timelineSummary: timeline,
+      reportDetails: buildReportRecordDetails(record, recordType),
     };
   });
 }

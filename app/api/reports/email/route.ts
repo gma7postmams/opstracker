@@ -5,7 +5,7 @@ import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildReportWorkbook } from "@/lib/reportExcel";
 import { logAudit } from "@/lib/audit";
-import { addReportWorkLogSummaries, applyReportScope, formatReportOwner, getReportContributionSummary, getReportWorkLogsForExport, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
+import { addReportWorkLogSummaries, applyReportScope, buildReportRecordDetails, formatReportOwner, getReportContributionSummary, getReportWorkLogsForExport, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
 
 export async function POST(req: NextRequest) {
   const actor = await currentUser();
@@ -146,24 +146,18 @@ const cellStyle = "padding:8px 7px;border-bottom:1px solid #e3e8ee;color:#273444
 const headerCellStyle = "padding:9px 7px;background:#edf3f4;border-bottom:1px solid #d7e0e5;color:#435564;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;text-align:left;";
 const tableHead = () => `<tr>${["Ref No", "Details", "Status", "Owner", "Assigned"].map((label) =>
   `<th style="${headerCellStyle}">${label}</th>`).join("")}</tr>`;
-const detailLine = (label: string, value: unknown) =>
-  `<strong>${label}:</strong> ${escapeHtml(value)}<br>`;
+const renderReportDetails = (record: Record<string, any>, recordType: "assistance" | "tasks") => {
+  const details = buildReportRecordDetails(record, recordType);
+  const header = details.header
+    ? `<div style="font-weight:bold;margin-bottom:4px;">${escapeHtml(details.header)}</div>`
+    : "";
+  const sections = details.sections.map(({ label, value }) =>
+    `<div><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</div>`).join("");
+  return `${header}${sections}`;
+};
 const assistanceRows = assistanceWithLogs.length
   ? assistanceWithLogs.map((row) => {
-      const resolution = row.latestResolutionWorkLog?.message?.trim();
-      const remark = row.latestRemarkWorkLog?.message?.trim();
-      const latestUpdate = row.latestWorkLog?.message?.trim();
-      const context = [row.clientName, row.showGroup, row.location]
-        .filter((value) => typeof value === "string" && value.trim())
-        .map(escapeHtml)
-        .join(" / ");
-      const details = [
-        context ? `${context}<br>` : "",
-        row.problem?.trim() ? detailLine("Problem", row.problem) : "",
-        resolution ? detailLine("Resolution", resolution) : "",
-        remark ? detailLine("Remark", remark) : "",
-        !resolution && !remark && latestUpdate ? detailLine("Update", latestUpdate) : "",
-      ].join("");
+      const details = renderReportDetails(row, "assistance");
       return `<tr>
         <td style="${cellStyle}">${escapeHtml(row.refNo)}</td>
         <td style="${cellStyle}">${details}</td>
@@ -175,10 +169,10 @@ const assistanceRows = assistanceWithLogs.length
   : `<tr><td colspan="5" style="${cellStyle}color:#6b7785;text-align:center;padding:18px;">No technical assistance records in this period.</td></tr>`;
 const taskRows = tasksWithLogs.length
   ? tasksWithLogs.map((row) => {
-      const latestUpdate = row.workLogs[0]?.message || "Not recorded.";
+      const details = renderReportDetails(row, "tasks");
       return `<tr>
         <td style="${cellStyle}">${escapeHtml(row.refNo)}</td>
-        <td style="${cellStyle}">${detailLine("Activity Type", row.activityType)}${detailLine("Description", row.description)}<strong>Latest Update:</strong> ${escapeHtml(latestUpdate)}</td>
+        <td style="${cellStyle}">${details}</td>
         <td style="${cellStyle}">${escapeHtml(formatStatusLabel(row.status))}</td>
         <td style="${cellStyle}">${escapeHtml(formatReportOwner(row.owner))}</td>
         <td style="${cellStyle}">${escapeHtml(row.assigned)}</td>

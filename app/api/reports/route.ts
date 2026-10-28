@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { minutesBetween } from "@/lib/format";
-import { applyReportScope, buildReportParticipationRows, formatReportOwner, getReportContributionSummary, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
+import { addReportWorkLogSummaries, applyReportScope, buildReportParticipationRows, buildReportRecordDetails, formatReportOwner, getReportContributionSummary, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
 
 interface Row {
   owner: string; assigned: string; total: number; closed: number; open: number; pending: number;
@@ -71,17 +71,35 @@ export async function GET(req: NextRequest) {
 
   if (status !== "all") where.status = status;
 
-  const select = {
-    ownerId: true, assigned: true, accountable: true, status: true, startDate: true, endDate: true,
+  const commonSelect = {
+    id: true, refNo: true, ownerId: true, assigned: true, accountable: true, status: true, startDate: true, endDate: true,
     timeStarted: true, timeEnded: true, priority: true,
     owner: { select: reportOwnerSelect },
+  } as const;
+  const workLogSelect = {
+    orderBy: [{ createdAt: "desc" as const }, { id: "desc" as const }],
+    take: 5,
+    select: { id: true, type: true, message: true, createdAt: true, createdByName: true },
   };
-  const [assistance, tasks] = await Promise.all([
-    activity === "tasks" ? [] : prisma.assistance.findMany({ where: reportWhere, select }),
-    activity === "assistance" ? [] : prisma.task.findMany({ where: reportWhere, select }),
+  const [assistanceRecords, taskRecords] = await Promise.all([
+    activity === "tasks" ? [] : prisma.assistance.findMany({
+      where: reportWhere,
+      select: { ...commonSelect, workLogs: workLogSelect, clientName: true, showGroup: true, location: true, problem: true, resolution: true, remarks: true },
+    }),
+    activity === "assistance" ? [] : prisma.task.findMany({
+      where: reportWhere,
+      select: { ...commonSelect, workLogs: workLogSelect, activityType: true, description: true, remarks: true },
+    }),
+  ]);
+  const [assistanceWithLogs, tasksWithLogs] = await Promise.all([
+    addReportWorkLogSummaries(assistanceRecords, "assistance"),
+    addReportWorkLogSummaries(taskRecords, "tasks"),
   ]);
 
-  const combined = [...assistance, ...tasks];
+  const combined = [
+    ...assistanceWithLogs.map((record) => ({ ...record, recordType: "assistance" as const })),
+    ...tasksWithLogs.map((record) => ({ ...record, recordType: "tasks" as const })),
+  ];
   const closed = combined.filter((r) => r.status === "CLOSED").length;
   const [contributionSummary, users] = await Promise.all([
     getReportContributionSummary(reportWhere, user, activity, userId),
@@ -90,14 +108,33 @@ export async function GET(req: NextRequest) {
     }),
   ]);
   const participationSummary = buildReportParticipationRows(combined, users);
+  const reportRecords = [
+    ...assistanceWithLogs.map((record) => ({
+      refNo: record.refNo,
+      recordType: "Technical Assistance",
+      status: record.status,
+      owner: formatReportOwner(record.owner),
+      assigned: record.assigned,
+      details: buildReportRecordDetails(record, "assistance"),
+    })),
+    ...tasksWithLogs.map((record) => ({
+      refNo: record.refNo,
+      recordType: "Other Tasks",
+      status: record.status,
+      owner: formatReportOwner(record.owner),
+      assigned: record.assigned,
+      details: buildReportRecordDetails(record, "tasks"),
+    })),
+  ];
 
   return NextResponse.json({
     range: { from, to, days },
     contributionSummary,
     participationSummary,
+    reportRecords,
     summary: {
-      assistance: assistance.length,
-      tasks: tasks.length,
+      assistance: assistanceWithLogs.length,
+      tasks: tasksWithLogs.length,
       total: combined.length,
       closed,
       open: combined.filter((r) => r.status === "OPEN").length,
@@ -105,8 +142,8 @@ export async function GET(req: NextRequest) {
       avgPerDay: (closed / days).toFixed(2),
     },
     tallies: {
-      assistance: activity === "tasks" ? null : tally(assistance, days),
-      tasks: activity === "assistance" ? null : tally(tasks, days),
+      assistance: activity === "tasks" ? null : tally(assistanceWithLogs, days),
+      tasks: activity === "assistance" ? null : tally(tasksWithLogs, days),
       combined: activity === "all" ? tally(combined, days) : null,
     },
   });

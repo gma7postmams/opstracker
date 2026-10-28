@@ -3,6 +3,30 @@ import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { addReportTimelineSummaries, addReportWorkLogSummaries, applyReportScope, getReportContributionSummary, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
 
+function applyReportDetailVisibility(records: any[], recordType: "assistance" | "tasks") {
+  return records.map((record) => {
+    if (record.assigned !== record.accountable) return record;
+
+    const isHiddenLog = (log: { type: string }) =>
+      log.type === "INVESTIGATION" || (recordType === "tasks" && log.type === "RESOLUTION");
+    const latestWorkLog = record.latestWorkLog && isHiddenLog(record.latestWorkLog)
+      ? null
+      : record.latestWorkLog;
+
+    return {
+      ...record,
+      latestInvestigationWorkLog: null,
+      ...(recordType === "tasks" ? { latestResolutionWorkLog: null, latestResolution: "" } : {}),
+      latestWorkLog,
+      recentWorkLogs: record.recentWorkLogs?.filter((log: { type: string }) => !isHiddenLog(log)),
+      workLogs: record.workLogs?.filter((log: { type: string }) => !isHiddenLog(log)),
+      timelineSummary: record.timelineSummary?.filter((event: { title: string }) =>
+        event.title !== "Investigation" && !(recordType === "tasks" && event.title === "Resolution")
+      ),
+    };
+  });
+}
+
 export async function GET(req: NextRequest) {
   const user = await currentUser();
 
@@ -130,8 +154,8 @@ export async function GET(req: NextRequest) {
       from,
       to,
     },
-    assistance: assistanceWithTimeline,
-    tasks: tasksWithTimeline,
+    assistance: applyReportDetailVisibility(assistanceWithTimeline, "assistance"),
+    tasks: applyReportDetailVisibility(tasksWithTimeline, "tasks"),
     contributionSummary,
   });
 }
