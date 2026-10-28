@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { logAudit, makeAuditChanges } from "./audit";
 import { RecordType, TYPES, SortKey } from "./recordTypes";
 import { SessionUser, canEdit } from "./permissions";
+import { fullName } from "./format";
 
 /**
  * Both models expose the same shared columns, so one generic delegate lets a
@@ -88,12 +89,25 @@ export function buildOrderBy(type: RecordType, sort: SortKey = "date", dir: "asc
 
 export function recordVisibilityWhere(user: SessionUser) {
   if (user.role === "ADMIN") return {};
+  return recordParticipationWhere(user);
+}
+
+export function recordParticipationWhere(user: { id: number; name?: string }) {
   return {
     OR: [
-      { owner: { is: { role: "USER" } } },
-      { assigned: user.name },
+      { ownerId: user.id },
+      ...(user.name ? [{ assigned: user.name }] : []),
+      { workLogs: { some: { createdById: user.id } } },
     ],
   };
+}
+
+export async function hasUserParticipated(type: RecordType, recordId: number, userId: number) {
+  const recordLink = type === "assistance" ? { assistanceId: recordId } : { taskId: recordId };
+  return Boolean(await prisma.workLog.findFirst({
+    where: { ...recordLink, createdById: userId },
+    select: { id: true },
+  }));
 }
 
 export function applyRecordVisibility<T extends Record<string, any>>(where: T, user: SessionUser) {
@@ -104,8 +118,21 @@ export function applyRecordVisibility<T extends Record<string, any>>(where: T, u
 export async function listRecords(type: RecordType, query: ListQuery, user?: any) {
   const d = delegateFor(type);
   const filters = buildWhere(type, query);
-  if (query.userId && query.userId !== "all") filters.ownerId = Number(query.userId);
-  const where = user ? applyRecordVisibility(filters, user) : filters;
+  let where = user ? applyRecordVisibility(filters, user) : filters;
+  if (query.userId && query.userId !== "all") {
+    const filterUserId = Number(query.userId);
+    if (Number.isInteger(filterUserId) && filterUserId > 0) {
+      let filterUserName = filterUserId === user?.id ? user.name : undefined;
+      if (!filterUserName) {
+        const filterUser = await prisma.user.findUnique({
+          where: { id: filterUserId },
+          select: { firstName: true, middleInitial: true, surname: true },
+        });
+        if (filterUser) filterUserName = fullName(filterUser);
+      }
+      where = { AND: [where, recordParticipationWhere({ id: filterUserId, name: filterUserName })] };
+    }
+  }
   const unfilteredWhere = user ? recordVisibilityWhere(user) : {};
 
 

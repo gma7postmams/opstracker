@@ -2,7 +2,7 @@ import { logAudit, makeAuditChanges } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { isRecordType } from "@/lib/recordTypes";
-import { getRecord, normalizeTimes, delegateFor } from "@/lib/records";
+import { getRecord, normalizeTimes, delegateFor, hasUserParticipated } from "@/lib/records";
 import { canEdit, canView, editBlockedReason, isAdmin } from "@/lib/permissions";
 import { schemaFor, flatten } from "@/lib/validation";
 import { prisma } from "@/lib/prisma";
@@ -29,7 +29,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ typ
   const found = await load(p.type, p.id);
   if (!found) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const { type, record } = found;
-  if (!canView(user, { ...record, ownerRole: record.owner?.role })) {
+  const hasParticipated = user.role !== "ADMIN" && await hasUserParticipated(type, record.id, user.id);
+  if (!canView(user, { ...record, hasParticipated })) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   const activityHistory = await prisma.auditLog.findMany({

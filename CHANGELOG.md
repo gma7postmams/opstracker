@@ -1,4 +1,6 @@
 ## 2026-10-28
+- Updated Technical Assistance and Other Tasks list summaries to show Investigation and delegated Resolution where applicable, while keeping owner summaries compact and omitting empty sections. Report logic is unchanged.
+- Updated Technical Assistance and Other Tasks visibility and the default My Records filter to include records owned by, currently assigned to, or previously participated in by the user through Investigation, Resolution or Remark work logs. Participants retain view access after reassignment; edit permissions and report calculations/counts are unchanged.
 - Applied consistent owner and delegated-work detail rules to the Reports page, Participation Summary details, report-details API, email previews and sent reports, and Excel detail sheets. Owner reports omit Investigation (and Other Tasks omit Resolution); delegated details include only populated work-log sections. Participation counts, filters and sorting are unchanged.
 
 - Revised Reports participation counts to count an Assigned To user only when they differ from the Accountable Person, consistently across Technical Assistance and Other Tasks. Added a per-user Participation Summary table with owned-record and participation counts; ownership counts and the My Records visibility scope are unchanged.

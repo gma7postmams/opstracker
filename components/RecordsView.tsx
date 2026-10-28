@@ -429,7 +429,25 @@ export default function RecordsView(props: Props) {
               </tr>
             </thead>
             <tbody>
-              {visibleRows.map((r) => (
+              {visibleRows.map((r) => {
+                const isOwner = r.assigned === r.accountable;
+                const summarySections = showLocation
+                  ? [
+                      { label: "Problem", value: summaryMessage(null, r[bodyField]) },
+                      ...(!isOwner ? [{ label: "Investigation", value: summaryMessage(r.latestInvestigationWorkLog?.message) }] : []),
+                      { label: "Resolution", value: summaryMessage(r.latestResolutionWorkLog?.message, r.resolution) },
+                      { label: "Remark", value: summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) },
+                    ]
+                  : [
+                      { label: "Description", value: summaryMessage(null, r[bodyField]) },
+                      ...(!isOwner ? [
+                        { label: "Investigation", value: summaryMessage(r.latestInvestigationWorkLog?.message) },
+                        { label: "Resolution", value: summaryMessage(r.latestResolutionWorkLog?.message, r.resolution) },
+                      ] : []),
+                      { label: "Remark", value: summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) },
+                    ];
+
+                return (
                 <tr key={r.id} className={selected.has(r.id) ? "selected" : ""}>
                   <td className="selcol">
                     <input
@@ -447,23 +465,17 @@ export default function RecordsView(props: Props) {
                   {showLocation && <td><span className="crm-category" title={r.category ?? ""}>{r.category || "—"}</span></td>}
                   {showLocation && <td>{r.location}<small>{r.showGroup}</small></td>}
                   {!showLocation && <td><span className="crm-category" title={r.activityType ?? ""}>{r.activityType || "—"}</span></td>}
-                    {showLocation ? <td className="crm-activity-cell">
-                      <b className="crm-title-clamp">{r[subjectField]}</b>
-                      <small className="crm-description-clamp"><strong className="crm-content-label">Problem:</strong> {r[bodyField]}</small>
-                      {summaryMessage(r.latestResolutionWorkLog?.message, r.resolution) && <small className="crm-description-clamp"><strong className="crm-content-label">Resolution:</strong> {summaryMessage(r.latestResolutionWorkLog?.message, r.resolution)}</small>}
-                      {summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) && <small className="crm-remarks-clamp"><strong>Remark:</strong> {summaryMessage(r.latestRemarkWorkLog?.message, r.remarks)}</small>}
-                      {!summaryMessage(r.latestResolutionWorkLog?.message, r.resolution) && !summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) && r.latestWorkLog?.message?.trim() ? (
-                        <small className="crm-description-clamp"><strong className="crm-content-label">Update:</strong> {r.latestWorkLog.message.trim()}</small>
-                      ) : null}
-                      {!summaryMessage(r.latestResolutionWorkLog?.message, r.resolution) && !summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) && !r.latestWorkLog?.message?.trim() && (
-                        <small className="crm-description-clamp"><strong className="crm-content-label">Update:</strong> No updates yet</small>
-                      )}
-                    </td> : <td className="crm-activity-cell">
-                      <small className="crm-description-clamp"><strong className="crm-content-label">Description:</strong> {r[bodyField]}</small>
-                      {summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) && <small className="crm-remarks-clamp"><strong>Remark:</strong> {summaryMessage(r.latestRemarkWorkLog?.message, r.remarks)}</small>}
-                      {!summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) && r.latestWorkLog?.message?.trim() && <small className="crm-description-clamp"><strong className="crm-content-label">Update:</strong> {r.latestWorkLog.message.trim()}</small>}
-                      {!summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) && !r.latestWorkLog?.message?.trim() && <small className="crm-description-clamp"><strong className="crm-content-label">Update:</strong> No updates yet</small>}
-                    </td>}
+                    <td className="crm-activity-cell">
+                      {showLocation && <b className="crm-title-clamp">{r[subjectField]}</b>}
+                      {summarySections.filter(({ value }) => value).map(({ label, value }) => (
+                        <small
+                          key={label}
+                          className={label === "Remark" ? "crm-remarks-clamp" : "crm-description-clamp"}
+                        >
+                          <strong className={label === "Remark" ? undefined : "crm-content-label"}>{label}:</strong> {value}
+                        </small>
+                      ))}
+                    </td>
                   <td><span className={`crm-priority crm-priority-${String(r.priority).toLowerCase()}`}><ArrowDownWideNarrow size={13} aria-hidden="true" />{priorityLabel(r.priority)}</span></td>
                   <td><span className={`crm-status crm-status-${String(r.status).toLowerCase()}`}><CircleDot size={13} aria-hidden="true" />{statusLabel(r.status)}</span></td>
                   <td>{(() => {
@@ -473,7 +485,8 @@ export default function RecordsView(props: Props) {
                   <td>{r.assigned}</td>
                   <td>{fullName(r.owner)}</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         ) : !loading ? (

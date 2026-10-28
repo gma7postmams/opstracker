@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { canEdit, canView } from "@/lib/permissions";
-import { delegateFor, getRecord } from "@/lib/records";
+import { delegateFor, getRecord, hasUserParticipated } from "@/lib/records";
 import { isRecordType } from "@/lib/recordTypes";
 import { prisma } from "@/lib/prisma";
 
@@ -22,7 +22,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ typ
   const { type, id } = await params;
   const found = await loadRecord(type, id);
   if (!found) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!canView(user, { ...found.record, ownerRole: found.record.owner?.role })) {
+  const hasParticipated = user.role !== "ADMIN" && await hasUserParticipated(found.type, found.record.id, user.id);
+  if (!canView(user, { ...found.record, hasParticipated })) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 

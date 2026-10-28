@@ -10,8 +10,8 @@ The shared `(app)` layout redirects unauthenticated visitors to `/login`. Middle
 
 | Capability | `USER` | `ADMIN` |
 |---|---|---|
-| View record lists | Records owned by a regular user, plus records assigned to the caller | All records |
-| View a record detail | Owner is a regular user or caller is assigned | All records |
+| View record lists | Records owned by the caller, assigned to the caller, or with a work log authored by the caller | All records |
+| View a record detail | Caller is the owner, current assignee, or a work-log author | All records |
 | Edit record content | Owner, or assigned user when unlocked; assigned users have a restricted field set | Any record, including locked records |
 | Edit work logs | Author may edit their own; record owner may edit any work log on their record | Any work log |
 | Delete work logs | Author may delete their own; record owner may delete any work log on their record | Any work log |
@@ -25,7 +25,7 @@ An unlocked record owner or assigned user can pass the base edit check. A caller
 
 Work-log editing and deletion are separately authorized and are not blocked by record locks: administrators and record owners can edit or delete any work log in scope, while authors can edit or delete their own work logs. Editing changes only the message; entry type, author and creation timestamp are immutable.
 
-The ordinary-user list visibility rule is based on owner role `USER` or matching assignee name. It is distinct from edit permission. Reports use a participation scope: the caller's owned records, assigned records and records with a work log authored by the caller. The dashboard's ordinary-user data filter is by owner ID.
+Ordinary-user record visibility includes records owned by the caller, assigned to the caller by matching name, or with an Investigation, Resolution or Remark work log authored by the caller. Work-log participation preserves view access after reassignment, but does not expand record-content edit permission; edit rights remain with the owner and current assignee under the rules above. Reports use the same participation scope, and report calculations are unchanged. The dashboard's ordinary-user data filter is by owner ID.
 
 ## Account management
 
