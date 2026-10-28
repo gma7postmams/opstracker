@@ -22,6 +22,7 @@ import {
   MapPin,
   Plus,
   Search,
+  Tag,
   Upload,
   UserRound,
 } from "lucide-react";
@@ -38,7 +39,7 @@ interface Props {
 }
 
 const STATUSES = ["OPEN", "CLOSE_PENDING", "CLOSED"];
-const emptyFilters = { q: "", status: "all", location: "all", shift: "all", from: "", to: "" };
+const emptyFilters = { q: "", status: "all", location: "all", category: "all", shift: "all", from: "", to: "" };
 
 function formatElapsedDuration(startAt: Date, now: number) {
   if (Number.isNaN(startAt.getTime())) return "—";
@@ -56,6 +57,50 @@ function formatElapsedDuration(startAt: Date, now: number) {
   if (seconds || parts.length === 0) parts.push(`${seconds}s`);
 
   return parts.join(" ");
+}
+
+function formatElapsedMinutes(startAt: Date, endAt: number) {
+  if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt)) return "—";
+
+  const totalMinutes = Math.max(0, Math.floor((endAt - startAt.getTime()) / 60000));
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  const parts = [];
+
+  if (days) parts.push(`${days}d`);
+  if (hours || days) parts.push(`${hours}h`);
+  if (minutes || parts.length === 0) parts.push(`${minutes}m`);
+
+  return parts.join(" ");
+}
+
+function formatListDate(date: Date | string, includeYear = true) {
+  const value = (typeof date === "string" ? date : date.toISOString()).slice(0, 10);
+  const [year, month, day] = value.split("-").map(Number);
+  const options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", timeZone: "UTC" };
+  if (includeYear) options.year = "numeric";
+  return new Intl.DateTimeFormat("en-US", options).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+function assistanceDuration(record: any, now: number) {
+  const startDate = String(record.startDate).slice(0, 10);
+  const startAt = new Date(`${startDate}T${record.timeStarted}:00`);
+  const endDate = record.timeEnded ? String(record.endDate ?? record.startDate).slice(0, 10) : null;
+  const endAt = endDate ? new Date(`${endDate}T${record.timeEnded}:00`) : new Date(now);
+  const validEndAt = Number.isNaN(endAt.getTime()) ? null : endAt;
+  const elapsed = formatElapsedMinutes(startAt, validEndAt?.getTime() ?? now);
+  const rangeEndDate = endDate ?? (validEndAt
+    ? `${validEndAt.getFullYear()}-${String(validEndAt.getMonth() + 1).padStart(2, "0")}-${String(validEndAt.getDate()).padStart(2, "0")}`
+    : startDate);
+  const rangeEndTime = record.timeEnded ?? (validEndAt
+    ? `${String(validEndAt.getHours()).padStart(2, "0")}:${String(validEndAt.getMinutes()).padStart(2, "0")}`
+    : record.timeStarted);
+  const range = rangeEndDate === startDate
+    ? `${formatTime12Hour(record.timeStarted)} → ${formatTime12Hour(rangeEndTime)}`
+    : `${formatListDate(startDate, false)} ${formatTime12Hour(record.timeStarted)}\n→ ${formatListDate(rangeEndDate, false)} ${formatTime12Hour(rangeEndTime)}`;
+
+  return { elapsed, range };
 }
 
 function summaryMessage(workLogMessage?: string | null, legacyMessage?: string | null) {
@@ -231,6 +276,7 @@ export default function RecordsView(props: Props) {
       onKeyDown={(e) => e.key === "Enter" && toggleSort(key)}
     >
       {key === "date" && <CalendarDays size={14} aria-hidden="true" />}
+      {key === "category" && <Tag size={14} aria-hidden="true" />}
       {key === "location" && <MapPin size={14} aria-hidden="true" />}
       {key === "priority" && <ArrowDownWideNarrow size={14} aria-hidden="true" />}
       {key === "status" && <CircleDot size={14} aria-hidden="true" />}
@@ -300,6 +346,14 @@ export default function RecordsView(props: Props) {
             </select>
           </label>
         )}
+        {showLocation && (
+          <label className="flabel"><span className="crm-filter-label"><Tag size={14} aria-hidden="true" /> CATEGORY</span>
+            <select value={filters.category} onChange={(e) => setFilter("category", e.target.value)}>
+              <option value="all">All Categories</option>
+              {(master.CATEGORY ?? []).map((v) => <option key={v}>{v}</option>)}
+            </select>
+          </label>
+        )}
         <label className="flabel">SHIFT
           <select value={filters.shift} onChange={(e) => setFilter("shift", e.target.value)}>
             <option value="all">All Shifts</option>
@@ -362,15 +416,17 @@ export default function RecordsView(props: Props) {
           <table>
             <colgroup>
               <col className="crm-col-select" />
-              <col className="crm-col-id" />
-              <col className="crm-col-date" />
-              {showLocation && <col className="crm-col-location" />}
-              <col className="crm-col-activity" />
-              <col className="crm-col-priority" />
-              <col className="crm-col-duration" />
-              <col className="crm-col-status" />
-              <col className="crm-col-assigned" />
-              <col className="crm-col-accountable" />
+              <col className={showLocation ? "crm-col-assistance-id" : "crm-col-id"} />
+              <col className={showLocation ? "crm-col-assistance-date" : "crm-col-date"} />
+              {showLocation && <col className="crm-col-category" />}
+              {showLocation && <col className="crm-col-assistance-location" />}
+              <col className={showLocation ? "crm-col-assistance-activity" : "crm-col-activity"} />
+              <col className={showLocation ? "crm-col-assistance-priority" : "crm-col-priority"} />
+              {showLocation && <col className="crm-col-assistance-status" />}
+              <col className={showLocation ? "crm-col-assistance-duration" : "crm-col-duration"} />
+              {!showLocation && <col className="crm-col-status" />}
+              <col className={showLocation ? "crm-col-assistance-assigned" : "crm-col-assigned"} />
+              <col className={showLocation ? "crm-col-assistance-accountable" : "crm-col-accountable"} />
             </colgroup>
             <thead>
               <tr>
@@ -378,12 +434,14 @@ export default function RecordsView(props: Props) {
                   <input type="checkbox" checked={allOn} onChange={toggleAll} aria-label="Select all visible records" />
                 </th>
                 {th("refNo", "ID")}
-                {th("date", "Start Date")}
-                {showLocation && th("location", "Location")}
-                {th("subject", subjectHeader)}
+                {th("date", showLocation ? "Date / Shift" : "Start Date")}
+                {showLocation && th("category", "Category")}
+                {showLocation && th("location", "Location / Show")}
+                {th("subject", showLocation ? "Client / Problem" : subjectHeader)}
                 {th("priority", "Priority")}
+                {showLocation && th("status", "Status")}
                 {th("timeStarted", "Duration")}
-                {th("status", "Status")}
+                {!showLocation && th("status", "Status")}
                 {th("assigned", "Assigned To")}
                 <th>Accountable Person</th>
               </tr>
@@ -403,7 +461,8 @@ export default function RecordsView(props: Props) {
                     <b><Link href={`/records/${type}/${r.id}`}>{r.refNo}</Link></b>
                     {r.locked && <small>🔒 Locked</small>}
                   </td>
-                  <td>{String(r.startDate).slice(0, 10)}<small>{r.shift}</small></td>
+                  <td>{showLocation ? formatListDate(r.startDate) : String(r.startDate).slice(0, 10)}<small>{r.shift}</small></td>
+                  {showLocation && <td><span className="crm-category" title={r.category ?? ""}>{r.category || "—"}</span></td>}
                   {showLocation && <td>{r.location}<small>{r.showGroup}</small></td>}
                   <td className="crm-activity-cell">
                     <b className="crm-title-clamp">{r[subjectField]}</b>
@@ -424,12 +483,16 @@ export default function RecordsView(props: Props) {
                     )}
                   </td>
                   <td><span className={`crm-priority crm-priority-${String(r.priority).toLowerCase()}`}><ArrowDownWideNarrow size={13} aria-hidden="true" />{priorityLabel(r.priority)}</span></td>
-                  <td>{r.status === "OPEN" && !r.timeEnded
+                  {showLocation && <td><span className={`crm-status crm-status-${String(r.status).toLowerCase()}`}><CircleDot size={13} aria-hidden="true" />{statusLabel(r.status)}</span></td>}
+                  <td>{showLocation ? (() => {
+                    const duration = assistanceDuration(r, now);
+                    return <><strong className="crm-duration-value">{duration.elapsed}</strong><small className="crm-duration-range">{duration.range}</small></>;
+                  })() : r.status === "OPEN" && !r.timeEnded
                     ? `${formatTime12Hour(r.timeStarted)} • ${formatElapsedDuration(new Date(`${String(r.startDate).slice(0, 10)}T${r.timeStarted}:00`), now)}`
                     : r.timeEnded
                       ? `${formatTime12Hour(r.timeStarted)} – ${formatTime12Hour(r.timeEnded)}`
                       : `Since ${formatTime12Hour(r.timeStarted)}`}</td>
-                  <td><span className={`crm-status crm-status-${String(r.status).toLowerCase()}`}><CircleDot size={13} aria-hidden="true" />{statusLabel(r.status)}</span></td>
+                  {!showLocation && <td><span className={`crm-status crm-status-${String(r.status).toLowerCase()}`}><CircleDot size={13} aria-hidden="true" />{statusLabel(r.status)}</span></td>}
                   <td>{r.assigned}</td>
                   <td>{fullName(r.owner)}</td>
                 </tr>
@@ -515,11 +578,21 @@ export default function RecordsView(props: Props) {
         .crm-col-date { width: 8%; }
         .crm-col-location { width: 11%; }
         .crm-col-activity { width: 28%; }
+        .crm-col-assistance-id { width: 7%; }
+        .crm-col-assistance-date { width: 9%; }
+        .crm-col-assistance-location { width: 9%; }
+        .crm-col-assistance-activity { width: 28%; }
+        .crm-col-category { width: 7%; }
         .crm-col-priority { width: 7%; }
+        .crm-col-assistance-priority { width: 6%; }
+        .crm-col-assistance-status { width: 7%; }
         .crm-col-duration { width: 8%; }
+        .crm-col-assistance-duration { width: 8%; }
         .crm-col-status { width: 9%; }
         .crm-col-assigned { width: 9%; }
         .crm-col-accountable { width: 9%; }
+        .crm-col-assistance-assigned { width: 8%; }
+        .crm-col-assistance-accountable { width: 8%; }
         .crm-table-wrap thead { position: sticky; top: 0; z-index: 2; }
         .crm-table-wrap thead th { background: var(--panel); box-shadow: 0 1px 0 var(--border); }
         .crm-table-wrap .selcol input[type="checkbox"] { appearance: none; display: inline-grid; place-content: center; width: 16px; height: 16px; margin: 0; border: 1px solid color-mix(in srgb, var(--border) 55%, var(--text)); border-radius: 4px; background: color-mix(in srgb, var(--panel) 94%, #237a75); color: #fff; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease; }
@@ -536,8 +609,11 @@ export default function RecordsView(props: Props) {
         .crm-title-clamp { color: var(--text); font-size: 14px; font-weight: 650; line-height: 1.35; -webkit-line-clamp: 1; line-clamp: 1; }
         .crm-description-clamp { margin-top: 4px; color: var(--record-content); font-size: 13px; line-height: 1.4; -webkit-line-clamp: 2; line-clamp: 2; }
         .crm-remarks-clamp { margin-top: 5px; color: var(--record-content); font-size: 13px; line-height: 1.4; -webkit-line-clamp: 2; line-clamp: 2; }
+        .crm-duration-value { display: block; color: var(--text); font-size: 13px; }
+        .crm-duration-range { display: block; margin-top: 4px; color: var(--muted); line-height: 1.4; white-space: pre-line; }
         .crm-content-label, .crm-remarks-clamp :global(strong) { color: var(--record-label); font-weight: 650; }
         .crm-status, .crm-priority { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border: 1px solid transparent; border-radius: 999px; font-size: 11px; font-weight: 650; white-space: nowrap; }
+        .crm-category { display: inline-block; max-width: 100%; overflow: hidden; padding: 4px 7px; border: 1px solid var(--border); border-radius: 999px; background: color-mix(in srgb, #237a75 10%, var(--panel)); color: var(--text); font-size: 11px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
         .crm-priority-normal { color: #1d4ed8; border-color: #bfdbfe; background: #eff6ff; }
         .crm-priority-low { color: #475569; border-color: #e2e8f0; background: #f1f5f9; }
         .crm-priority-high { color: #c2410c; border-color: #fed7aa; background: #fff7ed; }

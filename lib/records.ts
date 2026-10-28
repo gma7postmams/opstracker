@@ -16,6 +16,7 @@ export interface ListQuery {
   q?: string;
   status?: string;
   location?: string;
+  category?: string;
   shift?: string;
   from?: string;
   to?: string;
@@ -49,6 +50,7 @@ export function buildWhere(type: RecordType, query: ListQuery) {
 
   if (query.status && query.status !== "all") where.status = query.status;
   if (type === "assistance" && query.location && query.location !== "all") where.location = query.location;
+  if (type === "assistance" && query.category && query.category !== "all") where.category = query.category;
   if (query.shift && query.shift !== "all") where.shift = query.shift;
   if (query.from || query.to) {
     where.startDate = {};
@@ -76,6 +78,11 @@ export function buildOrderBy(type: RecordType, sort: SortKey = "date", dir: "asc
   const cfg = TYPES[type];
   if (sort === "subject") return [{ [cfg.subjectField]: dir }];
   if (sort === "date") return [{ startDate: dir }, { timeStarted: dir }];
+  if (sort === "category") {
+    return type === "assistance"
+      ? [{ category: dir }]
+      : [{ startDate: "desc" }, { timeStarted: "desc" }];
+  }
   return [{ [sort]: dir }];
 }
 

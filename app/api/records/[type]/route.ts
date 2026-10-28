@@ -21,6 +21,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
       q: s.get("q") ?? undefined,
       status: s.get("status") ?? undefined,
       location: p.type === "assistance" ? s.get("location") ?? undefined : undefined,
+      category: p.type === "assistance" ? s.get("category") ?? undefined : undefined,
       shift: s.get("shift") ?? undefined,
       from: s.get("from") ?? undefined,
       to: s.get("to") ?? undefined,

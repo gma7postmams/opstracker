@@ -59,7 +59,7 @@ export const SHARED_FIELDS = [
 ] as const;
 
 export const SORTABLE = [
-  "refNo", "date", "location", "subject", "priority", "timeStarted", "status", "assigned",
+  "refNo", "date", "category", "location", "subject", "priority", "timeStarted", "status", "assigned",
 ] as const;
 export type SortKey = (typeof SORTABLE)[number];
 
