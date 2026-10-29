@@ -69,6 +69,9 @@ function formatListDate(date: Date | string, includeYear = true) {
 function assistanceDuration(record: any, now: number) {
   const startDate = String(record.startDate).slice(0, 10);
   const startAt = new Date(`${startDate}T${record.timeStarted}:00`);
+  if (record.status === "OPEN") {
+    return { elapsed: formatElapsedMinutes(startAt, now), range: null };
+  }
   const endDate = record.timeEnded ? String(record.endDate ?? record.startDate).slice(0, 10) : null;
   const endAt = endDate ? new Date(`${endDate}T${record.timeEnded}:00`) : new Date(now);
   const validEndAt = Number.isNaN(endAt.getTime()) ? null : endAt;
@@ -484,7 +487,7 @@ export default function RecordsView(props: Props) {
                   <td><span className={`crm-status crm-status-${String(r.status).toLowerCase()}`}><CircleDot size={13} aria-hidden="true" />{statusLabel(r.status)}</span></td>
                   <td>{(() => {
                     const duration = assistanceDuration(r, now);
-                    return <><strong className="crm-duration-value">{duration.elapsed}</strong><small className="crm-duration-range">{duration.range}</small></>;
+                    return <><strong className="crm-duration-value">{duration.elapsed}</strong>{duration.range && <small className="crm-duration-range">{duration.range}</small>}</>;
                   })()}</td>
                   <td>{r.assigned}</td>
                   <td>{fullName(r.owner)}</td>

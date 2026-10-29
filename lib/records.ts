@@ -170,10 +170,13 @@ export async function getRecord(type: RecordType, id: number) {
   });
 }
 
-/** Closing pending fills any missing part of its end timestamp. */
+/** Normalize status-dependent end timestamps. */
 export function normalizeTimes(data: any) {
   const normalized = { ...data };
-  if (normalized.status === "CLOSE_PENDING") {
+  if (normalized.status === "OPEN") {
+    normalized.endDate = null;
+    normalized.timeEnded = null;
+  } else if (normalized.status === "CLOSE_PENDING") {
     const now = new Date();
     if (!normalized.endDate) {
       normalized.endDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -232,10 +235,6 @@ export async function batchUpdate(
           endDate: patch.endDate ?? row.endDate?.toISOString().slice(0, 10) ?? null,
           timeEnded: patch.timeEnded ?? row.timeEnded,
         });
-        if (patch.status === "OPEN" && row.status !== "OPEN") {
-          normalized.endDate = null;
-          normalized.timeEnded = null;
-        }
         const updated = await txDelegate.update({
           where: { id: row.id },
           data: {
@@ -259,7 +258,16 @@ export async function batchUpdate(
         },
       })));
   } else {
-    await d.updateMany({ where: { id: { in: allowed } }, data: patch });
+    await prisma.$transaction([
+      d.updateMany({
+        where: { id: { in: allowed }, status: "OPEN" },
+        data: { ...patch, endDate: null, timeEnded: null },
+      }),
+      d.updateMany({
+        where: { id: { in: allowed }, status: { not: "OPEN" } },
+        data: patch,
+      }),
+    ]);
   }
   return { applied: allowed.length, skipped: skippedRefs.length, skippedRefs };
 }

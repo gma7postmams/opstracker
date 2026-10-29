@@ -43,13 +43,13 @@ const [saving, setSaving] = useState(false);
     startDate: record?.startDate
       ? String(record.startDate).slice(0, 10)
       : record?.date ? String(record.date).slice(0, 10) : todayLocal(),
-    endDate: record?.endDate ? String(record.endDate).slice(0, 10) : "",
+    endDate: record?.status === "OPEN" ? "" : record?.endDate ? String(record.endDate).slice(0, 10) : "",
     shift: record?.shift ?? "",
     ...(type === "assistance" ? { location: record?.location ?? "" } : {}),
     ...(type === "assistance" ? { showGroup: record?.showGroup ?? "" } : {}),
     priority: record?.priority ?? "NORMAL",
     timeStarted: record?.timeStarted ?? nowHHMM(),
-    timeEnded: record?.timeEnded ?? "",
+    timeEnded: record?.status === "OPEN" ? "" : record?.timeEnded ?? "",
     status: record?.status ?? "OPEN",
     assigned: record?.assigned ?? "",
     accountable: record?.accountable ?? "",
@@ -64,7 +64,11 @@ const [saving, setSaving] = useState(false);
   }));
 
 const set = (k: string, v: any) =>
-  setForm((f: any) => ({ ...f, [k]: v }));
+  setForm((f: any) => ({
+    ...f,
+    [k]: v,
+    ...(k === "status" && v === "OPEN" ? { endDate: "", timeEnded: "" } : {}),
+  }));
 
 
 useEffect(() => {
@@ -109,7 +113,7 @@ useEffect(() => {
   const startAt = form.startDate && form.timeStarted
     ? new Date(`${form.startDate}T${form.timeStarted}:00`)
     : null;
-  const endAt = form.endDate && form.timeEnded
+  const endAt = form.status !== "OPEN" && form.endDate && form.timeEnded
     ? new Date(`${form.endDate}T${form.timeEnded}:00`)
     : null;
   const durationMinutes = startAt && endAt

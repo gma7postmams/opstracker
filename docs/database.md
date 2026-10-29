@@ -30,6 +30,7 @@ Enums are `Status` (`OPEN`, `CLOSE_PENDING`, `CLOSED`), `Role` (`ADMIN`, `USER`)
 ## Important data rules
 
 - Record `startDate` and optional `endDate` are PostgreSQL `DATE` values. Times are strings in `HH:MM` format.
+- Records with status `OPEN` persist null `endDate` and `timeEnded`; the `20261029140000_normalize_open_record_end_times` migration clears legacy values for both record tables.
 - Reference numbers are unique and assigned by updating a per-type/year `Counter` inside the same transaction as record creation/import.
 - Assistance and Task rows maintain `updatedAt` through Prisma's `@updatedAt` fields. User rows do not have an `updatedAt` column.
 - Passwords are stored as bcrypt hashes. The backup API includes those hashes; backup JSON is sensitive.

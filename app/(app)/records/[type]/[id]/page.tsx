@@ -27,6 +27,14 @@ function formatElapsedDuration(startAt: Date, now: Date) {
   return parts.join(" ");
 }
 
+function pendingEndTimestamp() {
+  const now = new Date();
+  return {
+    endDate: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
+    timeEnded: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
+  };
+}
+
 export default function RecordDetail() {
   const { type, id } = useParams<{ type: string; id: string }>();
   const router = useRouter();
@@ -101,15 +109,15 @@ const startAt = r.timeStarted
   ? new Date(`${startDateText}T${r.timeStarted}:00`)
   : null;
 const endDateText = r.endDate ? String(r.endDate).slice(0, 10) : null;
-const recordedEndAt = r.timeEnded
+const recordedEndAt = r.status !== "OPEN" && r.timeEnded
   ? endDateText ? new Date(`${endDateText}T${r.timeEnded}:00`) : null
   : null;
 const endAt = recordedEndAt ?? (r.status === "OPEN" ? new Date() : null);
-const isOngoing = r.status === "OPEN" && !recordedEndAt;
+const isOngoing = r.status === "OPEN";
 const displayDate = (date: Date) => new Intl.DateTimeFormat(undefined, {
   month: "short", day: "numeric", year: "numeric",
 }).format(date);
-const duration = startAt && endAt
+const duration = r.status !== "OPEN" && startAt && endAt
   ? (() => {
       const totalMinutes = Math.max(0, Math.floor((endAt.getTime() - startAt.getTime()) / 60000));
       const days = Math.floor(totalMinutes / 1440);
@@ -269,7 +277,7 @@ if (!historyEvents.some((event: any) => event.title === "Reported")) {
           disabled={!r.canEdit}
           onClick={(event) => {
             closeActions(event);
-            patch({ status: "CLOSE_PENDING" }, "Status set to Close Pending");
+            patch({ status: "CLOSE_PENDING", ...pendingEndTimestamp() }, "Status set to Close Pending");
           }}
         >
           Move to Close Pending

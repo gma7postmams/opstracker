@@ -146,8 +146,7 @@ return NextResponse.json(visibleRecord(type, updated));
   }
 
 const normalized = normalizeTimes(parsed.data) as any;
-  const reopening = record.status !== "OPEN" && normalized.status === "OPEN";
-  if (reopening) {
+  if (normalized.status === "OPEN") {
     normalized.endDate = null;
     normalized.timeEnded = null;
   }
@@ -162,7 +161,7 @@ for (const field of editableFields) {
     data[field] = normalized[field];
   }
 }
-if (reopening) {
+if (normalized.status === "OPEN") {
   data.endDate = null;
   data.timeEnded = null;
 } else if (body.status === "CLOSE_PENDING" && record.status !== "CLOSE_PENDING") {
