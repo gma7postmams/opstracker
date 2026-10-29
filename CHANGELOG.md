@@ -1,3 +1,6 @@
+# 2026-10-29
+- Added optional Cause to Technical Assistance records, including create/edit and list/detail views. Cause is included after Problem in report details, participation details, email previews and sent reports, and Excel exports; Other Tasks, delegation visibility and participation calculations are unchanged.
+
 ## 2026-10-28
 - Kept Clear Selection with the bulk record actions on Technical Assistance and Other Tasks, preventing the label from wrapping while retaining responsive toolbar wrapping.
 - Reordered the Technical Assistance create and edit forms to show Shift before Location; Other Tasks and existing field behavior are unchanged.

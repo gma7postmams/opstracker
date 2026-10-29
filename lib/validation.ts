@@ -46,6 +46,7 @@ export const assistanceSchema = z.object({
   showGroup: z.string().optional().nullable(),
   clientName: z.string().min(1, "Client name is required"),
   problem: z.string().min(1, "Problem is required"),
+  cause: z.string().optional().nullable(),
   category: z.string().min(1, "Category is required"),
   resolution: z.string().optional().nullable(),
 }).superRefine(timeRules);

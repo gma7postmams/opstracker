@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
   const [assistanceRecords, taskRecords] = await Promise.all([
     activity === "tasks" ? [] : prisma.assistance.findMany({
       where: reportWhere,
-      select: { ...commonSelect, workLogs: workLogSelect, clientName: true, showGroup: true, location: true, problem: true, resolution: true, remarks: true },
+      select: { ...commonSelect, workLogs: workLogSelect, clientName: true, showGroup: true, location: true, problem: true, cause: true, resolution: true, remarks: true },
     }),
     activity === "assistance" ? [] : prisma.task.findMany({
       where: reportWhere,

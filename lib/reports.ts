@@ -47,6 +47,7 @@ export function buildReportRecordDetails(
       .filter(Boolean)
       .join(" / ");
     addSection("Problem", record.problem);
+    addSection("Cause", record.cause);
     if (!isOwner) addSection("Investigation", record.latestInvestigationWorkLog?.message);
     addSection("Resolution", record.latestResolutionWorkLog?.message || record.resolution);
     addSection("Remarks", record.latestRemarkWorkLog?.message || record.remarks);

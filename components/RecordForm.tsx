@@ -56,6 +56,7 @@ const [saving, setSaving] = useState(false);
     remarks: record?.remarks ?? "",
     clientName: record?.clientName ?? "",
     problem: record?.problem ?? "",
+    ...(type === "assistance" ? { cause: record?.cause ?? "" } : {}),
     category: record?.category ?? "",
     resolution: record?.resolution ?? "",
     activityType: record?.activityType ?? "",
@@ -148,7 +149,7 @@ useEffect(() => {
       accountable: form.accountable,
       remarks: form.remarks,
       ...(isAssistance
-    ? { clientName: form.clientName, problem: form.problem, category: form.category, resolution: form.resolution }
+    ? { clientName: form.clientName, problem: form.problem, cause: form.cause, category: form.category, resolution: form.resolution }
     : { activityType: form.activityType, description: form.description }),
     }
   : record
@@ -302,6 +303,16 @@ useEffect(() => {
                 required
               />
               {err("problem")}
+            </label>
+
+            <label className="full">Cause
+              <textarea
+                value={form.cause ?? ""}
+                onChange={(e) => set("cause", e.target.value)}
+                readOnly={Boolean(record && !canEditOriginal)}
+                placeholder="Describe the cause of the issue…"
+              />
+              {err("cause")}
             </label>
 
 <label className="full">

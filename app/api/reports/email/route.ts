@@ -152,6 +152,7 @@ const renderReportDetails = (record: Record<string, any>, recordType: "assistanc
   const details = recordType === "assistance"
     ? [
         { label: "Problem", value: record.problem },
+        { label: "Cause", value: record.cause },
         { label: "Investigation", value: record.latestInvestigationWorkLog?.message },
         { label: "Resolution", value: record.latestResolutionWorkLog?.message || record.resolution },
         { label: "Remarks", value: record.latestRemarkWorkLog?.message || record.remarks },

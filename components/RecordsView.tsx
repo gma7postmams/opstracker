@@ -434,6 +434,7 @@ export default function RecordsView(props: Props) {
                 const summarySections = showLocation
                   ? [
                       { label: "Problem", value: summaryMessage(null, r[bodyField]) },
+                      { label: "Cause", value: summaryMessage(null, r.cause) },
                       ...(!isOwner ? [{ label: "Investigation", value: summaryMessage(r.latestInvestigationWorkLog?.message) }] : []),
                       { label: "Resolution", value: summaryMessage(r.latestResolutionWorkLog?.message, r.resolution) },
                       { label: "Remark", value: summaryMessage(r.latestRemarkWorkLog?.message, r.remarks) },

@@ -83,6 +83,7 @@ model Assistance {
   showGroup   String?  @map("show_group")
   clientName  String   @map("client_name")
   problem     String
+  cause       String?
   category    String
   resolution  String?
   priority    Priority @default(NORMAL)

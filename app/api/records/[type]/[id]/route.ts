@@ -113,7 +113,7 @@ return NextResponse.json(visibleRecord(type, updated));
         "priority",
         "timeStarted", "timeEnded", "status", "assigned", "accountable", "remarks",
         ...(type === "assistance"
-          ? ["clientName", "problem", "category", "resolution"]
+          ? ["clientName", "problem", "cause", "category", "resolution"]
           : ["activityType", "description"]),
       ])
     : new Set(["assigned", "status", "endDate", "timeEnded", "priority"]);

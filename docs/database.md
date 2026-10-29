@@ -7,7 +7,7 @@ PostgreSQL is the configured datasource. `prisma/schema.prisma` is the current s
 | Model | Purpose and key data |
 |---|---|
 | `User` | Name, unique email and username, bcrypt password hash, role, avatar, active state, last login, Email 2FA state (disabled by default), optional per-user SMTP settings. |
-| `Assistance` | Technical Assistance record: unique reference, start/end dates, shift/location/show-group, client/problem/category/resolution, priority/status, times, assigned/accountable/remarks, owner and lock fields. |
+| `Assistance` | Technical Assistance record: unique reference, start/end dates, shift/location/show-group, client/problem/optional cause/category/resolution, priority/status, times, assigned/accountable/remarks, owner and lock fields. |
 | `Task` | Other Task record with the shared operational fields plus activity type and description. |
 | `MasterData` | Typed location, shift, show/group, category and activity-type values. `(kind, value)` is unique; `active` marks retired values. |
 | `Counter` | Integer counters keyed by record type and year for reference-number allocation. |

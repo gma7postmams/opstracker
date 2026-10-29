@@ -91,6 +91,7 @@ export async function GET(req: NextRequest) {
             showGroup: true,
             clientName: true,
             problem: true,
+            cause: true,
             category: true,
             resolution: true,
             priority: true,

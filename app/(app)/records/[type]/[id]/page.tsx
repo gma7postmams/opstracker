@@ -241,7 +241,10 @@ if (!historyEvents.some((event: any) => event.title === "Reported")) {
             <b>{isAssistance ? r.problem : r.description}</b>
           </div>
           {isAssistance && (
-            <div className="field record-copy spacedtop"><label>Resolution</label><b>{r.resolution || "—"}</b></div>
+            <>
+              <div className="field record-copy spacedtop"><label>Cause</label><b>{r.cause || "—"}</b></div>
+              <div className="field record-copy spacedtop"><label>Resolution</label><b>{r.resolution || "—"}</b></div>
+            </>
           )}
           <div className="field record-copy spacedtop"><label>Remarks</label><b>{r.remarks || "—"}</b></div>
 
