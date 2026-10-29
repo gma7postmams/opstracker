@@ -76,7 +76,9 @@ export default function RecordTimeline({
   const [railGeometry, setRailGeometry] = useState({ key: "", path: "", width: 0, height: 0, delays: [] as number[] });
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/records/${type}/${recordId}/work-logs`);
+    const includeAllUserOwned = new URLSearchParams(window.location.search).get("userId") === "all";
+    const scope = includeAllUserOwned ? "?userId=all" : "";
+    const res = await fetch(`/api/records/${type}/${recordId}/work-logs${scope}`);
     if (res.ok) {
       const fetchedEntries: WorkLog[] = await res.json();
       setEntries([...fetchedEntries].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt)));

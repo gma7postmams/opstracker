@@ -1,4 +1,5 @@
 # 2026-10-29
+- Updated Technical Assistance and Other Tasks so USERs selecting All Users can browse records owned by any USER account while excluding ADMIN-owned records. My Records, administrator visibility, Reports, participation/contribution summaries and counts, email reports and Excel exports are unchanged.
 - Added optional Cause to Technical Assistance records, including create/edit and list/detail views. Cause is included after Problem in report details, participation details, email previews and sent reports, and Excel exports; Other Tasks, delegation visibility and participation calculations are unchanged.
 
 ## 2026-10-28

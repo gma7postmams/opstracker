@@ -459,7 +459,7 @@ export default function RecordsView(props: Props) {
                     />
                   </td>
                   <td>
-                    <b><Link href={`/records/${type}/${r.id}`}>{r.refNo}</Link></b>
+                    <b><Link href={`/records/${type}/${r.id}${activeUserFilter === "all" ? "?userId=all" : ""}`}>{r.refNo}</Link></b>
                     {r.locked && <small>🔒 Locked</small>}
                   </td>
                   <td>{formatListDate(r.startDate)}<small>{r.shift}</small></td>

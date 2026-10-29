@@ -6,14 +6,20 @@ export interface SessionUser {
 
 interface OwnableRecord {
   ownerId: number | null;
+  owner?: { role: "ADMIN" | "USER" } | null;
   assigned?: string | null;
   locked: boolean;
   hasParticipated?: boolean;
 }
 
-export function canView(user: SessionUser, record: OwnableRecord): boolean {
+export function canView(user: SessionUser, record: OwnableRecord, includeAllUserOwned = false): boolean {
   if (user.role === "ADMIN") return true;
-  return record.ownerId === user.id || record.assigned === user.name || record.hasParticipated === true;
+  return (
+    (includeAllUserOwned && record.owner?.role === "USER") ||
+    record.ownerId === user.id ||
+    record.assigned === user.name ||
+    record.hasParticipated === true
+  );
 }
 
 export function canEdit(user: SessionUser, record: OwnableRecord): boolean {

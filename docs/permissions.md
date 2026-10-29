@@ -10,8 +10,8 @@ The shared `(app)` layout redirects unauthenticated visitors to `/login`. Middle
 
 | Capability | `USER` | `ADMIN` |
 |---|---|---|
-| View record lists | Records owned by the caller, assigned to the caller, or with a work log authored by the caller | All records |
-| View a record detail | Caller is the owner, current assignee, or a work-log author | All records |
+| View record lists | My Records: owned by the caller, assigned to the caller, or with a work log authored by the caller. All Users: USER-owned records only, for Technical Assistance and Other Tasks | All records |
+| View a record detail | My Records: caller is the owner, current assignee, or a work-log author. From All Users: any USER-owned record | All records |
 | Edit record content | Owner, or assigned user when unlocked; assigned users have a restricted field set | Any record, including locked records |
 | Edit work logs | Author may edit their own; record owner may edit any work log on their record | Any work log |
 | Delete work logs | Author may delete their own; record owner may delete any work log on their record | Any work log |
@@ -25,7 +25,7 @@ An unlocked record owner or assigned user can pass the base edit check. A caller
 
 Work-log editing and deletion are separately authorized and are not blocked by record locks: administrators and record owners can edit or delete any work log in scope, while authors can edit or delete their own work logs. Editing changes only the message; entry type, author and creation timestamp are immutable.
 
-Ordinary-user record visibility includes records owned by the caller, assigned to the caller by matching name, or with an Investigation, Resolution or Remark work log authored by the caller. Work-log participation preserves view access after reassignment, but does not expand record-content edit permission; edit rights remain with the owner and current assignee under the rules above. Reports use the same participation scope, and report calculations are unchanged. The dashboard's ordinary-user data filter is by owner ID.
+Ordinary-user My Records visibility includes records owned by the caller, assigned to the caller by matching name, or with an Investigation, Resolution or Remark work log authored by the caller. Work-log participation preserves view access after reassignment, but does not expand record-content edit permission; edit rights remain with the owner and current assignee under the rules above. For Technical Assistance and Other Tasks, selecting All Users shows records owned by accounts with the USER role and excludes ADMIN-owned and ownerless records. Detail and work-log reads for another USER-owned record are allowed only when opened from All Users; My Records detail access remains unchanged. Reports retain their existing participation scope, and report calculations, participation counts, email reports and Excel exports are unchanged. The dashboard's ordinary-user data filter is by owner ID.
 
 ## Account management
 

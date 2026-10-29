@@ -22,7 +22,7 @@ function visibleRecord(type: string, record: Record<string, any>) {
     : record;
 }
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ type: string; id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ type: string; id: string }> }) {
   const p = await params;
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -30,7 +30,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ typ
   if (!found) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const { type, record } = found;
   const hasParticipated = user.role !== "ADMIN" && await hasUserParticipated(type, record.id, user.id);
-  if (!canView(user, { ...record, hasParticipated })) {
+  if (!canView(user, { ...record, hasParticipated }, req.nextUrl.searchParams.get("userId") === "all")) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   const activityHistory = await prisma.auditLog.findMany({

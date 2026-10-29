@@ -87,8 +87,9 @@ export function buildOrderBy(type: RecordType, sort: SortKey = "date", dir: "asc
   return [{ [sort]: dir }];
 }
 
-export function recordVisibilityWhere(user: SessionUser) {
+export function recordVisibilityWhere(user: SessionUser, includeAllUserOwned = false) {
   if (user.role === "ADMIN") return {};
+  if (includeAllUserOwned) return { owner: { is: { role: "USER" as const } } };
   return recordParticipationWhere(user);
 }
 
@@ -110,15 +111,20 @@ export async function hasUserParticipated(type: RecordType, recordId: number, us
   }));
 }
 
-export function applyRecordVisibility<T extends Record<string, any>>(where: T, user: SessionUser) {
-  const visibility = recordVisibilityWhere(user);
+export function applyRecordVisibility<T extends Record<string, any>>(
+  where: T,
+  user: SessionUser,
+  includeAllUserOwned = false
+) {
+  const visibility = recordVisibilityWhere(user, includeAllUserOwned);
   return Object.keys(visibility).length ? { AND: [where, visibility] } : where;
 }
 
 export async function listRecords(type: RecordType, query: ListQuery, user?: any) {
   const d = delegateFor(type);
   const filters = buildWhere(type, query);
-  let where = user ? applyRecordVisibility(filters, user) : filters;
+  const includeAllUserOwned = query.userId === "all";
+  let where = user ? applyRecordVisibility(filters, user, includeAllUserOwned) : filters;
   if (query.userId && query.userId !== "all") {
     const filterUserId = Number(query.userId);
     if (Number.isInteger(filterUserId) && filterUserId > 0) {
@@ -133,7 +139,7 @@ export async function listRecords(type: RecordType, query: ListQuery, user?: any
       where = { AND: [where, recordParticipationWhere({ id: filterUserId, name: filterUserName })] };
     }
   }
-  const unfilteredWhere = user ? recordVisibilityWhere(user) : {};
+  const unfilteredWhere = user ? recordVisibilityWhere(user, includeAllUserOwned) : {};
 
 
   const perPage = Math.min(query.perPage ?? 50, 200);

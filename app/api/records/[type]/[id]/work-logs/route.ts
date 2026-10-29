@@ -15,7 +15,7 @@ async function loadRecord(type: string, id: string) {
   return record ? { type, record } : null;
 }
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ type: string; id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ type: string; id: string }> }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -23,7 +23,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ typ
   const found = await loadRecord(type, id);
   if (!found) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const hasParticipated = user.role !== "ADMIN" && await hasUserParticipated(found.type, found.record.id, user.id);
-  if (!canView(user, { ...found.record, hasParticipated })) {
+  if (!canView(user, { ...found.record, hasParticipated }, req.nextUrl.searchParams.get("userId") === "all")) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 

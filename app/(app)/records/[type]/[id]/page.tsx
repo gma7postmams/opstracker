@@ -46,7 +46,9 @@ export default function RecordDetail() {
   }, []);
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/records/${type}/${id}`);
+    const includeAllUserOwned = new URLSearchParams(window.location.search).get("userId") === "all";
+    const scope = includeAllUserOwned ? "?userId=all" : "";
+    const res = await fetch(`/api/records/${type}/${id}${scope}`);
     if (!res.ok) return router.push(`/${type === "assistance" ? "assistance" : "tasks"}`);
     setR(await res.json());
   }, [type, id, router]);
