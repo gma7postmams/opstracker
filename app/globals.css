@@ -462,6 +462,14 @@ hr{border:0;border-top:1px solid var(--line);margin:19px 0}
 .modalhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
   padding:19px 22px;border-bottom:1px solid var(--line)}
 .modalbody{padding:21px 22px;overflow:auto}
+.record-report-preview{display:block;width:100%;height:min(68vh,750px);border:1px solid var(--line);background:#fff}
+.record-report-success-backdrop{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:20px;background:#101828a8}
+.record-report-success{width:min(480px,100%);padding:30px;background:var(--modal-bg);border:1px solid var(--line);border-radius:12px;box-shadow:0 24px 70px #00000066;text-align:center;color:var(--text)}
+.record-report-success-icon{color:#16834a}
+.record-report-success h2{margin:12px 0 22px;font-size:22px}
+.record-report-success dl{display:grid;grid-template-columns:90px minmax(0,1fr);gap:10px 14px;margin:0 0 24px;text-align:left;font-size:14px}
+.record-report-success dt{font-weight:700;color:var(--muted)}
+.record-report-success dd{min-width:0;margin:0;overflow-wrap:anywhere}
 .x{border:0;background:var(--x-bg);border-radius:8px;width:31px;height:31px;font-size:18px;
   line-height:1;color:var(--x-fg);flex:none}
 .actions{display:flex;justify-content:flex-end;gap:9px;padding:16px 22px;border-top:1px solid var(--line)}

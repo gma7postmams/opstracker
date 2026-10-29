@@ -10,6 +10,7 @@ import { useToast } from "@/components/Toast";
 import { statusLabel, priorityLabel } from "@/lib/recordTypes";
 import { formatTime12Hour } from "@/lib/format";
 import WorkLogTimeline from "@/components/WorkLogTimeline";
+import RecordReportModal from "@/components/RecordReportModal";
 
 function formatElapsedDuration(startAt: Date, now: Date) {
   const totalSeconds = Math.max(0, Math.floor((now.getTime() - startAt.getTime()) / 1000));
@@ -46,6 +47,7 @@ export default function RecordDetail() {
   const [master, setMaster] = useState<Record<string, string[]>>({});
   const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -360,6 +362,9 @@ if (!historyEvents.some((event: any) => event.title === "Reported")) {
       </button>
     </div>
   </details>
+  <button className="secondary action-control" type="button" onClick={() => setReportOpen(true)}>
+    Generate Report
+  </button>
 </div>
 
         </section>
@@ -381,6 +386,15 @@ if (!historyEvents.some((event: any) => event.title === "Reported")) {
           }))}
           onClose={() => setEditing(false)}
           onSaved={() => { setEditing(false); load(); toast("Record updated"); }}
+        />
+      )}
+      {reportOpen && (
+        <RecordReportModal
+          type={type}
+          recordId={id}
+          record={r}
+          systemEvents={historyEvents}
+          onClose={() => setReportOpen(false)}
         />
       )}
       {confirm && (
