@@ -40,3 +40,7 @@ Enums are `Status` (`OPEN`, `CLOSE_PENDING`, `CLOSED`), `Role` (`ADMIN`, `USER`)
 Development migration command: `npm run db:migrate` (`prisma migrate dev`). Deployment migration command: `npm run db:deploy` (`prisma migrate deploy`). Seed command: `npm run db:seed`. `npm run db:studio` opens Prisma Studio.
 
 The seed adds a bootstrap admin, ten named team users, default master data and default branding when missing. It does not update existing accounts' passwords or existing seed rows' values.
+
+## Record change notifications
+
+The `20261029130000_add_record_change_notifications` migration adds PostgreSQL triggers to `assistance`, `tasks`, and `work_logs`. Each row-level insert, update, or delete issues the same `opstracker_record_changes` notification with the `records-changed` payload. PostgreSQL delivers notifications only after the transaction commits and coalesces identical channel/payload notifications within a transaction, covering single writes, batch operations, imports, and work-log changes without including record contents. These triggers do not alter report queries or calculations.

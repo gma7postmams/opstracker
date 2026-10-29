@@ -27,6 +27,8 @@ Middleware protects the listed application page paths and restricts `/admin` to 
 3. `lib/records.ts` provides shared list, reference-number, permission partition and batch behavior over the Assistance and Task delegates.
 4. Prisma Client accesses PostgreSQL using `DATABASE_URL`; `prisma/schema.prisma` defines the persisted models and migrations live in `prisma/migrations/`.
 
+Record changes are also published through PostgreSQL `LISTEN/NOTIFY`. Database triggers on `assistance`, `tasks`, and `work_logs` emit generic invalidations after commits. An authenticated Node.js SSE route uses one reconnecting PostgreSQL listener per app process and fans invalidations out to connected clients. Dashboard metrics and the shared Technical Assistance / Other Tasks list re-fetch through their existing APIs; events contain no record data. SSE reconnects trigger an invalidation to recover changes missed while disconnected. Reports and report email workflows do not subscribe to this stream.
+
 Important shared modules:
 
 - `lib/auth.ts`: NextAuth credentials authentication, JWT session claims and current-user lookup.

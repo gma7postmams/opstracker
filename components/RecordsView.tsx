@@ -11,6 +11,7 @@ import { useToast } from "./Toast";
 import { statusLabel, priorityLabel } from "@/lib/recordTypes";
 import { formatTime12Hour, fullName } from "@/lib/format";
 import { PERIOD_OPTIONS, periodDateFilters, type Period } from "@/lib/period";
+import { useRecordEvents } from "@/components/useRecordEvents";
 import {
   Activity,
   ArrowDownWideNarrow,
@@ -156,6 +157,8 @@ export default function RecordsView(props: Props) {
     setData(await res.json());
     setLoading(false);
   }, [type, filters, sort, activeUserFilter, session]);
+
+  useRecordEvents(() => { void load(); });
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {

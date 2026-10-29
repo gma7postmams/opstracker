@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { Activity, CheckCircle2, ClipboardList, CircleDot, Clock3, Wrench } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PERIOD_OPTIONS, type Period } from "@/lib/period";
+import { useRecordEvents } from "@/components/useRecordEvents";
 
 const PALETTE = ["#3b82f6", "#7f56d9", "#06aed4", "#f79009", "#12b76a", "#f04438", "#ee46bc"];
 
@@ -62,6 +63,7 @@ export default function Dashboard() {
 
   const [d, setD] = useState<any>(null);
   const [dashboardDataRevision, setDashboardDataRevision] = useState(0);
+  const [realtimeRevision, setRealtimeRevision] = useState(0);
   const [animateDashboardEntrance, setAnimateDashboardEntrance] = useState(false);
   const hasRenderedDashboard = useRef(false);
   const [period, setPeriod] = useState<Period>("today");
@@ -80,6 +82,8 @@ export default function Dashboard() {
   const [quoteIndex, setQuoteIndex] = useState(() => new Date().getDate() % QUOTES.length);
   const [quoteVisible, setQuoteVisible] = useState(true);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useRecordEvents(() => setRealtimeRevision((revision) => revision + 1));
 
   useEffect(() => {
     const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -231,7 +235,7 @@ export default function Dashboard() {
         if (!controller.signal.aborted) console.error("Dashboard load failed:", err);
       });
     return () => controller.abort();
-  }, [fromDate, isAdmin, period, selectedUserId, toDate]);
+  }, [fromDate, isAdmin, period, realtimeRevision, selectedUserId, toDate]);
 
   useEffect(() => {
     const container = trendChartContainerRef.current;

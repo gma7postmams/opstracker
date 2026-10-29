@@ -1,4 +1,5 @@
 # 2026-10-29
+- Added authenticated SSE invalidations backed by PostgreSQL `LISTEN/NOTIFY` so Dashboard metrics and Technical Assistance / Other Tasks lists refresh after record, work-log, batch and import changes. Reconnecting clients refresh to recover missed events; Reports, participation calculations, email previews and email sending are unchanged.
 - Updated Technical Assistance and Other Tasks so USERs selecting All Users can browse records owned by any USER account while excluding ADMIN-owned records. My Records, administrator visibility, Reports, participation/contribution summaries and counts, email reports and Excel exports are unchanged.
 - Added optional Cause to Technical Assistance records, including create/edit and list/detail views. Cause is included after Problem in report details, participation details, email previews and sent reports, and Excel exports; Other Tasks, delegation visibility and participation calculations are unchanged.
 

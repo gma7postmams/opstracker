@@ -44,9 +44,11 @@ UI Files:
 
 API Files:
 - `app/api/dashboard/route.ts`
+- `app/api/records/events/route.ts` for authenticated realtime invalidations
 
 Business Logic:
 - `lib/period.ts` for shared reporting-period boundaries
+- `lib/recordEvents.ts` for the process-wide PostgreSQL notification listener
 
 Database Tables:
 - `assistance`
@@ -75,6 +77,7 @@ UI Files:
 
 API Files:
 - `app/api/records/[type]/route.ts`
+- `app/api/records/events/route.ts` for authenticated realtime invalidations
 - `app/api/records/[type]/[id]/route.ts`
 - `app/api/records/[type]/batch/route.ts`
 - `app/api/records/[type]/[id]/work-logs/route.ts`
@@ -114,6 +117,7 @@ UI Files:
 
 API Files:
 - `app/api/records/[type]/route.ts`
+- `app/api/records/events/route.ts` for authenticated realtime invalidations
 - `app/api/records/[type]/[id]/route.ts`
 - `app/api/records/[type]/batch/route.ts`
 - `app/api/records/[type]/[id]/work-logs/route.ts`

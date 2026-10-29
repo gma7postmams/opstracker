@@ -14,6 +14,8 @@ Open records show their start time beside a live elapsed-time counter in the lis
 
 The server allocates references such as `TA-2026-00001` and `OT-2026-00001` using a transactionally updated counter. The reference year comes from the server's current year.
 
+The Dashboard and Technical Assistance / Other Tasks lists receive live invalidation events when records or work logs change. They refresh through their existing APIs, preserving the current user, filters and list state; reconnecting clients refresh to catch changes missed while offline. Reports, report calculations, email previews and email sending are not part of this live-refresh behavior.
+
 ## Status lifecycle
 
 Allowed transitions for the single-record update endpoint:
