@@ -39,13 +39,15 @@ The account that creates or imports a record is its owner; `assigned` and `accou
 ## Import workflow
 
 1. Choose an import scope: `Technical Assistance Only`, `Other Tasks Only` or `Both Worksheets` (the default), then choose a CSV or Excel file (maximum 10 MB). The same scopes are available from either record page.
-2. The server maps known header aliases, normalizes dates, times, status and priority, then validates rows. Excel date/time serials are supported. `CLOSED` rows need an `End Date` and `Time Ended`; missing end fields on `CLOSE_PENDING` rows are filled with the current date and time. The downloadable workbook template includes `End Date` on both record sheets.
-3. Review detected, valid, invalid and warning counts per worksheet, validation errors and assignment warnings labeled by worksheet, ignored worksheets, ignored columns and a sample. Excel imports select worksheets by their canonical names; no worksheet picker is needed.
+2. The server maps known header aliases, including `Cause` on Technical Assistance, normalizes dates, times, status and priority, then validates rows. Excel date/time serials are supported. `CLOSED` rows need an `End Date` and `Time Ended`; missing end fields on `CLOSE_PENDING` rows are filled with the current date and time. The downloadable workbook template includes `Cause` on Technical Assistance and `End Date` on both record sheets.
+3. Review the status banner and total, valid, warning and error counts. Compact Technical Assistance and Other Tasks summaries show how many records are ready for import, or report when a worksheet has no records. The importer accountability notice appears with the summary. Warnings and validation errors are listed in dedicated sections; ignored worksheets and columns are also reported. Excel imports select worksheets by their canonical names; no worksheet picker is needed.
 4. Confirm import. Valid rows are inserted with newly generated references and the importing account as owner. Invalid rows are skipped and returned in the result.
 
 For Excel, the selected canonical worksheets are processed; in `Both Worksheets` mode, both named worksheets are required and records are created in their matching tables. All other worksheets, including `WorkLogs`, are ignored and reported in the preview and import response. The completion summary reports imported counts for each processed worksheet. CSV parsing supports quoted commas/newlines and remains a single-record-type import.
 
 `Assigned To` is optional and is matched against user full names. A unique match is assigned to the record. An unknown or ambiguous name leaves the record unassigned and generates a warning without blocking import. `Accountable Person` values are ignored; accountability and ownership are set to the importing user. The importer does not accept online file links.
+
+Other Tasks imports do not include `Location` or `Show Group`: these are legacy database columns no longer used by the task forms or APIs, and imported values are discarded. The workbook template omits them.
 
 ## Reporting and email
 

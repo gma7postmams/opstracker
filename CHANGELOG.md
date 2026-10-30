@@ -1,4 +1,7 @@
 # 2026-10-30
+- Redesigned import preview with ready/review/blocked status, workbook-wide summary counts, per-worksheet valid-row counts, importer accountability, and dedicated warning/error sections; sample field breakdowns were removed, and import processing is unchanged.
+- Updated the import template to remove importer-overridden Accountable Person columns and legacy Other Tasks Location/Show Group columns, add Technical Assistance Cause, and map Cause imports.
+- Simplified the Import My Records dialog into a clear template, scope, file and important-notes flow; preview validation, row reporting and admin import behavior are unchanged.
 - Added `Report.pdf` to Report Email alongside `Report.xlsx`, rendering the PDF from the exact email HTML and requiring a non-empty PDF buffer before SMTP delivery. Docker production runtime now installs Chromium; existing filters, calculations, permissions and recipients are unchanged.
 - Expanded the shared workbook used by Export Excel and Report Email attachments with dedicated Technical Assistance and Other Tasks field columns, complete one-row-per-entry Work Logs and Timeline sheets, and actor attribution. Report filtering is unchanged.
 - Expanded the Reports period filter to Today, Yesterday, This Week, This Month, This Year, All Records and Custom. From/To fields appear only for Custom; All Records removes date filtering from report results, Excel exports and email reports.

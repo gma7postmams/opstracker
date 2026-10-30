@@ -19,6 +19,7 @@ const ALIASES: Record<string, string> = {
   showgroup: "showGroup", show: "showGroup", group: "showGroup",
   clientname: "clientName", client: "clientName",
   problem: "problem", issue: "problem",
+  cause: "cause",
   category: "category",
   activitytype: "activityType", activity: "activityType",
   description: "description", desc: "description",

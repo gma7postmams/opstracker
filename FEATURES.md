@@ -82,9 +82,10 @@ Reference numbers are generated as `TA-YYYY-NNNNN` or `OT-YYYY-NNNNN`. A per-typ
 
 - Accepted files: `.xlsx`, `.xlsm`, and `.csv`, up to 10 MB.
 - The import scope defaults to both worksheets and can be set to `Technical Assistance Only`, `Other Tasks Only` or `Both Worksheets` on any page. Excel imports process the selected canonical worksheets; additional worksheets, including `WorkLogs`, are ignored and listed. CSV imports remain single-record-type imports.
-- The preview reports detected, valid, invalid and warning counts per worksheet, along with validation errors and warnings labeled by worksheet, ignored worksheets, unrecognized columns and a small sample. The completed import reports the imported count per worksheet. Invalid rows are skipped when importing valid rows.
-- The preview displays the same start date that will be imported. Excel date and time serials are normalized before validation. `CLOSED` rows require `End Date` and `Time Ended`; missing end fields on `CLOSE_PENDING` rows are filled with the current date and time. The downloadable workbook template includes `End Date` on both record worksheets.
+- The preview shows a ready/review/blocked status, importer accountability, workbook-wide detected/valid/warning/error totals, and valid-row counts for selected record worksheets (or “No records found”). Row-level errors and warnings identify their worksheet; ignored worksheets and columns are listed. The completed import reports the imported count per worksheet. Invalid rows are skipped when importing valid rows.
+- Excel date and time serials are normalized before validation. `CLOSED` rows require `End Date` and `Time Ended`; missing end fields on `CLOSE_PENDING` rows are filled with the current date and time. The downloadable workbook template includes `End Date` on both record worksheets.
 - `Assigned To` is optional and matched to a user by full name. A unique match is assigned; no match or multiple matches leave the record unassigned and produce a warning. Imported records are owned by the importing user. Imported `Accountable Person` values are ignored and accountability is set to the importer.
+- The import template includes `Cause` for Technical Assistance. The Other Tasks template omits legacy `Location` and `Show Group` fields because the task forms and APIs no longer use them.
 - The importer generates new reference numbers; imported reference-number values are not used.
 
 ## UI and themes
