@@ -80,11 +80,13 @@ useEffect(() => {
     .then((r) => r.json())
     .then((data) => {
       const name = data.currentUser?.name ?? "";
-      if (!record && name) {
+      if (name) {
         setForm((f: any) => ({
           ...f,
-          assigned: f.assigned || name,
-          accountable: f.accountable || name,
+          ...(!record ? { assigned: f.assigned || name } : {}),
+          accountable: isAdmin
+            ? (!record ? f.accountable || name : f.accountable)
+            : name,
         }));
       }
     });
@@ -440,11 +442,15 @@ useEffect(() => {
           {err("assigned")}
         </label>
         <label>Accountable person
-          <select value={form.accountable} onChange={(e) => set("accountable", e.target.value)} required>
-            <option value="">Select a user</option>
-            {form.accountable && !people.includes(form.accountable) && <option value={form.accountable}>{form.accountable}</option>}
-            {people.map((person) => <option key={person} value={person}>{person}</option>)}
-          </select>
+          {isAdmin ? (
+            <select value={form.accountable} onChange={(e) => set("accountable", e.target.value)} required>
+              <option value="">Select a user</option>
+              {form.accountable && !people.includes(form.accountable) && <option value={form.accountable}>{form.accountable}</option>}
+              {people.map((person) => <option key={person} value={person}>{person}</option>)}
+            </select>
+          ) : (
+            <input value={form.accountable} readOnly />
+          )}
           {err("accountable")}
         </label>
           </>

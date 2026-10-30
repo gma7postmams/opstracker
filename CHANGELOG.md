@@ -1,3 +1,6 @@
+# 2026-10-30
+- Made Accountable Person read-only and session-owned for USERs on Technical Assistance and Other Tasks create/edit forms; ADMINs retain the editable user dropdown. Record APIs enforce the signed-in USER's display name on create and update, ignoring submitted alternatives.
+
 # 2026-10-29
 - Redesigned Generate Report email as a responsive OpsTracker notification with a compact record summary, status badge, PDF attachment notice and generated footer. Full incident details remain in the PDF attachment; subject lines now include the report type and reference number.
 - Refined record-detail PDF reports with empty-field omission, a consistent Started / Ended / Duration summary, grouped work logs, chronological incident-style timeline entries and a compact generated footer. Email success now remains in a dismissible dialog with the filename, recipients and send time; preview, download, print, permissions and reporting calculations are unchanged.

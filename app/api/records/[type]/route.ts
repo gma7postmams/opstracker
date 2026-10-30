@@ -6,6 +6,7 @@ import { isRecordType, SortKey } from "@/lib/recordTypes";
 import { listRecords, nextRefNo, normalizeTimes, delegateFor } from "@/lib/records";
 import { addReportWorkLogSummaries } from "@/lib/reports";
 import { schemaFor, flatten } from "@/lib/validation";
+import { isAdmin } from "@/lib/permissions";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
   const p = await params;
@@ -55,6 +56,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ typ
   if (!isRecordType(p.type)) return NextResponse.json({ error: "Unknown record type" }, { status: 404 });
 
   const body = normalizeTimes(await req.json());
+  if (!isAdmin(user)) body.accountable = user.name;
   const parsed = schemaFor(p.type).safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Validation failed", fields: flatten(parsed.error) }, { status: 400 });

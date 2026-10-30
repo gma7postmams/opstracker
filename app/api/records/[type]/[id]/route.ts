@@ -58,6 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ty
   const body = type === "tasks"
     ? Object.fromEntries(Object.entries(requestBody).filter(([key]) => key !== "location" && key !== "showGroup"))
     : requestBody;
+  if (!isAdmin(user)) body.accountable = user.name;
 
   if (typeof body.status === "string" && body.status !== record.status) {
     const allowedTransitions: Record<string, string[]> = {
@@ -117,7 +118,9 @@ return NextResponse.json(visibleRecord(type, updated));
           : ["activityType", "description"]),
       ])
     : new Set(["assigned", "status", "endDate", "timeEnded", "priority"]);
-  const rejectedFields = Object.keys(body).filter((key) => !editableFields.has(key));
+  const rejectedFields = Object.keys(body).filter((key) =>
+    !editableFields.has(key) && !(key === "accountable" && !isAdmin(user))
+  );
   if (rejectedFields.length) {
     return NextResponse.json(
       {
@@ -161,6 +164,7 @@ for (const field of editableFields) {
     data[field] = normalized[field];
   }
 }
+if (!isAdmin(user)) data.accountable = user.name;
 if (normalized.status === "OPEN") {
   data.endDate = null;
   data.timeEnded = null;
