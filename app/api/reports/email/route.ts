@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import puppeteer, { type Browser } from "puppeteer";
 
 import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildReportWorkbook } from "@/lib/reportExcel";
 import { logAudit } from "@/lib/audit";
-import { addReportWorkLogSummaries, applyReportScope, buildReportRecordDetails, formatReportOwner, getReportContributionSummary, getReportWorkLogsForExport, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
+import { addReportTimelineSummaries, addReportWorkLogSummaries, applyReportScope, buildReportRecordDetails, formatReportOwner, getReportContributionSummary, getReportWorkLogsForExport, reportOwnerSelect, resolveReportScope } from "@/lib/reports";
 
 export async function POST(req: NextRequest) {
   const actor = await currentUser();
@@ -107,12 +108,14 @@ export async function POST(req: NextRequest) {
 
   const assistanceWithLogs = await addReportWorkLogSummaries(assistance, "assistance");
   const tasksWithLogs = await addReportWorkLogSummaries(tasks, "tasks");
+  const assistanceWithTimeline = await addReportTimelineSummaries(assistanceWithLogs, "assistance");
+  const tasksWithTimeline = await addReportTimelineSummaries(tasksWithLogs, "tasks");
   const contributionSummary = await getReportContributionSummary(reportWhere, actor, activity, userId);
 
   const workbook = await buildReportWorkbook({
     range: { from: from || "All Records", to },
-    assistance: assistanceWithLogs,
-    tasks: tasksWithLogs,
+    assistance: assistanceWithTimeline,
+    tasks: tasksWithTimeline,
     workLogs: await getReportWorkLogsForExport(assistance, tasks),
     contributionSummary,
   });
@@ -129,11 +132,8 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const filename = !from
-    ? "MAMS_Support_Activity_Report_All_Records.xlsx"
-    : from === to
-      ? `MAMS_Support_Activity_Report_${from}.xlsx`
-      : `MAMS_Support_Activity_Report_${from}_to_${to}.xlsx`;
+  const filename = "Report.xlsx";
+  const pdfFilename = "Report.pdf";
 
 const escapeHtml = (value: unknown) =>
   String(value ?? "").replace(/[&<>"']/g, (character) => ({
@@ -275,7 +275,7 @@ const emailHtml = `
             ${taskRows}
           </table>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin-top:22px;border-top:1px solid #e3e8ee;border-collapse:collapse;">
-            <tr><td style="padding:14px 0 4px;color:#4d5c68;font-family:Arial,sans-serif;font-size:12px;line-height:19px;">The detailed Excel workbook is attached as <strong>${escapeHtml(filename)}</strong>.</td></tr>
+            <tr><td style="padding:14px 0 4px;color:#4d5c68;font-family:Arial,sans-serif;font-size:12px;line-height:19px;">The detailed Excel workbook (<strong>${escapeHtml(filename)}</strong>) and this report as a PDF (<strong>${escapeHtml(pdfFilename)}</strong>) are attached.</td></tr>
             <tr><td style="padding:0 0 15px;color:#78848e;font-family:Arial,sans-serif;font-size:11px;line-height:17px;">Generated automatically by MAMS Support Operations Tracker.</td></tr>
           </table>
         </td></tr>
@@ -294,8 +294,57 @@ if (preview) {
   });
 }
 
+const createReportPdf = async (html: string): Promise<Buffer> => {
+  let browser: Browser | undefined;
+  console.info("[report-email] Creating PDF from email HTML", {
+    htmlBytes: Buffer.byteLength(html, "utf8"),
+  });
+
+  try {
+    browser = await puppeteer.launch({
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+    });
+    console.info("[report-email] Chromium launched", {
+      executablePath: browser.process()?.spawnfile ?? process.env.PUPPETEER_EXECUTABLE_PATH ?? "Puppeteer default",
+    });
+
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "load" });
+    console.info("[report-email] Email HTML rendered for PDF");
+
+    const pdfBuffer = Buffer.from(await page.pdf({
+      format: "A4",
+      landscape: true,
+      printBackground: true,
+      preferCSSPageSize: true,
+    }));
+
+    if (pdfBuffer.length === 0) {
+      throw new Error("PDF renderer returned an empty buffer");
+    }
+
+    console.info("[report-email] PDF buffer created", { bytes: pdfBuffer.length });
+    return pdfBuffer;
+  } catch (error) {
+    console.error("[report-email] PDF creation failed", error);
+    throw error;
+  } finally {
+    if (browser) await browser.close();
+  }
+};
+
 
 try {
+  const pdfBuffer = await createReportPdf(emailHtml);
+  const attachments = [
+    { filename: "Report.xlsx", content: attachment },
+    { filename: "Report.pdf", content: pdfBuffer, contentType: "application/pdf" },
+  ];
+  console.info("[report-email] Attachments created", attachments.map(({ filename: attachmentName, content }) => ({
+    filename: attachmentName,
+    bytes: content.length,
+  })));
 
   await transporter.sendMail({
     from: `"MAMS Support Reports" <${sender.smtpEmail}>`,
@@ -303,12 +352,7 @@ try {
     subject: `MAMS Support Activity Report (${reportingPeriod})`,
 
     html: emailHtml,
-    attachments: [
-      {
-        filename,
-        content: attachment,
-      },
-    ],
+    attachments,
   });
 
 await logAudit({

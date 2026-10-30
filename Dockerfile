@@ -7,6 +7,7 @@ RUN apt-get update \
 
 FROM base AS dependencies
 COPY package.json package-lock.json ./
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 RUN npm ci
 
 FROM base AS builder
@@ -23,12 +24,13 @@ FROM node:22-bookworm-slim AS runner
 ARG PRISMA_VERSION=5.18.0
 ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
-    PORT=3000
+    PORT=3000 \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install --no-install-recommends -y openssl \
+    && apt-get install --no-install-recommends -y openssl chromium \
     && rm -rf /var/lib/apt/lists/* \
     && npm install --global "prisma@${PRISMA_VERSION}" \
     && npm cache clean --force \

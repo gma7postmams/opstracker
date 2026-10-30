@@ -1,4 +1,6 @@
 # 2026-10-30
+- Added `Report.pdf` to Report Email alongside `Report.xlsx`, rendering the PDF from the exact email HTML and requiring a non-empty PDF buffer before SMTP delivery. Docker production runtime now installs Chromium; existing filters, calculations, permissions and recipients are unchanged.
+- Expanded the shared workbook used by Export Excel and Report Email attachments with dedicated Technical Assistance and Other Tasks field columns, complete one-row-per-entry Work Logs and Timeline sheets, and actor attribution. Report filtering is unchanged.
 - Expanded the Reports period filter to Today, Yesterday, This Week, This Month, This Year, All Records and Custom. From/To fields appear only for Custom; All Records removes date filtering from report results, Excel exports and email reports.
 - Locked work-log creation, editing and deletion for Close Pending and Closed Technical Assistance and Other Task records in the timeline UI and API. Work logs remain viewable, and reopening a record restores permitted controls; reports and dashboards are unchanged.
 - Made Accountable Person read-only and session-owned for USERs on Technical Assistance and Other Tasks create/edit forms; ADMINs retain the editable user dropdown. Record APIs enforce the signed-in USER's display name on create and update, ignoring submitted alternatives.

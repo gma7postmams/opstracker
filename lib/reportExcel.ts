@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
-import { buildReportRecordDetails, formatReportOwner, formatReportRecordDetails, ReportContributionSummary } from "@/lib/reports";
+import { minutesBetween } from "@/lib/format";
+import { formatReportOwner, ReportContributionSummary } from "@/lib/reports";
 
 function styleHeader(row: ExcelJS.Row) {
   row.eachCell((cell) => {
@@ -39,6 +40,21 @@ function autoFit(ws: ExcelJS.Worksheet) {
 
     column.width = Math.min(max + 3, 60);
   });
+}
+
+function dateOnly(value: Date | string | null | undefined) {
+  if (!value) return "";
+  return value instanceof Date ? value.toISOString().slice(0, 10) : value.slice(0, 10);
+}
+
+function formatDuration(record: any) {
+  const totalMinutes = minutesBetween(record.startDate, record.timeStarted, record.endDate, record.timeEnded);
+  if (totalMinutes == null) return "";
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return [hours ? `${hours}h` : "", minutes ? `${minutes}m` : ""]
+    .filter(Boolean)
+    .join(" ") || "0m";
 }
 
 function colorStatusColumn(
@@ -100,11 +116,10 @@ export async function buildReportWorkbook(data: {
   workLogs: Array<{
     parentRecordNo: string;
     recordType: string;
+    type: string;
     createdAt: Date;
     createdBy: string;
-    investigate: string;
-    resolution: string;
-    remarks: string;
+    message: string;
   }>;
   contributionSummary: ReportContributionSummary;
 }) {
@@ -176,41 +191,69 @@ export async function buildReportWorkbook(data: {
   ];
 
   const taHeader = ta.addRow([
-    "Ref No",
-    "Date",
-    "Shift",
-    "Category",
-    "Priority",
+    "Reference No",
     "Status",
-    "Owner",
-    "Assigned",
+    "Priority",
+    "Shift",
+    "Location",
+    "Show / Group",
+    "Category",
+    "Client",
+    "Assigned To",
     "Accountable",
-    "Details",
+    "Owner",
+    "Start Date",
+    "Start Time",
+    "End Date",
+    "End Time",
+    "Duration",
+    "Problem",
+    "Cause",
+    "Resolution",
+    "Remarks",
+    "Created By",
+    "Created At",
+    "Updated At",
   ]);
 
   styleHeader(taHeader);
 
   ta.autoFilter = {
     from: "A1",
-    to: "J1",
+    to: "W1",
   };
 
   data.assistance.forEach((r) => {
     ta.addRow([
       r.refNo,
-      new Date(r.startDate).toLocaleDateString(),
-      r.shift,
-      r.category,
-      r.priority,
       r.status,
-      formatReportOwner(r.owner),
+      r.priority,
+      r.shift,
+      r.location,
+      r.showGroup,
+      r.category,
+      r.clientName,
       r.assigned,
       r.accountable,
-      formatReportRecordDetails(buildReportRecordDetails(r, "assistance")),
+      formatReportOwner(r.owner),
+      dateOnly(r.startDate),
+      r.timeStarted,
+      dateOnly(r.endDate),
+      r.timeEnded,
+      formatDuration(r),
+      r.problem,
+      r.cause,
+      r.resolution,
+      r.remarks,
+      r.createdBy,
+      r.createdAt,
+      r.updatedAt,
     ]);
   });
 
-  colorStatusColumn(ta, 6, 2);
+  colorStatusColumn(ta, 2, 2);
+  ta.getColumn(22).numFmt = "yyyy-mm-dd hh:mm";
+  ta.getColumn(23).numFmt = "yyyy-mm-dd hh:mm";
   autoFit(ta);
 
   //
@@ -226,132 +269,120 @@ export async function buildReportWorkbook(data: {
   ];
 
   const taskHeader = taskSheet.addRow([
-    "Ref No",
-    "Date",
-    "Shift",
-    "Priority",
+    "Reference No",
     "Status",
-    "Owner",
-    "Assigned",
+    "Priority",
+    "Shift",
+    "Location",
+    "Show / Group",
+    "Activity Type",
+    "Description",
+    "Assigned To",
     "Accountable",
-    "Details",
+    "Owner",
+    "Start Date",
+    "Start Time",
+    "End Date",
+    "End Time",
+    "Duration",
+    "Remarks",
+    "Created By",
+    "Created At",
+    "Updated At",
   ]);
 
   styleHeader(taskHeader);
 
   taskSheet.autoFilter = {
     from: "A1",
-    to: "I1",
+    to: "T1",
   };
 
   data.tasks.forEach((r) => {
     taskSheet.addRow([
       r.refNo,
-      new Date(r.startDate).toLocaleDateString(),
-      r.shift,
-      r.priority,
       r.status,
-      formatReportOwner(r.owner),
+      r.priority,
+      r.shift,
+      r.location,
+      r.showGroup,
+      r.activityType,
+      r.description,
       r.assigned,
       r.accountable,
-      formatReportRecordDetails(buildReportRecordDetails(r, "tasks")),
+      formatReportOwner(r.owner),
+      dateOnly(r.startDate),
+      r.timeStarted,
+      dateOnly(r.endDate),
+      r.timeEnded,
+      formatDuration(r),
+      r.remarks,
+      r.createdBy,
+      r.createdAt,
+      r.updatedAt,
     ]);
   });
 
-  colorStatusColumn(taskSheet, 5, 2);
+  colorStatusColumn(taskSheet, 2, 2);
+  taskSheet.getColumn(19).numFmt = "yyyy-mm-dd hh:mm";
+  taskSheet.getColumn(20).numFmt = "yyyy-mm-dd hh:mm";
   autoFit(taskSheet);
 
   //
   // WORK LOGS
   //
-  const workLogs = wb.addWorksheet("WorkLogs");
+  const workLogs = wb.addWorksheet("Work Logs");
   workLogs.views = [{ state: "frozen", ySplit: 1 }];
   const workLogsHeader = workLogs.addRow([
-    "Parent Record No",
+    "Record No",
     "Record Type",
-    "Created At",
-    "Created By",
-    "Investigate",
-    "Resolution",
-    "Remarks",
+    "Work Log Type",
+    "Timestamp",
+    "User",
+    "Message",
   ]);
   styleHeader(workLogsHeader);
-  workLogs.autoFilter = { from: "A1", to: "G1" };
+  workLogs.autoFilter = { from: "A1", to: "F1" };
   data.workLogs.forEach((log) => {
     const row = workLogs.addRow([
       log.parentRecordNo,
       log.recordType,
+      log.type,
       log.createdAt,
       log.createdBy,
-      log.investigate,
-      log.resolution,
-      log.remarks,
+      log.message,
     ]);
-    row.getCell(3).numFmt = "yyyy-mm-dd hh:mm";
+    row.getCell(4).numFmt = "yyyy-mm-dd hh:mm";
   });
   autoFit(workLogs);
 
   //
-  // COMBINED SHEET
+  // TIMELINE
   //
-  const combined = wb.addWorksheet("Combined Records");
-
-  combined.views = [
-    {
-      state: "frozen",
-      ySplit: 1,
-    },
-  ];
-
-  const combinedHeader = combined.addRow([
-    "Ref No",
-    "Type",
-    "Date",
-    "Status",
-    "Priority",
-    "Location",
-    "Owner",
-    "Assigned",
-    "Details",
+  const timeline = wb.addWorksheet("Timeline");
+  timeline.views = [{ state: "frozen", ySplit: 1 }];
+  const timelineHeader = timeline.addRow([
+    "Record No",
+    "Timestamp",
+    "Event Type",
+    "Description",
+    "User",
   ]);
-
-  styleHeader(combinedHeader);
-
-  data.assistance.forEach((r) => {
-    combined.addRow([
-      r.refNo,
-      "Technical Assistance",
-      new Date(r.startDate).toLocaleDateString(),
-      r.status,
-      r.priority,
-      r.location,
-      formatReportOwner(r.owner),
-      r.assigned,
-      formatReportRecordDetails(buildReportRecordDetails(r, "assistance")),
-    ]);
+  styleHeader(timelineHeader);
+  timeline.autoFilter = { from: "A1", to: "E1" };
+  [...data.assistance, ...data.tasks].forEach((record) => {
+    (record.timelineSummary ?? []).forEach((event: any) => {
+      const row = timeline.addRow([
+        record.refNo,
+        event.createdAt,
+        event.title,
+        event.description,
+        event.user,
+      ]);
+      row.getCell(2).numFmt = "yyyy-mm-dd hh:mm";
+    });
   });
-
-  data.tasks.forEach((r) => {
-    combined.addRow([
-      r.refNo,
-      "Other Task",
-      new Date(r.startDate).toLocaleDateString(),
-      r.status,
-      r.priority,
-      "",
-      formatReportOwner(r.owner),
-      r.assigned,
-      formatReportRecordDetails(buildReportRecordDetails(r, "tasks")),
-    ]);
-  });
-
-  combined.autoFilter = {
-    from: "A1",
-    to: "I1",
-  };
-
-  colorStatusColumn(combined, 4, 2);
-  autoFit(combined);
+  autoFit(timeline);
 
   return wb;
 }

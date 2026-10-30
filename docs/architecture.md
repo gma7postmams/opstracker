@@ -44,6 +44,7 @@ Important shared modules:
 
 - PostgreSQL stores users, records, master data, settings, counters, audit events and work logs.
 - Nodemailer sends reports and Email 2FA codes through each user's saved Gmail SMTP configuration. Email 2FA is verified before the credentials provider returns a user to NextAuth for JWT session creation.
+- Report emails use Puppeteer to render the preview HTML as a PDF attachment; the production Docker image installs Chromium and configures its executable path.
 - Uploaded images are written to `public/uploads` and served by `/uploads/[filename]` through a filesystem-backed route, so runtime-created files work with standalone builds. The import workbook template is served from `public/templates/`.
 
 ## Production deployment

@@ -175,29 +175,14 @@ export async function getReportWorkLogsForExport(
       task: { select: { refNo: true } },
     },
   });
-
-  const assistanceOwnerById = new Map(assistance.map((record) => [record.id, record.assigned === record.accountable]));
-  const taskOwnerById = new Map(tasks.map((record) => [record.id, record.assigned === record.accountable]));
-
-  return logs.flatMap((log) => {
-    const isAssistance = Boolean(log.assistance);
-    const isOwner = isAssistance
-      ? assistanceOwnerById.get(log.assistanceId!) === true
-      : taskOwnerById.get(log.taskId!) === true;
-    if (isOwner && (log.type === "INVESTIGATION" || (!isAssistance && log.type === "RESOLUTION"))) {
-      return [];
-    }
-
-    return [{
+  return logs.map((log) => ({
       parentRecordNo: log.assistance?.refNo ?? log.task?.refNo ?? "",
-      recordType: isAssistance ? "Technical Assistance" : "Other Tasks",
+      recordType: log.assistance ? "Technical Assistance" : "Other Tasks",
+      type: log.type,
       createdAt: log.createdAt,
       createdBy: log.createdByName,
-      investigate: log.type === "INVESTIGATION" ? log.message : "",
-      resolution: log.type === "RESOLUTION" ? log.message : "",
-      remarks: log.type === "REMARK" ? log.message : "",
-    }];
-  });
+      message: log.message,
+    }));
 }
 
 export function resolveReportScope(scope: string | null | undefined, user: SessionUser): ReportScope {
@@ -392,42 +377,52 @@ export async function addReportTimelineSummaries<T extends {
       createdByName: string;
     }>;
     const history = historyByRecord.get(record.refNo) ?? [];
-    const timeline: Array<{ title: string; description: string; createdAt: Date }> = [];
-    const addEvent = (title: string, description: string, createdAt: Date) =>
-      timeline.push({ title, description, createdAt });
+    const timeline: Array<{ title: string; description: string; createdAt: Date; user: string }> = [];
+    const addEvent = (title: string, description: string, createdAt: Date, user = "") =>
+      timeline.push({ title, description, createdAt, user });
+    const creatorEvent = history.find((entry) => entry.action === "CREATE");
+    const creatorName = creatorEvent?.details && typeof (creatorEvent.details as any).name === "string"
+      ? (creatorEvent.details as any).name as string
+      : "";
 
     for (const entry of history) {
       const details = entry.details && typeof entry.details === "object"
         ? entry.details as Record<string, unknown>
         : {};
       const actor = typeof details.name === "string" ? ` by ${details.name}` : "";
+      const actorName = typeof details.name === "string" ? details.name : "";
       if (entry.action === "CREATE") {
-        addEvent("Reported", `Record created${actor}`, entry.createdAt);
-        addEvent("Assigned", `Assigned to ${String(details.assigned || record.assigned)}`, entry.createdAt);
+        addEvent("Reported", `Record created${actor}`, entry.createdAt, actorName);
+        addEvent("Assigned", `Assigned to ${String(details.assigned || record.assigned)}`, entry.createdAt, actorName);
       } else if (entry.action === "ENDORSED" || entry.action === "ASSIGNMENT_CHANGE") {
         addEvent(
           "Endorsed",
           `Reassigned from ${String(details.previousAssigned || "unassigned")} to ${String(details.assigned || record.assigned)}${actor}`,
           entry.createdAt,
+          actorName,
         );
       } else if (entry.action === "STATUS_CHANGE") {
-        const nextStatus = details.nextStatus;
+        const statusChange = Array.isArray(details.changes)
+          ? details.changes.find((change: any) => change.field === "status")
+          : null;
+        const nextStatus = details.nextStatus || statusChange?.newValue;
         if (nextStatus === "CLOSE_PENDING") {
-          addEvent("Close Pending", `Work completed and awaiting approval${actor}`, entry.createdAt);
+          addEvent("Close Pending", `Work completed and awaiting approval${actor}`, entry.createdAt, actorName);
         } else if (nextStatus === "CLOSED") {
-          addEvent("Closed", `Approved and closed${actor}`, entry.createdAt);
+          addEvent("Closed", `Approved and closed${actor}`, entry.createdAt, actorName);
         }
       }
     }
 
     const hasTitle = (title: string) => timeline.some((event) => event.title === title);
-    if (!hasTitle("Reported")) addEvent("Reported", "Record created", record.createdAt);
-    if (!hasTitle("Assigned")) addEvent("Assigned", `Assigned to ${record.assigned}`, record.createdAt);
+    const ownerName = formatReportOwner(record.owner);
+    if (!hasTitle("Reported")) addEvent("Reported", "Record created", record.createdAt, ownerName);
+    if (!hasTitle("Assigned")) addEvent("Assigned", `Assigned to ${record.assigned}`, record.createdAt, ownerName);
     if (record.status === "CLOSE_PENDING" && !hasTitle("Close Pending")) {
-      addEvent("Close Pending", "Current status is Close Pending", record.updatedAt);
+      addEvent("Close Pending", "Current status is Close Pending", record.updatedAt, ownerName);
     }
     if (record.status === "CLOSED" && !hasTitle("Closed")) {
-      addEvent("Closed", "Current status is Closed", record.updatedAt);
+      addEvent("Closed", "Current status is Closed", record.updatedAt, ownerName);
     }
 
     const contributors = recordLogs
@@ -439,7 +434,7 @@ export async function addReportTimelineSummaries<T extends {
         : log.type === "RESOLUTION"
           ? "Resolution"
           : "Remark";
-      addEvent(title, `${log.createdByName}: ${log.message}`, log.createdAt);
+      addEvent(title, log.message, log.createdAt, log.createdByName);
     }
 
     timeline.sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
@@ -452,6 +447,7 @@ export async function addReportTimelineSummaries<T extends {
 
     return {
       ...record,
+      createdBy: creatorName || ownerName,
       participants,
       latestResolution: latestResolutionLog?.message || record.resolution || "",
       timelineSummary: timeline,
