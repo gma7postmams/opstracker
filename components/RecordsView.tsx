@@ -494,7 +494,7 @@ export default function RecordsView(props: Props) {
                     return <><strong className="crm-duration-value">{duration.elapsed}</strong>{duration.range && <small className="crm-duration-range">{duration.range}</small>}</>;
                   })()}</td>
                   <td>{r.assigned}</td>
-                  <td>{fullName(r.owner)}</td>
+                  <td>{r.accountable}</td>
                 </tr>
                 );
               })}

@@ -142,7 +142,9 @@ export default function ImportDialog({ scope, onClose, onDone }: Props) {
       <section className="import-notes" aria-labelledby="import-notes-title">
         <h4 id="import-notes-title">Important Notes</h4>
         <ul>
-          <li>Accountable Person is always your account.</li>
+          {scope === "admin"
+            ? <li>Accountable Person is matched from the workbook when possible; blank or unmatched values default to the importing administrator.</li>
+            : <li>Accountable Person is always your account; workbook values are ignored.</li>}
           <li>Validation is performed before import.</li>
           <li>Invalid rows are skipped and reported.</li>
         </ul>
@@ -163,8 +165,15 @@ export default function ImportDialog({ scope, onClose, onDone }: Props) {
               </div>
             </div>
             <div className="import-accountability">
-              <span>Accountable</span>
-              <strong>{preview.importerName} <span>(Importer)</span></strong>
+              {scope === "admin" ? <>
+                <span>Accountable Person</span>
+                <strong>Matched from workbook when possible.</strong>
+                <span>Fallback</span>
+                <strong>Importing Administrator ({preview.importerName})</strong>
+              </> : <>
+                <span>Accountable</span>
+                <strong>{preview.importerName} <span>(Importer)</span></strong>
+              </>}
             </div>
           </section>
 
@@ -187,6 +196,48 @@ export default function ImportDialog({ scope, onClose, onDone }: Props) {
               </header>
             </section>
           ))}
+
+          <section className="import-feedback-section" aria-labelledby="import-matches-title">
+            <h4 id="import-matches-title">Valid User Matches</h4>
+            <div className="import-match-groups">
+              <div>
+                <strong>Assigned To</strong>
+                {preview.assignedMatches?.length
+                  ? <ul>{preview.assignedMatches.map((match: any) => (
+                      <li key={match.name}>{match.name} <span>({match.count} valid {match.count === 1 ? "row" : "rows"})</span></li>
+                    ))}</ul>
+                  : <p className="import-feedback-empty">No valid matches.</p>}
+              </div>
+              {scope === "admin" && <div>
+                <strong>Accountable Person</strong>
+                {preview.accountableMatches?.length
+                  ? <ul>{preview.accountableMatches.map((match: any) => (
+                      <li key={match.name}>{match.name} <span>({match.count} valid {match.count === 1 ? "row" : "rows"})</span></li>
+                    ))}</ul>
+                  : <p className="import-feedback-empty">No valid matches.</p>}
+              </div>}
+            </div>
+          </section>
+
+          {scope === "admin" && preview.accountabilityDiagnostics?.length > 0 && (
+            <details className="import-feedback-section import-accountability-diagnostics">
+              <summary>Temporary Accountability Diagnostics · Scope: {preview.scope} ({preview.accountabilityDiagnostics.length} rows)</summary>
+              <ul>
+                {preview.accountabilityDiagnostics.map((diagnostic: any) => (
+                  <li key={`${diagnostic.sheet}-${diagnostic.row}`}>
+                    <strong>{diagnostic.sheet} · Row {diagnostic.row}</strong>
+                    <p>Workbook Accountable Person: {diagnostic.workbookValue || "(blank)"}</p>
+                    <p>Matched User: {diagnostic.matchedUser ?? "No match"}</p>
+                    <p>Matched User ID: {diagnostic.matchedUserId ?? "None"}</p>
+                    <p>Match Count: {diagnostic.matchCount}</p>
+                    <p>Warning Generated: {diagnostic.warningGenerated ? "Yes" : "No"}</p>
+                    <p>Validated Accountable: {diagnostic.validatedAccountable ?? "Not validated (invalid row)"}</p>
+                    <p>Final Accountable (would save): {diagnostic.finalAccountable ?? "Not saved (invalid row)"}</p>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
 
           <section className="import-feedback-section import-warnings-section" aria-labelledby="import-warnings-title">
             <h4 id="import-warnings-title">Warnings ({warningCount})</h4>

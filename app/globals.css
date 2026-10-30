@@ -545,6 +545,10 @@ hr{border:0;border-top:1px solid var(--line);margin:19px 0}
   font-size:12px;font-weight:600}
 .fielderr{color:var(--err-fg);font-size:11px;font-weight:600}
 .hint{background:var(--hint-bg);border-radius:9px;padding:11px 13px;font-size:11px;color:var(--muted);line-height:1.6}
+.admin-import-help-list{margin:6px 0 0;padding-left:19px}
+.admin-import-notice{border-left:3px solid var(--accent)}
+.admin-import-notice p{margin:5px 0}
+.admin-import-notice ul{margin:4px 0;padding-left:19px}
 .row-actions{display:flex;gap:9px;margin-top:6px}
 
 /* uploads */
@@ -589,6 +593,16 @@ hr{border:0;border-top:1px solid var(--line);margin:19px 0}
 .import-feedback-empty{margin:7px 0 0;color:var(--muted);font-size:12px}
 .import-feedback-section{border-top:1px solid var(--line);padding-top:12px}
 .import-feedback-section h4{margin:0 0 8px;color:var(--text);font-size:13px}
+.import-accountability-diagnostics>summary{cursor:pointer;color:var(--text);font-size:13px;font-weight:650}
+.import-accountability-diagnostics>ul{margin-top:10px}
+.import-accountability-diagnostics p{margin:2px 0;overflow-wrap:anywhere}
+.import-match-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.import-match-groups>div{min-width:0;font-size:12px}
+.import-match-groups strong{font-size:11px}
+.import-feedback-section .import-match-groups ul{display:grid;gap:4px;margin:6px 0 0;padding:0;list-style:none}
+.import-feedback-section .import-match-groups li{display:block;overflow-wrap:anywhere;padding:0;color:var(--text)}
+.import-match-groups li span{color:var(--muted)}
+.import-match-groups .import-feedback-empty{margin-top:5px}
 .import-feedback-section ul{display:grid;gap:7px;margin:0;padding:0;list-style:none}
 .import-feedback-section li{display:flex;align-items:flex-start;gap:8px;padding:9px 10px;border-radius:7px;
   font-size:12px;line-height:1.45}
@@ -607,6 +621,7 @@ hr{border:0;border-top:1px solid var(--line);margin:19px 0}
   .import-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .import-sheet-heading{display:grid;gap:4px}
   .import-sheet-heading p{text-align:left}
+  .import-match-groups{grid-template-columns:minmax(0,1fr)}
 }
 .import-template-link{display:inline-flex;align-items:center;gap:8px;margin-bottom:19px;
   border:1px solid var(--line2);border-radius:9px;padding:10px 14px;background:var(--panel);

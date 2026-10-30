@@ -1,6 +1,11 @@
 # 2026-10-30
+- Aligned Administration-imported record ownership with Accountable Person: unique workbook matches become both owner and accountable, while blank or unmatched values fall back to the importing administrator. Import My Records behavior is unchanged.
+- Fixed the Technical Assistance and Other Tasks grids to display each record's Accountable Person from its `accountable` field rather than showing the owner's name in that column.
+- Updated Administration import presentation with a migration-focused title and subtitle, clearer workbook-matching guidance, a highlighted use-case notice, admin-specific template label and preview accountability fallback text. Import processing is unchanged.
+- Administration imports now resolve Accountable Person values to unique user matches, default blank or unmatched values to the importing admin, and show valid Assigned To and Accountable Person matches in preview. The downloadable template includes Accountable Person columns; record-page imports remain accountable to their importer.
 - Replaced record-list Export mine with Export Current View, applying the grid's filters and role-based visibility to the selected record type's Excel export.
 - Redesigned import preview with ready/review/blocked status, workbook-wide summary counts, per-worksheet valid-row counts, importer accountability, and dedicated warning/error sections; sample field breakdowns were removed, and import processing is unchanged.
+- Added an expandable temporary accountability diagnostic to the Administration import preview, showing per-row user-match, warning and validation outcomes.
 - Updated the import template to remove importer-overridden Accountable Person columns and legacy Other Tasks Location/Show Group columns, add Technical Assistance Cause, and map Cause imports.
 - Simplified the Import My Records dialog into a clear template, scope, file and important-notes flow; preview validation, row reporting and admin import behavior are unchanged.
 - Added `Report.pdf` to Report Email alongside `Report.xlsx`, rendering the PDF from the exact email HTML and requiring a non-empty PDF buffer before SMTP delivery. Docker production runtime now installs Chromium; existing filters, calculations, permissions and recipients are unchanged.

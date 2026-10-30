@@ -33,6 +33,19 @@ const ALIASES: Record<string, string> = {
 };
 
 type ImportWarning = { row: number; message: string; sheet?: string };
+type UserNameMatch = { id: number; name: string };
+type AccountabilityDiagnostic = {
+  row: number;
+  sheet: string;
+  workbookValue: string;
+  matchedUser: string | null;
+  matchedUserId: number | null;
+  matchCount: number;
+  warningGenerated: boolean;
+  validatedAccountable: string | null;
+  finalAccountable: string | null;
+  rowValid: boolean;
+};
 
 function normalizePersonName(name: string) {
   return name.trim().replace(/\s+/g, " ").toLocaleLowerCase();
@@ -42,16 +55,23 @@ function processRows(
   sheet: ParsedSheet,
   type: "assistance" | "tasks",
   importerName: string,
-  usersByName: Map<string, string[]>,
+  importerId: number,
+  usersByName: Map<string, UserNameMatch[]>,
+  scope: "self" | "admin",
 ) {
   const mapped = sheet.headers.map((header) =>
     ALIASES[header.toLowerCase().replace(/[^a-z0-9]/g, "")] ?? null
   );
   const unknownColumns = sheet.headers.filter((_, index) => mapped[index] === null);
-  const overriddenColumns = sheet.headers.filter((_, index) => mapped[index] === "accountable");
+  const overriddenColumns = scope === "self"
+    ? sheet.headers.filter((_, index) => mapped[index] === "accountable")
+    : [];
   const valid: any[] = [];
   const errors: { row: number; message: string; sheet?: string }[] = [];
   const warnings: ImportWarning[] = [];
+  const assignedMatches = new Map<string, number>();
+  const accountableMatches = new Map<string, number>();
+  const accountabilityDiagnostics: AccountabilityDiagnostic[] = [];
 
   sheet.rows.forEach((cells, index) => {
     const raw: Record<string, string> = {};
@@ -64,7 +84,7 @@ function processRows(
     if (requestedAssignee) {
       const matches = usersByName.get(normalizePersonName(requestedAssignee)) ?? [];
       if (matches.length === 1) {
-        assigned = matches[0];
+        assigned = matches[0].name;
       } else if (matches.length === 0) {
         warnings.push({
           row: index + 2,
@@ -80,6 +100,38 @@ function processRows(
       }
     }
 
+    const requestedAccountable = raw.accountable ?? "";
+    const accountableUserMatches = scope === "admin" && requestedAccountable
+      ? usersByName.get(normalizePersonName(requestedAccountable)) ?? []
+      : [];
+    let accountable = importerName;
+    const accountableMatched = accountableUserMatches.length === 1;
+    const accountableWarningGenerated = scope === "admin"
+      && Boolean(requestedAccountable)
+      && accountableUserMatches.length !== 1;
+    if (scope === "admin" && requestedAccountable) {
+      if (accountableMatched) {
+        accountable = accountableUserMatches[0].name;
+      } else {
+        warnings.push({
+          row: index + 2,
+          sheet: sheet.sheetUsed,
+          message: accountableUserMatches.length === 0
+            ? `Accountable Person "${requestedAccountable}" did not match a user; accountability will default to the importer.`
+            : `Accountable Person "${requestedAccountable}" matches multiple users; accountability will default to the importer.`,
+        });
+      }
+    }
+    const accountabilityDiagnostic = scope === "admin" ? {
+      row: index + 2,
+      sheet: sheet.sheetUsed,
+      workbookValue: requestedAccountable,
+      matchedUser: accountableMatched ? accountableUserMatches[0].name : null,
+      matchedUserId: accountableMatched ? accountableUserMatches[0].id : null,
+      matchCount: accountableUserMatches.length,
+      warningGenerated: accountableWarningGenerated,
+    } : undefined;
+
     const candidate = normalizeTimes({
       ...raw,
       startDate: normalizeDate(raw.startDate),
@@ -93,13 +145,33 @@ function processRows(
         : {}),
       remarks: raw.remarks || null,
       assigned: assigned || importerName,
-      accountable: importerName,
+      accountable,
       ...(type === "assistance" ? { resolution: raw.resolution || null } : {}),
     });
 
     const parsed = schemaFor(type).safeParse(candidate);
+    const completedDiagnostic = accountabilityDiagnostic ? {
+      ...accountabilityDiagnostic,
+      validatedAccountable: parsed.success ? parsed.data.accountable : null,
+      finalAccountable: parsed.success ? parsed.data.accountable : null,
+      rowValid: parsed.success,
+    } : undefined;
+    if (completedDiagnostic) accountabilityDiagnostics.push(completedDiagnostic);
     if (parsed.success) {
-      valid.push({ ...normalizeTimes(parsed.data), assigned, accountable: importerName, type });
+      valid.push({
+        ...normalizeTimes(parsed.data),
+        assigned,
+        accountable,
+        ownerId: scope === "admin" && accountableMatched
+          ? accountableUserMatches[0].id
+          : importerId,
+        type,
+        ...(completedDiagnostic ? { _accountabilityDiagnostic: completedDiagnostic } : {}),
+      });
+      if (assigned) assignedMatches.set(assigned, (assignedMatches.get(assigned) ?? 0) + 1);
+      if (accountableMatched) {
+        accountableMatches.set(accountable, (accountableMatches.get(accountable) ?? 0) + 1);
+      }
     } else {
       const first = parsed.error.issues[0];
       errors.push({
@@ -110,7 +182,16 @@ function processRows(
     }
   });
 
-  return { valid, errors, warnings, unknownColumns, overriddenColumns };
+  return {
+    valid,
+    errors,
+    warnings,
+    unknownColumns,
+    overriddenColumns,
+    assignedMatches,
+    accountableMatches,
+    accountabilityDiagnostics,
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -188,18 +269,18 @@ export async function POST(req: NextRequest) {
 
   const parsedRows = new Map<"assistance" | "tasks", ReturnType<typeof processRows>>();
   const allUsers = await prisma.user.findMany({
-    select: { firstName: true, middleInitial: true, surname: true },
+    select: { id: true, firstName: true, middleInitial: true, surname: true },
   });
-  const usersByName = new Map<string, string[]>();
+  const usersByName = new Map<string, UserNameMatch[]>();
   for (const account of allUsers) {
     const name = fullName(account);
     const key = normalizePersonName(name);
-    usersByName.set(key, [...(usersByName.get(key) ?? []), name]);
+    usersByName.set(key, [...(usersByName.get(key) ?? []), { id: account.id, name }]);
   }
 
   for (const recordType of types) {
     const parsed = parsedSheets.get(recordType)!;
-    parsedRows.set(recordType, processRows(parsed, recordType, user.name, usersByName));
+    parsedRows.set(recordType, processRows(parsed, recordType, user.name, user.id, usersByName, scope as "self" | "admin"));
   }
 
   const sheetSummaries = types.map((recordType) => {
@@ -218,6 +299,16 @@ export async function POST(req: NextRequest) {
   const warnings = results.flatMap((result) => result.warnings);
   const unknownColumns = [...new Set(results.flatMap((result) => result.unknownColumns))];
   const overriddenColumns = [...new Set(results.flatMap((result) => result.overriddenColumns))];
+  const accountabilityDiagnostics = results.flatMap((result) => result.accountabilityDiagnostics);
+  const collectMatches = (field: "assignedMatches" | "accountableMatches") => {
+    const matches = new Map<string, number>();
+    for (const result of results) {
+      for (const [name, count] of result[field]) {
+        matches.set(name, (matches.get(name) ?? 0) + count);
+      }
+    }
+    return [...matches].map(([name, count]) => ({ name, count }));
+  };
   const detected = types.reduce((count, recordType) => count + parsedSheets.get(recordType)!.rows.length, 0);
   const processedSheetNames = types.map((recordType) => sheetNames.get(recordType)!);
   const ignoredSheets = sheets
@@ -241,6 +332,9 @@ export async function POST(req: NextRequest) {
       ignoredSheets,
       scope,
       overriddenColumns,
+      assignedMatches: collectMatches("assignedMatches"),
+      accountableMatches: collectMatches("accountableMatches"),
+      accountabilityDiagnostics,
       importerName: user.name,
     });
   }
@@ -252,20 +346,41 @@ export async function POST(req: NextRequest) {
       const recordType = row.type as "assistance" | "tasks";
       const data = { ...row };
       delete data.type;
+      const diagnostic = data._accountabilityDiagnostic as AccountabilityDiagnostic | undefined;
+      delete data._accountabilityDiagnostic;
       const refNo = await nextRefNo(recordType, tx);
       const recordData = {
         ...data,
         startDate: new Date(data.startDate),
         endDate: data.endDate ? new Date(data.endDate) : null,
         refNo,
-        ownerId: user.id,
+        ownerId: data.ownerId ?? user.id,
       };
+      let finalAccountableSaved: string;
       if (recordType === "assistance") {
-        await tx.assistance.create({ data: recordData as any });
+        const created = await tx.assistance.create({ data: recordData as any, select: { accountable: true } });
+        finalAccountableSaved = created.accountable;
         assistanceImported++;
       } else {
-        await tx.task.create({ data: { ...recordData, location: "" } as any });
+        const created = await tx.task.create({ data: { ...recordData, location: "" } as any, select: { accountable: true } });
+        finalAccountableSaved = created.accountable;
         taskImported++;
+      }
+      if (process.env.NODE_ENV !== "production" && diagnostic) {
+        console.info("[admin-import-accountability]", JSON.stringify({
+          scope,
+          row: diagnostic.row,
+          sheet: diagnostic.sheet,
+          workbookAccountable: diagnostic.workbookValue,
+          matchedUser: diagnostic.matchedUser,
+          matchedUserId: diagnostic.matchedUserId,
+          matchCount: diagnostic.matchCount,
+          warningGenerated: diagnostic.warningGenerated,
+          parsedAccountable: diagnostic.workbookValue,
+          validatedAccountable: diagnostic.validatedAccountable,
+          prismaCreatePayloadAccountable: recordData.accountable,
+          savedRecordAccountable: finalAccountableSaved,
+        }));
       }
     }
   }, { timeout: 60_000 });
