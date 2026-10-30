@@ -1,4 +1,5 @@
 # 2026-10-30
+- Locked work-log creation, editing and deletion for Close Pending and Closed Technical Assistance and Other Task records in the timeline UI and API. Work logs remain viewable, and reopening a record restores permitted controls; reports and dashboards are unchanged.
 - Made Accountable Person read-only and session-owned for USERs on Technical Assistance and Other Tasks create/edit forms; ADMINs retain the editable user dropdown. Record APIs enforce the signed-in USER's display name on create and update, ignoring submitted alternatives.
 
 # 2026-10-29

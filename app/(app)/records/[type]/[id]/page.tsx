@@ -371,7 +371,7 @@ if (!historyEvents.some((event: any) => event.title === "Reported")) {
 
         <section className="panel">
           <div className="panelhead"><h3>Record Timeline</h3></div>
-          <WorkLogTimeline type={type} recordId={id} canAdd={r.canEdit} systemEvents={historyEvents} />
+          <WorkLogTimeline type={type} recordId={id} canAdd={r.canEdit} status={r.status} systemEvents={historyEvents} />
         </section>
       </div>
 

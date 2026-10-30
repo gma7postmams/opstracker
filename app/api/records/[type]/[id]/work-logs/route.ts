@@ -7,6 +7,16 @@ import { prisma } from "@/lib/prisma";
 
 const WORK_LOG_TYPES = ["INVESTIGATION", "RESOLUTION", "REMARK"] as const;
 
+function lockedStatusResponse(status: string) {
+  if (status === "CLOSED") {
+    return NextResponse.json({ error: "Work logs are locked because this record is Closed." }, { status: 409 });
+  }
+  if (status === "CLOSE_PENDING") {
+    return NextResponse.json({ error: "Work logs are locked because this record is Close Pending." }, { status: 409 });
+  }
+  return null;
+}
+
 async function loadRecord(type: string, id: string) {
   if (!isRecordType(type)) return null;
   const recordId = Number(id);
@@ -51,6 +61,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ typ
   if (!canEdit(user, found.record)) {
     return NextResponse.json({ error: "You do not have permission to add work logs" }, { status: 403 });
   }
+  const lockResponse = lockedStatusResponse(found.record.status);
+  if (lockResponse) return lockResponse;
 
   let body: { type?: unknown; message?: unknown };
   try {
@@ -105,6 +117,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ty
 
   const canEdit = user.role === "ADMIN" || found.record.ownerId === user.id || workLog.createdById === user.id;
   if (!canEdit) return NextResponse.json({ error: "You do not have permission to edit this work log" }, { status: 403 });
+  const lockResponse = lockedStatusResponse(found.record.status);
+  if (lockResponse) return lockResponse;
 
   const message = typeof body.message === "string" ? body.message.trim() : "";
   if (!message || message.length > 10000) {
@@ -143,6 +157,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ t
 
   const canDelete = user.role === "ADMIN" || found.record.ownerId === user.id || workLog.createdById === user.id;
   if (!canDelete) return NextResponse.json({ error: "You do not have permission to delete this work log" }, { status: 403 });
+  const lockResponse = lockedStatusResponse(found.record.status);
+  if (lockResponse) return lockResponse;
 
   await prisma.workLog.delete({ where: { id: workLog.id } });
   return new NextResponse(null, { status: 204 });

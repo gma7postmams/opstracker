@@ -54,13 +54,19 @@ export default function RecordTimeline({
   type,
   recordId,
   canAdd,
+  status,
   systemEvents,
 }: {
   type: string;
   recordId: string;
   canAdd: boolean;
+  status: string;
   systemEvents: SystemEvent[];
 }) {
+  const lockedStatus = status === "CLOSED" || status === "CLOSE_PENDING";
+  const lockedMessage = status === "CLOSED"
+    ? "Work logs are locked because this record is Closed."
+    : "Work logs are locked because this record is Close Pending.";
   const [entries, setEntries] = useState<WorkLog[]>([]);
   const [entryType, setEntryType] = useState<WorkLog["type"]>("INVESTIGATION");
   const [message, setMessage] = useState("");
@@ -219,7 +225,9 @@ export default function RecordTimeline({
 
   return (
     <div className="record-timeline-content">
-      {canAdd && (
+      {lockedStatus ? (
+        <p className="muted worklog-empty">{lockedMessage}</p>
+      ) : canAdd && (
         <form className="worklog-form" onSubmit={submit}>
           <h4>Add Timeline Entry</h4>
           <label htmlFor="worklog-type">Entry type</label>
@@ -277,7 +285,7 @@ export default function RecordTimeline({
                   <span className="record-timeline-type">{event.source === "system" ? "System Event" : event.title}</span>
                   <time dateTime={event.createdAt}>{dateTimeFormatter.format(new Date(event.createdAt))}</time>
                 </div>
-                {entry && (entry.canEdit || entry.canDelete) && editingId !== entry.id && (
+                {!lockedStatus && entry && (entry.canEdit || entry.canDelete) && editingId !== entry.id && (
                   <div className="record-timeline-actions">
                     {entry.canEdit && (
                       <button
@@ -307,7 +315,7 @@ export default function RecordTimeline({
                 {event.source === "worklog" ? (
                   <>
                     <small>By {event.actor}</small>
-                    {editingId === entry?.id && entry ? (
+                    {!lockedStatus && editingId === entry?.id && entry ? (
                       <form className="record-timeline-edit" onSubmit={(submitEvent) => { submitEvent.preventDefault(); void saveEdit(entry); }}>
                         <textarea
                           aria-label="Edit timeline message"
@@ -345,7 +353,7 @@ export default function RecordTimeline({
       ) : (
         <p className="muted worklog-empty">No timeline events yet.</p>
       )}
-      {confirmDelete && (
+      {!lockedStatus && confirmDelete && (
         <ConfirmDialog
           title="Delete timeline entry?"
           body="This entry will be permanently removed from the record timeline and related participation reports."
