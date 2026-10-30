@@ -127,7 +127,7 @@ export async function buildReportWorkbook(data: {
   };
 
   summary.addRow([]);
-  summary.addRow(["Reporting Period", `${data.range.from} to ${data.range.to}`]);
+  summary.addRow(["Reporting Period", data.range.to ? `${data.range.from} to ${data.range.to}` : data.range.from]);
   summary.addRow(["Generated On", new Date().toLocaleString()]);
 
   summary.addRow([]);

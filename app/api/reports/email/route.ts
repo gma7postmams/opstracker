@@ -20,12 +20,19 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const preview = body.preview === true;
 
-  const from = body.from;
-  const to = body.to;
+  const from = typeof body.from === "string" ? body.from : "";
+  const to = typeof body.to === "string" ? body.to : "";
   const activity = body.activity || "all";
   const status = body.status || "all";
   const scope = resolveReportScope(body.scope, actor);
   const userId = typeof body.userId === "string" ? body.userId : null;
+
+  if (Boolean(from) !== Boolean(to)) {
+    return NextResponse.json({ error: "Both From and To dates are required" }, { status: 400 });
+  }
+  if (from && from > to) {
+    return NextResponse.json({ error: "From date must be on or before To date" }, { status: 400 });
+  }
 
   const sender = await prisma.user.findUnique({
     where: { id: actor.id },
@@ -53,12 +60,13 @@ export async function POST(req: NextRequest) {
   }
 
 
-  const where: any = {
-    startDate: {
+  const where: any = {};
+  if (from && to) {
+    where.startDate = {
       gte: new Date(from),
       lte: new Date(to),
-    },
-  };
+    };
+  }
 
   if (status !== "all") {
     where.status = status;
@@ -102,7 +110,7 @@ export async function POST(req: NextRequest) {
   const contributionSummary = await getReportContributionSummary(reportWhere, actor, activity, userId);
 
   const workbook = await buildReportWorkbook({
-    range: { from, to },
+    range: { from: from || "All Records", to },
     assistance: assistanceWithLogs,
     tasks: tasksWithLogs,
     workLogs: await getReportWorkLogsForExport(assistance, tasks),
@@ -121,8 +129,9 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const filename =
-    from === to
+  const filename = !from
+    ? "MAMS_Support_Activity_Report_All_Records.xlsx"
+    : from === to
       ? `MAMS_Support_Activity_Report_${from}.xlsx`
       : `MAMS_Support_Activity_Report_${from}_to_${to}.xlsx`;
 
@@ -207,8 +216,9 @@ const generatedAt = new Date().toLocaleString("en-PH", {
   minute: "2-digit",
 });
 
-const reportingPeriod =
-  from === to
+const reportingPeriod = !from
+  ? "All Records"
+  : from === to
     ? `As of ${from}`
     : `${from} to ${to}`;
 

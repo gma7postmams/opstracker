@@ -47,25 +47,27 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const s = req.nextUrl.searchParams;
-  const from = s.get("from") || new Date(Date.now() - 29 * 864e5).toISOString().slice(0, 10);
-  const to = s.get("to") || new Date().toISOString().slice(0, 10);
+  const from = s.get("from") || "";
+  const to = s.get("to") || "";
   const activity = s.get("activity") || "all";
   const status = s.get("status") || "all";
   const userId = s.get("userId") || "all";
   const scope = resolveReportScope(s.get("scope"), user);
 
-  if (from > to) {
+  if (Boolean(from) !== Boolean(to)) {
+    return NextResponse.json({ error: "Both From and To dates are required" }, { status: 400 });
+  }
+  if (from && from > to) {
     return NextResponse.json({ error: "From date must be on or before To date" }, { status: 400 });
   }
- 
-  const days = Math.max(1, Math.round((+new Date(to) - +new Date(from)) / 864e5) + 1);
 
-  const where: any = {
-    startDate: {
+  const where: any = {};
+  if (from && to) {
+    where.startDate = {
       gte: new Date(from),
       lte: new Date(to),
-    },
-  };
+    };
+  }
 
   const reportWhere = await applyReportScope(where, user, scope, userId);
 
@@ -100,6 +102,13 @@ export async function GET(req: NextRequest) {
     ...assistanceWithLogs.map((record) => ({ ...record, recordType: "assistance" as const })),
     ...tasksWithLogs.map((record) => ({ ...record, recordType: "tasks" as const })),
   ];
+  const earliestDate = combined.reduce<string | null>((earliest, record) => {
+    const date = new Date(record.startDate).toISOString().slice(0, 10);
+    return earliest === null || date < earliest ? date : earliest;
+  }, null);
+  const reportEnd = to || new Date().toISOString().slice(0, 10);
+  const reportStart = from || earliestDate || reportEnd;
+  const days = Math.max(1, Math.round((Date.parse(reportEnd) - Date.parse(reportStart)) / 864e5) + 1);
   const closed = combined.filter((r) => r.status === "CLOSED").length;
   const [contributionSummary, users] = await Promise.all([
     getReportContributionSummary(reportWhere, user, activity, userId),
@@ -128,7 +137,7 @@ export async function GET(req: NextRequest) {
   ];
 
   return NextResponse.json({
-    range: { from, to, days },
+    range: { from: from || "All Records", to, days },
     contributionSummary,
     participationSummary,
     reportRecords,

@@ -8,7 +8,7 @@ The dashboard presents status counts by record type, totals, assistance counts b
 
 ## Reports
 
-The Reports page has Today, This Week, This Month and Custom date choices, plus filters for activity type (`all`, `assistance`, `tasks`) and status. Administrators can select a report scope (`mine` or `all`) and a user. Regular users are forced to `mine`.
+The Reports page has Today, Yesterday, This Week, This Month, This Year, All Records and Custom period choices. From and To fields appear only for Custom. All Records omits date filtering from report results, Excel exports and email reports. Activity type (`all`, `assistance`, `tasks`) and status filters remain available. Administrators can select a report scope (`mine` or `all`) and a user. Regular users are forced to `mine`.
 
 Technical Assistance and Other Tasks record toolbars also provide `Export mine`. This downloads the existing report Excel workbook with `scope=mine` and an owner-only constraint for the signed-in user. The workbook includes Technical Assistance, Other Tasks and WorkLogs sheets; this owner-only export is narrower than the Reports page's participation-based `mine` scope.
 

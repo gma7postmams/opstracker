@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useToast } from "@/components/Toast";
 import { useSession } from "next-auth/react";
 import { Activity, AlertCircle, Check, CheckCircle2, CircleDot, Clock3, LoaderCircle, Send, UsersRound } from "lucide-react";
+import { PERIOD_OPTIONS, type Period } from "@/lib/period";
 
 
 const formatDate = (date: Date) => {
@@ -13,17 +14,24 @@ const formatDate = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-type DateRangePreset = "today" | "week" | "month" | "custom";
+type DateRangePreset = Period;
 type ReportScope = "mine" | "all";
 
 function getDateRange(preset: Exclude<DateRangePreset, "custom">) {
+  if (preset === "all") return { from: "", to: "" };
+
   const end = new Date();
   const start = new Date(end);
 
-  if (preset === "week") {
+  if (preset === "yesterday") {
+    start.setDate(start.getDate() - 1);
+    end.setDate(end.getDate() - 1);
+  } else if (preset === "thisWeek") {
     start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-  } else if (preset === "month") {
+  } else if (preset === "thisMonth") {
     start.setDate(1);
+  } else if (preset === "thisYear") {
+    start.setMonth(0, 1);
   }
 
   return { from: formatDate(start), to: formatDate(end) };
@@ -420,15 +428,14 @@ const activeFilters =
       `}</style>
       <div className="filters">
         <label className="flabel">PERIOD
-          <select value={dateRangePreset} onChange={(e) => selectDateRange(e.target.value as DateRangePreset)}>
-            <option value="today">Today</option>
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-            <option value="custom">Custom</option>
+          <select value={dateRangePreset} onChange={(e) => selectDateRange(e.target.value as Period)}>
+            {PERIOD_OPTIONS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
           </select>
         </label>
-        <label className="flabel">FROM<input type="date" value={f.from} disabled={dateRangePreset !== "custom"} onChange={(e) => setF({ ...f, from: e.target.value })} /></label>
-        <label className="flabel">TO<input type="date" value={f.to} disabled={dateRangePreset !== "custom"} onChange={(e) => setF({ ...f, to: e.target.value })} /></label>
+        {dateRangePreset === "custom" && <>
+          <label className="flabel">FROM<input type="date" value={f.from} onChange={(e) => setF({ ...f, from: e.target.value })} /></label>
+          <label className="flabel">TO<input type="date" value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })} /></label>
+        </>}
         <label className="flabel">ACTIVITY
           <select value={f.activity} onChange={(e) => setF({ ...f, activity: e.target.value })}>
             <option value="all">Assistance + Tasks</option>

@@ -16,13 +16,15 @@ export async function GET(req: NextRequest) {
 
   const s = req.nextUrl.searchParams;
 
-  const from =
-    s.get("from") ||
-    new Date(Date.now() - 29 * 864e5).toISOString().slice(0, 10);
+  const from = s.get("from") || "";
+  const to = s.get("to") || "";
 
-  const to =
-    s.get("to") ||
-    new Date().toISOString().slice(0, 10);
+  if (Boolean(from) !== Boolean(to)) {
+    return NextResponse.json({ error: "Both From and To dates are required" }, { status: 400 });
+  }
+  if (from && from > to) {
+    return NextResponse.json({ error: "From date must be on or before To date" }, { status: 400 });
+  }
 
   const activity = s.get("activity") || "all";
   const status = s.get("status") || "all";
@@ -30,12 +32,13 @@ export async function GET(req: NextRequest) {
   const userId = s.get("userId");
   const ownerOnly = s.get("ownerOnly") === "true";
 
-  const where: any = {
-    startDate: {
+  const where: any = {};
+  if (from && to) {
+    where.startDate = {
       gte: new Date(from),
       lte: new Date(to),
-    },
-  };
+    };
+  }
 
   if (status !== "all") {
     where.status = status;
@@ -117,7 +120,7 @@ export async function GET(req: NextRequest) {
 
   const workbook = await buildReportWorkbook({
     range: {
-      from,
+      from: from || "All Records",
       to,
     },
     assistance: assistanceWithLogs,
@@ -128,7 +131,9 @@ export async function GET(req: NextRequest) {
 
   const buffer = await workbook.xlsx.writeBuffer();
 
-  const filename = `MAMS_Support_Activity_Report_${from}_to_${to}.xlsx`;
+  const filename = from
+    ? `MAMS_Support_Activity_Report_${from}_to_${to}.xlsx`
+    : "MAMS_Support_Activity_Report_All_Records.xlsx";
 
   return new NextResponse(buffer as ArrayBuffer, {
     headers: {
