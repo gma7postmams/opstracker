@@ -1,4 +1,5 @@
 # 2026-10-30
+- Replaced record-list Export mine with Export Current View, applying the grid's filters and role-based visibility to the selected record type's Excel export.
 - Redesigned import preview with ready/review/blocked status, workbook-wide summary counts, per-worksheet valid-row counts, importer accountability, and dedicated warning/error sections; sample field breakdowns were removed, and import processing is unchanged.
 - Updated the import template to remove importer-overridden Accountable Person columns and legacy Other Tasks Location/Show Group columns, add Technical Assistance Cause, and map Cause imports.
 - Simplified the Import My Records dialog into a clear template, scope, file and important-notes flow; preview validation, row reporting and admin import behavior are unchanged.

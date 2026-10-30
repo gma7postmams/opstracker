@@ -250,9 +250,13 @@ export default function RecordsView(props: Props) {
     });
   }
 
-  function exportMine() {
-    const params = new URLSearchParams({ scope: "mine", ownerOnly: "true" });
-    window.open(`/api/reports/excel?${params}`, "_blank");
+  function exportCurrentView() {
+    const params = new URLSearchParams({ sort: sort.key, dir: sort.dir });
+    if (activeUserFilter) params.set("userId", activeUserFilter);
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value && value !== "all") params.set(key, value);
+    });
+    window.open(`/api/records/${type}/export?${params}`, "_blank");
   }
 
   const th = (key: string, text: string) => (
@@ -286,7 +290,7 @@ export default function RecordsView(props: Props) {
           />
         </div>
         <button className="secondary" onClick={() => setImporting(true)}><Upload size={16} aria-hidden="true" /> Import mine</button>
-        <button className="secondary" onClick={exportMine}><Download size={16} aria-hidden="true" /> Export mine</button>
+        <button className="secondary" onClick={exportCurrentView}><Download size={16} aria-hidden="true" /> Export Current View</button>
         <button className="primary" onClick={() => setShowForm({})}><Plus size={16} aria-hidden="true" /> New {singular}</button>
       </div>
 
