@@ -35,7 +35,7 @@ RUN apt-get update \
     && npm install --global "prisma@${PRISMA_VERSION}" \
     && npm cache clean --force \
     && groupadd --system --gid 1001 nodejs \
-    && useradd --system --uid 1001 --gid nodejs nextjs
+    && useradd --system --create-home --uid 1001 --gid nodejs nextjs
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
