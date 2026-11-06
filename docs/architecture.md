@@ -44,12 +44,14 @@ Important shared modules:
 
 - PostgreSQL stores users, records, master data, settings, counters, audit events and work logs.
 - Nodemailer sends reports and Email 2FA codes through each user's saved Gmail SMTP configuration. Email 2FA is verified before the credentials provider returns a user to NextAuth for JWT session creation.
-- Report emails use Puppeteer to render the preview HTML as a PDF attachment; the production Docker image installs Chromium and configures its executable path.
+- Report emails use Puppeteer to render the preview HTML as a PDF attachment; the production Docker image installs Chromium, configures its executable path, and provides the non-root runtime user with a writable home for Chromium's crash-report data.
 - Uploaded images are written to `public/uploads` and served by `/uploads/[filename]` through a filesystem-backed route, so runtime-created files work with standalone builds. The import workbook template is served from `public/templates/`.
 
 ## Production deployment
 
 The Docker deployment builds Next.js standalone output in a multi-stage Node 22 image and runs the app as a non-root user. Docker Compose provides PostgreSQL 16, waits for its health check, and runs `prisma migrate deploy` before the app server starts. A separate, opt-in seed target includes the development dependencies required by `tsx`; it runs migrations and seed data as a one-shot job without adding those tools to the app image. PostgreSQL data and `public/uploads` are persisted in separate named volumes; back up both independently. The app expects `DATABASE_URL`, `NEXTAUTH_URL` and `NEXTAUTH_SECRET` at runtime.
+
+The runner installs Chromium and the global Prisma CLI in separate layers before user creation and the remaining runtime settings, allowing those installation layers to be reused when later configuration changes.
 
 ## API areas
 

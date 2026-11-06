@@ -21,20 +21,22 @@ RUN npx prisma generate
 CMD ["sh", "-c", "npx prisma migrate deploy --schema=/app/prisma/schema.prisma && npm run db:seed"]
 
 FROM node:22-bookworm-slim AS runner
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y openssl chromium \
+    && rm -rf /var/lib/apt/lists/*
+
 ARG PRISMA_VERSION=5.18.0
-ENV NODE_ENV=production \
-    HOSTNAME=0.0.0.0 \
-    PORT=3000 \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV NODE_ENV=production
+RUN npm install --global "prisma@${PRISMA_VERSION}" \
+    && npm cache clean --force
 
 WORKDIR /app
 
-RUN apt-get update \
-    && apt-get install --no-install-recommends -y openssl chromium \
-    && rm -rf /var/lib/apt/lists/* \
-    && npm install --global "prisma@${PRISMA_VERSION}" \
-    && npm cache clean --force \
-    && groupadd --system --gid 1001 nodejs \
+ENV HOSTNAME=0.0.0.0 \
+    PORT=3000 \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
+RUN groupadd --system --gid 1001 nodejs \
     && useradd --system --create-home --uid 1001 --gid nodejs nextjs
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
