@@ -57,7 +57,7 @@ The production server listens on the Next.js default port unless configured othe
 
 ## Docker deployment
 
-The production Docker image uses Next.js standalone output and runs as an unprivileged user. The image includes Chromium for rendering report email PDFs. On an Ubuntu VM with Docker Engine and the Compose plugin installed, create a root `.env.production` file with the following values. Local Docker testing uses `.env.docker`. Keep secrets out of source control. Use a strong generated `NEXTAUTH_SECRET` and URL-encode any reserved characters in the database password used in `DATABASE_URL`.
+The production Docker image uses Next.js standalone output and runs as an unprivileged user with a writable home directory. The image includes Chromium for rendering report email PDFs; Chromium needs that writable home for its crash-report data. On an Ubuntu VM with Docker Engine and the Compose plugin installed, create a root `.env.production` file with the following values. Local Docker testing uses `.env.docker`. Keep secrets out of source control. Use a strong generated `NEXTAUTH_SECRET` and URL-encode any reserved characters in the database password used in `DATABASE_URL`.
 
 ```env
 POSTGRES_DB=opslog
