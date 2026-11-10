@@ -107,7 +107,7 @@ export const brandingSchema = z.object({
 
 export const masterDataSchema = z.object({
   kind: z.enum(["LOCATION", "SHIFT", "SHOW_GROUP", "CATEGORY", "ACTIVITY_TYPE"]),
-  value: z.string().min(1, "Value is required"),
+  value: z.string().trim().min(1, "Value is required"),
 });
 
 export function flatten(err: z.ZodError) {

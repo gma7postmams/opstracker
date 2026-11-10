@@ -52,6 +52,7 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
   MASTERDATA_ADD: "Master Data Added",
   MASTERDATA_RETIRE: "Master Data Retired",
   MASTERDATA_RESTORE: "Master Data Restored",
+  MASTERDATA_RENAME: "Master Data Renamed",
 };
 
 function formatAuditAction(actionValue: unknown) {

@@ -1,4 +1,8 @@
 # 2026-11-10
+- Added inline renaming for active Administration master-data values. Renames reject normalized duplicates and update matching record values transactionally, preserving usage counts and recent record previews; rename actions are audited.
+- Refined Administration master-data cards to use the Add field for both finding and creating values, retaining duplicate, usage, recent-record and retired-value feedback. Moved CSV import beside sorting; sort modes and import previews are unchanged.
+- Enhanced Administration master-data entry with live normalized usage lookups, recent matching records, retired-value restoration feedback, four sort modes, and CSV preview-before-commit. Record behavior is unchanged.
+- Enhanced Administration master-data lists with search, alphabetical ordering, case-insensitive duplicate warnings, record usage counts and per-kind CSV imports that report added and skipped values. Record behavior is unchanged.
 - Made record search global across dates and users by suspending the implicit Today and My Records filters while a search term is present; explicit filters and role-based visibility remain applied to lists and exports.
 - Expanded Technical Assistance and Other Tasks global search to cover visible record fields, status and priority, owner names, full record dates, and current or historical Work Log messages, authors, types and timestamps. Existing filters, permissions, sorting and pagination are unchanged.
 
