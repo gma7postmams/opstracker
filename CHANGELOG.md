@@ -1,3 +1,7 @@
+# 2026-11-10
+- Made record search global across dates and users by suspending the implicit Today and My Records filters while a search term is present; explicit filters and role-based visibility remain applied to lists and exports.
+- Expanded Technical Assistance and Other Tasks global search to cover visible record fields, status and priority, owner names, full record dates, and current or historical Work Log messages, authors, types and timestamps. Existing filters, permissions, sorting and pagination are unchanged.
+
 # 2026-10-30
 - Aligned Administration-imported record ownership with Accountable Person: unique workbook matches become both owner and accountable, while blank or unmatched values fall back to the importing administrator. Import My Records behavior is unchanged.
 - Fixed the Technical Assistance and Other Tasks grids to display each record's Accountable Person from its `accountable` field rather than showing the owner's name in that column.

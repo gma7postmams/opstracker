@@ -45,6 +45,41 @@ export async function nextRefNo(type: RecordType, tx: any = prisma) {
   return `${cfg.prefix}-${year}-${String(row.value).padStart(5, "0")}`;
 }
 
+function searchDateRange(value: string) {
+  let year: number;
+  let month: number;
+  let day: number;
+  let match = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(value);
+  if (match) {
+    year = Number(match[1]);
+    month = Number(match[2]);
+    day = Number(match[3]);
+  } else {
+    match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(value);
+    if (match) {
+      month = Number(match[1]);
+      day = Number(match[2]);
+      year = Number(match[3]);
+    } else if (/^[a-z]{3,9}\s+\d{1,2},?\s+\d{4}$/i.test(value)) {
+      const parsed = new Date(`${value} UTC`);
+      if (Number.isNaN(parsed.getTime())) return undefined;
+      year = parsed.getUTCFullYear();
+      month = parsed.getUTCMonth() + 1;
+      day = parsed.getUTCDate();
+    } else {
+      return undefined;
+    }
+  }
+
+  const start = new Date(Date.UTC(year, month - 1, day));
+  if (start.getUTCFullYear() !== year || start.getUTCMonth() !== month - 1 || start.getUTCDate() !== day) {
+    return undefined;
+  }
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 1);
+  return { gte: start, lt: end };
+}
+
 export function buildWhere(type: RecordType, query: ListQuery) {
   const cfg = TYPES[type];
   const where: any = {};
@@ -62,14 +97,54 @@ export function buildWhere(type: RecordType, query: ListQuery) {
   const q = query.q?.trim();
   if (q) {
     const like = { contains: q, mode: "insensitive" as const };
+    const normalizedQuery = q.toLowerCase().replace(/[_-]+/g, " ");
+    const statusOptions = [
+      ["OPEN", "Open"],
+      ["CLOSE_PENDING", "Close Pending"],
+      ["CLOSED", "Closed"],
+    ] as const;
+    const priorityOptions = [
+      ["LOW", "Low"],
+      ["NORMAL", "Normal"],
+      ["HIGH", "High"],
+      ["CRITICAL", "Critical"],
+    ] as const;
+    const workLogTypeOptions = [
+      ["INVESTIGATION", "Investigation"],
+      ["RESOLUTION", "Resolution"],
+      ["REMARK", "Remark"],
+    ] as const;
+    const matchingStatuses = statusOptions
+      .filter(([value, label]) => `${value.replaceAll("_", " ")} ${label}`.toLowerCase().includes(normalizedQuery))
+      .map(([value]) => value);
+    const matchingPriorities = priorityOptions
+      .filter(([value, label]) => `${value} ${label}`.toLowerCase().includes(normalizedQuery))
+      .map(([value]) => value);
+    const matchingWorkLogTypes = workLogTypeOptions
+      .filter(([value, label]) => `${value} ${label}`.toLowerCase().includes(normalizedQuery))
+      .map(([value]) => value);
+    const dateRange = searchDateRange(q);
     // Search only user-visible columns — never owner ids or lock flags, or
     // searching "admin" would match every record that user happened to enter.
     where.OR = [
       { refNo: like },
       ...(type === "assistance" ? [{ location: like }] : []),
       ...(type === "assistance" ? [{ showGroup: like }] : []),
+      ...(type === "assistance" ? [{ cause: like }] : []),
+      { shift: like }, { timeStarted: like }, { timeEnded: like },
       { assigned: like }, { accountable: like }, { remarks: like },
       ...cfg.ownFields.map((f) => ({ [f]: like })),
+      { owner: { is: { OR: [
+        { firstName: like }, { middleInitial: like }, { surname: like },
+      ] } } },
+      { workLogs: { some: { OR: [
+        { message: like }, { createdByName: like },
+        ...(matchingWorkLogTypes.length ? [{ type: { in: matchingWorkLogTypes } }] : []),
+        ...(dateRange ? [{ createdAt: dateRange }, { updatedAt: dateRange }] : []),
+      ] } } },
+      ...(matchingStatuses.length ? [{ status: { in: matchingStatuses } }] : []),
+      ...(matchingPriorities.length ? [{ priority: { in: matchingPriorities } }] : []),
+      ...(dateRange ? [{ startDate: dateRange }, { endDate: dateRange }] : []),
     ];
   }
   return where;

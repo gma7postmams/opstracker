@@ -101,6 +101,7 @@ export default function RecordsView(props: Props) {
   const toast = useToast();
 
   const [period, setPeriod] = useState<Period>("today");
+  const [periodExplicit, setPeriodExplicit] = useState(false);
   const [filters, setFilters] = useState(() => ({ ...emptyFilters, ...periodDateFilters("today") }));
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -136,15 +137,22 @@ export default function RecordsView(props: Props) {
   }, []);
 
   const defaultUserFilter = session?.user.id != null ? String(session.user.id) : "all";
-  const activeUserFilter = userFilter ?? defaultUserFilter;
+  const searchActive = Boolean(filters.q.trim());
+  const selectedUserFilter = userFilter ?? defaultUserFilter;
+  const activeUserFilter = userFilter ?? (searchActive ? "all" : defaultUserFilter);
+  const requestUserFilter = userFilter ?? (searchActive ? null : defaultUserFilter);
+  const activeFilters = useMemo(() => {
+    if (!searchActive || periodExplicit) return filters;
+    return { ...filters, from: "", to: "" };
+  }, [filters, searchActive, periodExplicit]);
 
   const activeCount = useMemo(
     () =>
       (Object.keys(emptyFilters) as (keyof typeof emptyFilters)[])
         .filter((k) => k !== "from" && k !== "to" && filters[k] && filters[k] !== "all").length +
       (period !== "today" ? 1 : 0) +
-      (activeUserFilter !== defaultUserFilter ? 1 : 0),
-    [filters, period, activeUserFilter, defaultUserFilter]
+      (selectedUserFilter !== defaultUserFilter ? 1 : 0),
+    [filters, period, selectedUserFilter, defaultUserFilter]
   );
 
   const load = useCallback(async () => {
@@ -153,13 +161,13 @@ export default function RecordsView(props: Props) {
 
     const p = new URLSearchParams({ sort: sort.key, dir: sort.dir });
 
-    if (activeUserFilter) {p.set("userId", activeUserFilter);}
+    if (requestUserFilter) {p.set("userId", requestUserFilter);}
  
-    Object.entries(filters).forEach(([k, v]) => { if (v && v !== "all") p.set(k, v); });
+    Object.entries(activeFilters).forEach(([k, v]) => { if (v && v !== "all") p.set(k, v); });
     const res = await fetch(`/api/records/${type}?${p}`);
     setData(await res.json());
     setLoading(false);
-  }, [type, filters, sort, activeUserFilter, session]);
+  }, [type, activeFilters, sort, requestUserFilter, session]);
 
   useRecordEvents(() => { void load(); });
 
@@ -174,12 +182,14 @@ export default function RecordsView(props: Props) {
     setSelected(new Set());
     setPage(1);
     setFilters((f) => ({ ...f, [k]: v }));
+    if (k === "from" || k === "to") setPeriodExplicit(true);
   };
 
   const clearFilters = () => {
     setSelected(new Set());
     setPage(1);
     setPeriod("today");
+    setPeriodExplicit(false);
     setFilters({ ...emptyFilters, ...periodDateFilters("today") });
     setUserFilter(null);
   };
@@ -188,6 +198,7 @@ export default function RecordsView(props: Props) {
     setSelected(new Set());
     setPage(1);
     setPeriod(nextPeriod);
+    setPeriodExplicit(true);
     if (nextPeriod === "custom") {
       setFilters((current) => ({ ...current, from: "", to: "" }));
     } else {
@@ -252,8 +263,8 @@ export default function RecordsView(props: Props) {
 
   function exportCurrentView() {
     const params = new URLSearchParams({ sort: sort.key, dir: sort.dir });
-    if (activeUserFilter) params.set("userId", activeUserFilter);
-    Object.entries(filters).forEach(([key, value]) => {
+    if (requestUserFilter) params.set("userId", requestUserFilter);
+    Object.entries(activeFilters).forEach(([key, value]) => {
       if (value && value !== "all") params.set(key, value);
     });
     window.open(`/api/records/${type}/export?${params}`, "_blank");
@@ -469,7 +480,7 @@ export default function RecordsView(props: Props) {
                     />
                   </td>
                   <td>
-                    <b><Link href={`/records/${type}/${r.id}${activeUserFilter === "all" ? "?userId=all" : ""}`}>{r.refNo}</Link></b>
+                    <b><Link href={`/records/${type}/${r.id}${selectedUserFilter === "all" ? "?userId=all" : ""}`}>{r.refNo}</Link></b>
                     {r.locked && <small>🔒 Locked</small>}
                   </td>
                   <td>{formatListDate(r.startDate)}<small>{r.shift}</small></td>
