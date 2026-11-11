@@ -23,7 +23,7 @@ export default function BackupPanel() {
     }
     const blob = await res.blob();
     const name = res.headers.get("Content-Disposition")?.match(/filename="(.+)"/)?.[1]
-      ?? "opslog-backup.json";
+      ?? `opstracker-backup-v2-${new Date().toISOString().slice(0, 19).replace(/[-:]/g, "").replace("T", "-")}.opsbackup`;
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url; a.download = name; a.click();
@@ -35,22 +35,22 @@ export default function BackupPanel() {
     <>
       <section className="panel spaced">
         <div className="panelhead">
-          <div><h3>Backup &amp; restore</h3>
-            <span className="muted">Full export of users, records, master data and branding</span></div>
+          <div><h3>OpsTracker Backup &amp; restore</h3>
+            <span className="muted">Export of users, records, work logs, master data, audit history and branding</span></div>
         </div>
         <div className="hint spacedbottom">
           <b>Before you restore</b><br />
-          • The backup file contains password hashes — store it somewhere private.<br />
-          • Uploaded images live in <code>public/uploads</code> and are <b>not</b> inside the JSON.
+          • The backup file contains password hashes and saved SMTP passwords — store it somewhere private.<br />
+          • The backup contents are JSON. Uploaded images live in <code>public/uploads</code> and are <b>not</b> inside the backup.
           Copy that folder alongside the file for a complete backup.<br />
-          • <b>Merge</b> adds anything missing and leaves existing rows untouched.
-          <b> Replace</b> deletes all current data first.
+          • <b>Merge</b> adds missing rows, reactivates matched retired master data and updates branding.
+          <b> Replace</b> clears backup-managed tables first and clears pending email verification codes; uploaded files remain untouched.
         </div>
         <div className="row-actions">
           <button className="primary" onClick={download} disabled={downloading}>
-            {downloading ? "Preparing…" : "⇩ Download backup"}
+            {downloading ? "Preparing…" : "⇩ Download OpsTracker Backup"}
           </button>
-          <button className="secondary" onClick={() => setRestoring(true)}>⇧ Restore from backup</button>
+          <button className="secondary" onClick={() => setRestoring(true)}>⇧ Restore OpsTracker Backup</button>
         </div>
       </section>
 
@@ -90,13 +90,13 @@ function RestoreDialog({ onClose, onDone }: { onClose: () => void; onDone: () =>
     setBusy(false);
     if (!res.ok) { toast(out.error ?? "Restore failed"); return; }
     if (dryRun) { setPreview(out); return; }
-    toast(`Restored — ${out.usersAdded} user(s), ${out.assistanceAdded} assistance, ${out.tasksAdded} task(s)`);
+    toast(`Restored — ${out.usersAdded} user(s), ${out.assistanceAdded} assistance, ${out.tasksAdded} task(s), ${out.workLogsAdded} work log(s)`);
     onDone();
   }
 
   return (
     <>
-      <Modal title="Restore from backup" subtitle="Check the summary before committing"
+      <Modal title="Restore OpsTracker Backup" subtitle="Check the summary before committing"
         onClose={onClose} width={600}
         footer={<>
           <button className="secondary" onClick={onClose}>Cancel</button>
@@ -106,18 +106,19 @@ function RestoreDialog({ onClose, onDone }: { onClose: () => void; onDone: () =>
               </button>
             : <button className={`primary${mode === "replace" ? " destructive" : ""}`}
                 onClick={() => mode === "replace" ? setConfirm(true) : send(false)} disabled={busy}>
-                {busy ? "Restoring…" : mode === "replace" ? "Replace all data" : "Merge into database"}
+                {busy ? "Restoring…" : mode === "replace" ? "Replace database data" : "Merge into database"}
               </button>}
         </>}>
         <div className="form">
           <label className="full">Backup file
-            <input type="file" accept="application/json,.json"
+            <input type="file" accept=".opsbackup,.json,application/json"
               onChange={(e) => { setFile(e.target.files?.[0] ?? null); setPreview(null); }} />
+            <span className="muted">Accepted formats: .opsbackup and .json (legacy).</span>
           </label>
           <label className="full">Mode
             <select value={mode} onChange={(e) => { setMode(e.target.value); setPreview(null); }}>
               <option value="merge">Merge — add what is missing, keep existing rows</option>
-              <option value="replace">Replace — delete all current data first</option>
+              <option value="replace">Replace — clear backup-managed tables first</option>
             </select>
           </label>
         </div>
@@ -150,6 +151,12 @@ function RestoreDialog({ onClose, onDone }: { onClose: () => void; onDone: () =>
 	  </tr>
 
     <tr>
+      <td>Work Logs</td>
+      <td>{preview.incoming.workLogs}</td>
+      <td>{preview.existing.workLogs}</td>
+    </tr>
+
+    <tr>
       <td>Master Data</td>
       <td>{preview.incoming.masterData}</td>
       <td>{preview.existing.masterData}</td>
@@ -167,8 +174,12 @@ function RestoreDialog({ onClose, onDone }: { onClose: () => void; onDone: () =>
             </table>
             {mode === "replace" && (
               <div className="err spacedtop">
-                Replace deletes all {preview.existing.users + preview.existing.assistance + preview.existing.tasks} existing
-                row(s) before loading the backup. This cannot be undone.
+                Replace removes the existing backed-up rows before loading this file. This cannot be undone.
+              </div>
+            )}
+            {mode === "replace" && preview.format === 1 && (
+              <div className="err spacedtop">
+                This version 1 backup has no Work Logs. Replace will remove the {preview.existing.workLogs} existing work log(s).
               </div>
             )}
           </div>
@@ -177,8 +188,8 @@ function RestoreDialog({ onClose, onDone }: { onClose: () => void; onDone: () =>
 
       {confirm && (
         <ConfirmDialog
-          title="Replace all data?"
-          body="Every user, record and master-data entry is deleted first, then the backup is loaded."
+          title="Replace database data?"
+          body="Backed-up database rows are replaced, and pending email verification codes are cleared. Uploaded files are left untouched."
           onCancel={() => setConfirm(false)}
           onYes={() => { setConfirm(false); send(false); }} />
       )}

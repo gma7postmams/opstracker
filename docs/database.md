@@ -33,8 +33,8 @@ Enums are `Status` (`OPEN`, `CLOSE_PENDING`, `CLOSED`), `Role` (`ADMIN`, `USER`)
 - Records with status `OPEN` persist null `endDate` and `timeEnded`; the `20261029140000_normalize_open_record_end_times` migration clears legacy values for both record tables.
 - Reference numbers are unique and assigned by updating a per-type/year `Counter` inside the same transaction as record creation/import.
 - Assistance and Task rows maintain `updatedAt` through Prisma's `@updatedAt` fields. User rows do not have an `updatedAt` column.
-- Passwords are stored as bcrypt hashes. The backup API includes those hashes; backup JSON is sensitive.
-- Backup JSON includes users, both record tables, branding, master data, counters and audit logs. It does not include work-log rows or uploaded files in the current payload implementation.
+- Passwords are stored as bcrypt hashes. The `.opsbackup` file contains JSON including those hashes; treat it as sensitive. Legacy `.json` backups are also accepted for restore.
+- Version 2 `.opsbackup` files contain JSON with users, both record tables, work logs, branding, master data, counters and audit logs. Restore accepts version 1 backups for compatibility; those backups do not contain work logs. Email verification codes and uploaded files are excluded, and Replace clears pending verification codes before deleting users. The JSON payload is a logical data export, not a PostgreSQL schema/database dump.
 
 ## Database operations
 
