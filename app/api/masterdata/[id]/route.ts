@@ -34,6 +34,23 @@ export async function PATCH(
   }
 
   const body = await req.json();
+  if (body?.restore === true) {
+    const restored = await prisma.masterData.update({
+      where: { id: item.id },
+      data: { active: true },
+    });
+
+    await logAudit({
+      action: "MASTERDATA_RESTORE",
+      entityType: item.kind,
+      entityId: item.value,
+      userId: user.id,
+      details: { name: user.name, value: item.value },
+    });
+
+    return NextResponse.json(restored);
+  }
+
   const parsed = masterDataSchema.safeParse({ kind: item.kind, value: body?.value });
   if (!parsed.success) {
     return NextResponse.json(

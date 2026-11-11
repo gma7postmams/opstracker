@@ -114,8 +114,12 @@ export async function GET(req: NextRequest) {
       configured: configured ? { value: configured.value, active: configured.active } : null,
     });
   }
+  const includeRetired = search.get("includeRetired") === "true";
+  if (includeRetired && !isAdmin(user)) {
+    return NextResponse.json({ error: "Administrators only" }, { status: 403 });
+  }
   const rows = await prisma.masterData.findMany({
-    where: { active: true },
+    where: includeRetired ? undefined : { active: true },
     orderBy: [{ kind: "asc" }, { value: "asc" }],
   });
   const [assistance, tasks] = await Promise.all([

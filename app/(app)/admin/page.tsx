@@ -21,6 +21,7 @@ const ADMIN_TABS: { id: AdminTab; label: string }[] = [
 
 type MasterdataKind = "LOCATION" | "SHIFT" | "SHOW_GROUP" | "CATEGORY" | "ACTIVITY_TYPE";
 type MasterdataSort = "alphabetical" | "most-used" | "least-used" | "recent";
+type MasterdataStatus = "active" | "retired" | "all";
 type UsageLookup = {
   value: string;
   usageCount: number;
@@ -64,6 +65,7 @@ export default function Admin() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [adding, setAdding] = useState<Record<string, string>>({});
   const [sortModes, setSortModes] = useState<Record<string, MasterdataSort>>({});
+  const [statusModes, setStatusModes] = useState<Record<string, MasterdataStatus>>({});
   const [usageHints, setUsageHints] = useState<Record<string, UsageLookup>>({});
   const [csvPreview, setCsvPreview] = useState<CsvPreview | null>(null);
   const [importing, setImporting] = useState<MasterdataKind | null>(null);
@@ -72,7 +74,7 @@ export default function Admin() {
   const [saving, setSaving] = useState(false);
 
   const loadMaster = useCallback(async () => {
-    const d = await (await fetch("/api/masterdata")).json();
+    const d = await (await fetch("/api/masterdata?includeRetired=true")).json();
     setRows(d.rows ?? []);
   }, []);
 
@@ -136,11 +138,15 @@ useEffect(() => {
     const value = (adding[kind] ?? "").trim();
     if (!value) return;
     const lookup = usageHints[kind];
-    if (lookup?.value !== value) {
+    const normalizedValue = value.toLocaleLowerCase();
+    const retiredMatch = rows.some((row) => row.kind === kind && !row.active
+      && row.value.trim().toLocaleLowerCase() === normalizedValue);
+    if (lookup?.value !== value && !retiredMatch) {
       toast("Checking existing records. Try again in a moment.");
       return;
     }
-    const duplicate = rows.find((row) => row.kind === kind && row.value.trim().toLocaleLowerCase() === value.toLocaleLowerCase());
+    const duplicate = rows.find((row) => row.kind === kind && row.active
+      && row.value.trim().toLocaleLowerCase() === normalizedValue);
     if (duplicate) {
       toast(`Already exists. Used by ${duplicate.usageCount ?? 0} records.`);
       return;
@@ -246,8 +252,23 @@ useEffect(() => {
 
   async function retire(id: number) {
     await fetch(`/api/masterdata/${id}`, { method: "DELETE" });
-    loadMaster();
+    await loadMaster();
     toast("Entry retired");
+  }
+
+  async function restore(id: number) {
+    try {
+      const res = await fetch(`/api/masterdata/${id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ restore: true }),
+      });
+      const out = await res.json();
+      if (!res.ok) { toast(out.error ?? "Could not restore entry"); return; }
+      await loadMaster();
+      toast("Master data value restored");
+    } catch {
+      toast("Could not restore entry");
+    }
   }
 
   if (!isAdmin) {
@@ -323,7 +344,10 @@ useEffect(() => {
         {activeTab === "system" && <div className="system-masterdata-grid">
           {KINDS.map(([kind, label]) => {
             const sortMode = sortModes[kind] ?? "alphabetical";
-            const items = rows.filter((r) => r.kind === kind).sort((a, b) => {
+            const statusMode = statusModes[kind] ?? "active";
+            const allItems = rows.filter((r) => r.kind === kind);
+            const items = allItems.filter((row) => statusMode === "all"
+              || (statusMode === "active" ? row.active : !row.active)).sort((a, b) => {
               if (sortMode === "most-used" && a.usageCount !== b.usageCount) return b.usageCount - a.usageCount;
               if (sortMode === "least-used" && a.usageCount !== b.usageCount) return a.usageCount - b.usageCount;
               if (sortMode === "recent" && a.id !== b.id) return b.id - a.id;
@@ -332,10 +356,15 @@ useEffect(() => {
             const Icon = MASTERDATA_ICONS[kind];
             const value = (adding[kind] ?? "").trim();
             const filteredItems = items.filter((r) => r.value.toLocaleLowerCase().includes(value.toLocaleLowerCase()));
-            const duplicate = value ? items.find((r) => r.value.trim().toLocaleLowerCase() === value.toLocaleLowerCase()) : undefined;
+            const normalizedValue = value.toLocaleLowerCase();
+            const duplicate = value ? allItems.find((r) => r.active
+              && r.value.trim().toLocaleLowerCase() === normalizedValue) : undefined;
             const lookup = usageHints[kind]?.value === value ? usageHints[kind] : undefined;
             const liveUsageCount = lookup?.usageCount ?? duplicate?.usageCount ?? 0;
-            const retiredMatch = lookup?.configured && !lookup.configured.active ? lookup.configured : null;
+            const retiredMatch = value
+              ? allItems.find((row) => !row.active && row.value.trim().toLocaleLowerCase() === normalizedValue)
+                ?? (lookup?.configured && !lookup.configured.active ? lookup.configured : null)
+              : null;
             return (
               <section className="panel system-tile" key={kind}>
                 <div className="panelhead system-tile-head">
@@ -350,7 +379,14 @@ useEffect(() => {
                 </div>
                 <div className="system-sort-tools">
                   <label className="system-sort">
-                    <span>Sort by</span>
+                    <select aria-label={`Filter ${label} by status`} value={statusMode}
+                      onChange={(e) => setStatusModes((modes) => ({ ...modes, [kind]: e.target.value as MasterdataStatus }))}>
+                      <option value="active">Active</option>
+                      <option value="retired">Retired</option>
+                      <option value="all">All</option>
+                    </select>
+                  </label>
+                  <label className="system-sort system-sort-order">
                     <select aria-label={`Sort ${label}`} value={sortMode}
                       onChange={(e) => setSortModes((modes) => ({ ...modes, [kind]: e.target.value as MasterdataSort }))}>
                       <option value="alphabetical">Alphabetical</option>
@@ -395,10 +431,12 @@ useEffect(() => {
                       ) : <>
                         <button type="button" className="system-value-trigger"
                           aria-label={`Edit ${r.value}`} onClick={() => setEditing({ id: r.id, value: r.value })}>
-                          <span className="system-value">{r.value}<small>Used by {r.usageCount ?? 0} records</small></span>
+                          <span className="system-value">{r.value}{!r.active && <small className="system-retired-label">Retired</small>}<small>Used by {r.usageCount ?? 0} records</small></span>
                         </button>
-                        <button className="linkbtn" onClick={() => retire(r.id)}
-                          title="Retire this entry — existing records keep their value">Retire</button>
+                        {r.active
+                          ? <button className="linkbtn" onClick={() => retire(r.id)}
+                              title="Retire this entry — existing records keep their value">Retire</button>
+                          : <button className="linkbtn" onClick={() => restore(r.id)}>Restore</button>}
                       </>}
                     </div>
                   )) : <div className="muted">{items.length ? "No matching values." : "Nothing yet."}</div>}
@@ -415,7 +453,8 @@ useEffect(() => {
                       });
                     }}
                     onKeyDown={(e) => e.key === "Enter" && addValue(kind)} />
-                  <button className="secondary" onClick={() => addValue(kind)} disabled={!value || Boolean(duplicate) || !lookup}>
+                  <button className="secondary" onClick={() => addValue(kind)}
+                    disabled={!value || Boolean(duplicate) || (!lookup && !retiredMatch)}>
                     {retiredMatch ? "Restore" : "Add"}
                   </button>
                 </div>
@@ -526,16 +565,18 @@ useEffect(() => {
         .system-row-input-wrap input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
         .system-row-actions { display: flex; flex-wrap: wrap; gap: 5px; }
         .system-row-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 34px; padding: 0 8px; font-size: 11px; }
-        .system-sort-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 7px; min-width: 0; }
-        .system-sort { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 11px; }
-        .system-sort select { min-width: 0; height: 34px; padding: 0 8px; border: 1px solid var(--line2); border-radius: 8px; background: var(--input-bg); color: var(--text); font: inherit; font-size: 11px; }
-        .system-csv-import { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 36px; padding: 0 9px; border: 1px solid var(--line2); border-radius: 8px; background: var(--panel); color: var(--text); font-size: 11px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+        .system-sort-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+        .system-sort { flex: 1 1 82px; min-width: 0; color: var(--muted); font-size: 11px; }
+        .system-sort-order { flex-basis: 118px; }
+        .system-sort select { width: 100%; min-width: 0; height: 34px; padding: 0 6px; border: 1px solid var(--line2); border-radius: 8px; background: var(--input-bg); color: var(--text); font: inherit; font-size: 11px; }
+        .system-csv-import { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 36px; padding: 0 7px; border: 1px solid var(--line2); border-radius: 8px; background: var(--panel); color: var(--text); font-size: 11px; font-weight: 600; white-space: nowrap; cursor: pointer; }
         .system-csv-import:hover { background: var(--hint-bg); }
         .system-csv-import:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
         .system-csv-import input { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
         .system-csv-import.is-importing { opacity: .65; }
         .system-value { display: grid; gap: 2px; }
         .system-value small { color: var(--muted); font-size: 10px; font-weight: 400; }
+        .system-value .system-retired-label { width: fit-content; padding: 2px 5px; border-radius: 4px; background: var(--hint-bg); color: var(--card-r-fg); font-weight: 700; }
         .system-duplicate-warning { color: var(--card-r-fg); font-size: 11px; line-height: 1.4; }
         .system-usage-hint { color: var(--muted); font-size: 11px; line-height: 1.4; }
         .system-usage-preview { display: grid; gap: 7px; color: var(--muted); font-size: 11px; }

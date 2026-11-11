@@ -1,3 +1,7 @@
+# 2026-11-11
+- Combined the Administration master-data status, sort and CSV import controls into a compact responsive toolbar row; filtering, sort modes, import previews and behavior are unchanged.
+- Added Active, Retired and All filters to each Administration master-data card, with in-place restoration, retired labels and existing exact-value restore support. Retired values remain excluded from record-form options and normalized duplicate prevention is unchanged.
+
 # 2026-11-10
 - Added inline renaming for active Administration master-data values. Renames reject normalized duplicates and update matching record values transactionally, preserving usage counts and recent record previews; rename actions are audited.
 - Refined Administration master-data cards to use the Add field for both finding and creating values, retaining duplicate, usage, recent-record and retired-value feedback. Moved CSV import beside sorting; sort modes and import previews are unchanged.
