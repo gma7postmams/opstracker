@@ -6,11 +6,29 @@ import Modal from "./Modal";
 import ConfirmDialog from "./ConfirmDialog";
 import { useToast } from "./Toast";
 
+type RestoreCount = {
+  added: number;
+  skipped: number;
+  total: number;
+};
+
+type RestoreSummary = {
+  mode: "merge" | "replace";
+  filename: string;
+  users: RestoreCount;
+  assistance: RestoreCount;
+  tasks: RestoreCount;
+  workLogs: RestoreCount;
+  masterData: RestoreCount;
+  auditLogs: RestoreCount;
+};
+
 export default function BackupPanel() {
   const toast = useToast();
   const router = useRouter();
   const [restoring, setRestoring] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [restoreSummary, setRestoreSummary] = useState<RestoreSummary | null>(null);
 
   async function download() {
     setDownloading(true);
@@ -57,23 +75,46 @@ export default function BackupPanel() {
       {restoring && (
         <RestoreDialog
           onClose={() => setRestoring(false)}
-
-          onDone={() => {
+          onSuccess={(summary) => {
             setRestoring(false);
-            router.refresh();
-            window.location.reload();
+            setRestoreSummary(summary);
           }}
-
         />
+      )}
+
+      {restoreSummary && (
+        <Modal
+          title="Restore completed"
+          subtitle="The backup was restored successfully."
+          onClose={() => { setRestoreSummary(null); router.refresh(); }}
+          width={720}
+          footer={<button className="primary" onClick={() => { setRestoreSummary(null); router.refresh(); }}>Done</button>}>
+          <div className="importresult">
+            <p><b>Mode:</b> {restoreSummary.mode === "merge" ? "Merge" : "Replace"}</p>
+            <p><b>Backup file:</b> {restoreSummary.filename}</p>
+            <table className="minitable">
+              <thead><tr><th>Restored data</th><th>Added / restored</th><th>Skipped / existing</th><th>In backup</th></tr></thead>
+              <tbody>
+                <tr><td>Users</td><td>{restoreSummary.users.added}</td><td>{restoreSummary.users.skipped}</td><td>{restoreSummary.users.total}</td></tr>
+                <tr><td>Technical assistance</td><td>{restoreSummary.assistance.added}</td><td>{restoreSummary.assistance.skipped}</td><td>{restoreSummary.assistance.total}</td></tr>
+                <tr><td>Other tasks</td><td>{restoreSummary.tasks.added}</td><td>{restoreSummary.tasks.skipped}</td><td>{restoreSummary.tasks.total}</td></tr>
+                <tr><td>Work logs</td><td>{restoreSummary.workLogs.added}</td><td>{restoreSummary.workLogs.skipped}</td><td>{restoreSummary.workLogs.total}</td></tr>
+                <tr><td>Master data</td><td>{restoreSummary.masterData.added}</td><td>{restoreSummary.masterData.skipped}</td><td>{restoreSummary.masterData.total}</td></tr>
+                <tr><td>Audit logs</td><td>{restoreSummary.auditLogs.added}</td><td>{restoreSummary.auditLogs.skipped}</td><td>{restoreSummary.auditLogs.total}</td></tr>
+              </tbody>
+            </table>
+            <p className="muted">Restored includes newly added rows and retired master data reactivated during Merge.</p>
+          </div>
+        </Modal>
       )}
     </>
   );
 }
 
-function RestoreDialog({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+function RestoreDialog({ onClose, onSuccess }: { onClose: () => void; onSuccess: (summary: RestoreSummary) => void }) {
   const toast = useToast();
   const [file, setFile] = useState<File | null>(null);
-  const [mode, setMode] = useState("merge");
+  const [mode, setMode] = useState<RestoreSummary["mode"]>("merge");
   const [preview, setPreview] = useState<any>(null);
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
@@ -90,8 +131,17 @@ function RestoreDialog({ onClose, onDone }: { onClose: () => void; onDone: () =>
     setBusy(false);
     if (!res.ok) { toast(out.error ?? "Restore failed"); return; }
     if (dryRun) { setPreview(out); return; }
-    toast(`Restored — ${out.usersAdded} user(s), ${out.assistanceAdded} assistance, ${out.tasksAdded} task(s), ${out.workLogsAdded} work log(s)`);
-    onDone();
+    toast(`Backup restored successfully (${mode === "merge" ? "Merge" : "Replace"})`);
+    onSuccess({
+      mode,
+      filename: file.name,
+      users: { added: out.usersAdded, skipped: preview.incoming.users - out.usersAdded, total: preview.incoming.users },
+      assistance: { added: out.assistanceAdded, skipped: preview.incoming.assistance - out.assistanceAdded, total: preview.incoming.assistance },
+      tasks: { added: out.tasksAdded, skipped: preview.incoming.tasks - out.tasksAdded, total: preview.incoming.tasks },
+      workLogs: { added: out.workLogsAdded, skipped: preview.incoming.workLogs - out.workLogsAdded, total: preview.incoming.workLogs },
+      masterData: { added: out.masterAdded, skipped: preview.incoming.masterData - out.masterAdded, total: preview.incoming.masterData },
+      auditLogs: { added: out.auditAdded, skipped: preview.incoming.auditLogs - out.auditAdded, total: preview.incoming.auditLogs },
+    });
   }
 
   return (
@@ -116,7 +166,7 @@ function RestoreDialog({ onClose, onDone }: { onClose: () => void; onDone: () =>
             <span className="muted">Accepted formats: .opsbackup and .json (legacy).</span>
           </label>
           <label className="full">Mode
-            <select value={mode} onChange={(e) => { setMode(e.target.value); setPreview(null); }}>
+            <select value={mode} onChange={(e) => { setMode(e.target.value as RestoreSummary["mode"]); setPreview(null); }}>
               <option value="merge">Merge — add what is missing, keep existing rows</option>
               <option value="replace">Replace — clear backup-managed tables first</option>
             </select>
