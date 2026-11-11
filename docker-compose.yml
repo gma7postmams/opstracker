@@ -24,10 +24,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      backup-init:
+        condition: service_completed_successfully
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env using host db}
       NEXTAUTH_URL: ${NEXTAUTH_URL:?Set NEXTAUTH_URL in .env}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?Set NEXTAUTH_SECRET in .env}
+      BACKUP_STORAGE_DIR: /app/backups
+      UPLOADS_STORAGE_DIR: /app/public/uploads
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:-}
       NODE_ENV: production
       PORT: 3000
       HOSTNAME: 0.0.0.0
@@ -35,6 +40,45 @@ services:
       - "${APP_PORT:-3000}:3000"
     volumes:
       - uploads:/app/public/uploads
+      - backup_data:/app/backups
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    init: true
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env using host db}
+      BACKUP_STORAGE_DIR: /app/backups
+      UPLOADS_STORAGE_DIR: /app/public/uploads
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:-}
+      NODE_ENV: production
+    volumes:
+      - backup_data:/app/backups
+      - uploads:/app/public/uploads
+    entrypoint: ["node"]
+    command: ["worker/scripts/backup-scheduler.js"]
+
+  backup-init:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    user: "0:0"
+    entrypoint: ["sh", "-c"]
+    command: ["chown 1001:1001 /app/backups"]
+    restart: "no"
+    volumes:
+      - backup_data:/app/backups
 
   seed:
     profiles: ["seed"]
@@ -54,3 +98,4 @@ services:
 volumes:
   postgres_data:
   uploads:
+  backup_data:

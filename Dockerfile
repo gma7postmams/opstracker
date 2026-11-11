@@ -14,6 +14,7 @@ FROM base AS builder
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
+RUN npx tsc --project tsconfig.worker.json
 
 FROM dependencies AS seeder
 COPY . .
@@ -43,6 +44,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/worker/package.json /app/worker/package-lock.json ./worker/
+RUN npm ci --omit=dev --prefix /app/worker \
+    && chown -R nextjs:nodejs /app/worker/node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/.worker-dist ./worker
 COPY --chown=nextjs:nodejs entrypoint.sh ./entrypoint.sh
 
 RUN chmod 755 /app/entrypoint.sh

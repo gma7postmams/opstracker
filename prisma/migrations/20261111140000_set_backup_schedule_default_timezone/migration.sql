@@ -1,0 +1,1 @@
+ALTER TABLE "backup_schedule" ALTER COLUMN "timezone" SET DEFAULT 'Asia/Manila';

@@ -256,12 +256,17 @@ API Files:
 - `app/api/masterdata/[id]/route.ts`
 - `app/api/import/route.ts`
 - `app/api/backup/route.ts`
+- `app/api/backup/history/route.ts`
+- `app/api/backup/history/[filename]/route.ts`
 
 Business Logic:
 - `lib/validation.ts`
 - `lib/csv.ts`
 - `lib/xlsx.ts`
 - `lib/records.ts`
+- `lib/backup-storage.ts`
+- `lib/backup-package.ts`
+- `lib/backup-crypto.ts`
 
 Database Tables:
 - `master_data`
@@ -272,14 +277,18 @@ Database Tables:
 - `work_logs`
 - `audit_logs`
 - `branding`
+- `backup_runs`
 
 Configuration Files:
 - `prisma/schema.prisma`
+- `docker-compose.yml` for persistent backup storage at `/app/backups`
 
 Documentation Files:
 - `docs/workflow.md`
 - `docs/architecture.md`
 - `docs/database.md`
+- `FEATURES.md`
+- `CHANGELOG.md`
 
 ## Branding
 

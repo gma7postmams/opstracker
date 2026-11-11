@@ -10,7 +10,7 @@ OpsTracker is a Next.js application for recording and reviewing Technical Assist
 - Searchable, filterable record lists with live elapsed-time counters for open records, Resolution and Remark summaries that prefer typed work logs and fall back to legacy fields, record detail pages, batch actions and a chronological Record Timeline with typed entries, message editing, role-based edit/delete permissions and animations.
 - Dashboard summaries, Technical Assistance and Other Tasks lists, and Audit Logs share Today, Yesterday, This Week, This Month, This Year, All Records and Custom period filters using UTC date boundaries. Custom date inputs appear only when Custom is selected.
 - Owner/assignee reports include participation counts and report-detail timelines. Excel downloads and email attachments include Summary, Technical Assistance, Other Tasks, Work Logs and Timeline sheets; report emails also attach a PDF rendered from the preview HTML. Record lists offer an owner-only Export mine action.
-- User and master-data administration, branding, JSON backup and restore, and audit-log review/export.
+- User and master-data administration, branding, scheduled and on-demand backup history with retention, packaged restore support for uploads, optional AES-256-GCM backup encryption, and audit-log review/export.
 - Optional email-based two-factor authentication with six-digit, single-use login codes, throttled delivery, audit events and administrator recovery.
 - Spreadsheet and CSV import.
 
@@ -31,6 +31,7 @@ Install a supported Node.js runtime, npm, and PostgreSQL. Create a PostgreSQL da
 DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/opslog?schema=public"
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="a-long-random-secret"
+BACKUP_ENCRYPTION_KEY="optional-aes-256-key"
 ```
 
 Use `.env.example` as a starting point for local application settings. Apply the checked-in migrations and seed initial accounts and master data:
@@ -67,6 +68,7 @@ DATABASE_URL=postgresql://opslog:replace-with-a-strong-password@db:5432/opslog?s
 NEXTAUTH_URL=https://ops.example.com
 NEXTAUTH_SECRET=replace-with-a-long-random-secret
 APP_PORT=3000
+BACKUP_ENCRYPTION_KEY=replace-with-an-optional-long-secret
 SEED_ADMIN_PASSWORD=replace-with-a-unique-bootstrap-password
 SEED_DEMO_USER=false
 ```
@@ -82,7 +84,8 @@ The seed job waits for PostgreSQL, applies pending migrations, and runs `npm run
 
 For later deployments, run `make prod-update`. The app container runs `prisma migrate deploy` before starting Next.js; the command applies pending checked-in migrations and is safe to repeat on container restarts. Back up the database before deploying schema changes; for multi-instance deployments, run migrations once as a deployment job before starting application replicas.
 
-Compose persists PostgreSQL data in the `postgres_data` named volume and uploaded images in the `uploads` named volume mounted at `/app/public/uploads`. The `/uploads/[filename]` route reads from that volume at runtime, including files created after the standalone build. Back up both volumes as part of the deployment's recovery plan. A host bind mount such as `./uploads:/app/public/uploads` can replace the upload volume when host-managed backups are preferred; create that directory and make it writable by container UID 1001 first. Keep port 3000 behind a TLS-terminating reverse proxy and restrict VM firewall access to the proxy.
+Compose persists PostgreSQL data in the `postgres_data` named volume, uploaded images in the `uploads` named volume mounted at `/app/public/uploads`, and generated backup files in the `backup_data` named volume mounted at `/app/backups`. The `/uploads/[filename]` route reads from that volume at runtime, including files created after the standalone build. Back up the database and the `backup_data` and `uploads` volumes as part of the deployment's recovery plan. A host bind mount such as `./uploads:/app/public/uploads` can replace the upload volume when host-managed backups are preferred; create that directory and make it writable by container UID 1001 first. Set `BACKUP_ENCRYPTION_KEY` or `BACKUP_ENCRYPTION_PASSPHRASE` to make scheduled or manual backups write AES-256-GCM encrypted `.opsbackup` files; leave both unset to keep the current plain ZIP package format. Keep port 3000 behind a TLS-terminating reverse proxy and restrict VM firewall access to the proxy.
+Compose runs scheduled backups in a separate worker container using the same image; its archive dependencies are installed from the worker-specific lockfile so they are available to the separately compiled worker at runtime.
 
 ## Makefile usage
 
@@ -94,7 +97,7 @@ Utilities are `make status`, `make clean`, `make backup-db`, and `make backup-up
 
 ## Operational data
 
-Administrators can download or restore a versioned JSON database backup from Administration. The file includes user password hashes and must be protected. It excludes uploaded assets; preserve `public/uploads` separately. Imports accept `.xlsx`, `.xlsm`, and `.csv` files up to 10 MB. The import scope defaults to both the `Technical Assistance` and `Other Tasks` worksheets, with either worksheet available individually from any record page; additional tabs such as `WorkLogs` are ignored. Preview and completion summaries show counts per worksheet, and warnings identify their worksheet. Preview dates match the dates imported; Excel date/time serials are normalized before validation. Closed rows need `End Date` and `Time Ended`; close-pending rows receive the current date/time for missing end fields. The downloadable template includes these fields plus `Accountable Person` on both worksheets. Optional `Assigned To` values are matched by user full name; unknown or ambiguous names remain unassigned with a preview warning. Administration imports match `Accountable Person` by full name and default blank or unmatched values to the importing admin; record-page imports always use the importer. Administration imports with a unique Accountable Person match are owned by that user; blank or unmatched values and record-page imports are owned by the importer. Report workbooks include Work Logs and Timeline worksheets for exported entries.
+Administrators can create, download and restore a versioned database backup from Administration. The managed `.opsbackup` file includes user password hashes and must be protected; when `BACKUP_ENCRYPTION_KEY` or `BACKUP_ENCRYPTION_PASSPHRASE` is configured, the package is written with AES-256-GCM encryption before storage. The backup includes uploaded files when present, and restore accepts both encrypted packages and legacy `.json` files. Scheduled runs use the persistent `backup_data` volume and support a retention count. The backup excludes email verification codes and leaves uploaded assets in the persistent `uploads` volume unless a packaged backup includes them; preserve that volume separately for full recovery. Imports accept `.xlsx`, `.xlsm`, and `.csv` files up to 10 MB. The import scope defaults to both the `Technical Assistance` and `Other Tasks` worksheets, with either worksheet available individually from any record page; additional tabs such as `WorkLogs` are ignored. Preview and completion summaries show counts per worksheet, and warnings identify their worksheet. Preview dates match the dates imported; Excel date/time serials are normalized before validation. Closed rows need `End Date` and `Time Ended`; close-pending rows receive the current date/time for missing end fields. The downloadable template includes these fields plus `Accountable Person` on both worksheets. Optional `Assigned To` values are matched by user full name; unknown or ambiguous names remain unassigned with a preview warning. Administration imports match `Accountable Person` by full name and default blank or unmatched values to the importing admin; record-page imports always use the importer. Administration imports with a unique Accountable Person match are owned by that user; blank or unmatched values and record-page imports are owned by the importer. Report workbooks include Work Logs and Timeline worksheets for exported entries.
 
 The application writes uploaded images to `public/uploads`; use persistent storage for this directory when deploying. Email reporting and Email 2FA use the per-user Gmail SMTP settings saved in the profile. Users must configure a Gmail sender and app password before enabling 2FA. Report workbooks include Summary, Technical Assistance, Other Tasks, Work Logs and Timeline worksheets.
 

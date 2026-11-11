@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": ".worker-dist",
+    "noEmit": false,
+    "incremental": false,
+    "plugins": []
+  },
+  "include": ["scripts/backup-scheduler.ts"],
+  "exclude": ["node_modules", ".next"]
+}

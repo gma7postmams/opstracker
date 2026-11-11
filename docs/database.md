@@ -15,6 +15,8 @@ PostgreSQL is the configured datasource. `prisma/schema.prisma` is the current s
 | `AuditLog` | Action, entity type/id, optional actor ID, JSON details and timestamp. Indexed by timestamp and entity type. |
 | `EmailVerificationCode` | Bcrypt-hashed six-digit one-time code, user ID, expiry, used timestamp and creation timestamp. Indexed by user ID and linked to its user. |
 | `WorkLog` | Record timeline note with type, message, creator ID/name, creation timestamp and modification timestamp; linked to either Assistance or Task. |
+| `BackupRun` | Backup history metadata: unique filename, source, format version, byte size, status, error, upload inclusion, encryption flag, creation and completion timestamps. Backup contents are stored in the configured filesystem directory, not in PostgreSQL. |
+| `BackupSchedule` | Singleton schedule settings and run status, including frequency, local backup time, IANA timezone (defaults to `Asia/Manila`), retention count and next run. Existing schedule values are preserved when the column default changes. |
 
 Enums are `Status` (`OPEN`, `CLOSE_PENDING`, `CLOSED`), `Role` (`ADMIN`, `USER`), `Priority` (`LOW`, `NORMAL`, `HIGH`, `CRITICAL`), `MasterKind`, and `WorkLogType` (`RESOLUTION`, `REMARK`, `INVESTIGATION`).
 

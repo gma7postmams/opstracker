@@ -35,6 +35,22 @@ Update:
 - `FEATURES.md` when functionality changes
 - `CHANGELOG.md` for user-visible changes
 
+## Backup & Restore
+
+Code:
+- `components/BackupPanel.tsx`
+- `app/api/backup/**`
+- `lib/backup-*.ts`
+- `prisma/schema.prisma` and backup migrations
+- `docker-compose.yml` and `Dockerfile` when storage or deployment changes
+
+Update:
+- `docs/workflow.md`
+- `docs/database.md` when backup metadata schema changes
+- `docs/architecture.md` and `README.md` when persistent storage or deployment changes
+- `FEATURES.md` when functionality changes
+- `CHANGELOG.md` for user-visible changes
+
 ## Reports
 
 Code:

@@ -3,6 +3,9 @@ import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/permissions";
 import { logAudit } from "@/lib/audit";
+import { createStoredBackup, getUploadsDirectory, readStoredBackup } from "@/lib/backup-storage";
+import { isBackupPackage, parseBackupPackage, stageBackupUploads, type StagedUploadRestore } from "@/lib/backup-package";
+import { normalizeBackupInput } from "@/lib/backup-crypto";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
@@ -182,59 +185,11 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!isAdmin(user)) return NextResponse.json({ error: "Administrators only" }, { status: 403 });
 
-const [users, assistance, tasks, workLogs, branding, masterData, counters, auditLogs] = await prisma.$transaction(
-  (tx) => Promise.all([
-    tx.user.findMany({ orderBy: { id: "asc" } }),
-    tx.assistance.findMany({ orderBy: { id: "asc" } }),
-    tx.task.findMany({ orderBy: { id: "asc" } }),
-    tx.workLog.findMany({ orderBy: { id: "asc" } }),
-    tx.branding.findUnique({ where: { id: 1 } }),
-    tx.masterData.findMany({ orderBy: { id: "asc" } }),
-    tx.counter.findMany(),
-    tx.auditLog.findMany({ orderBy: { id: "asc" } }),
-  ]),
-  { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 120_000 },
-);
-
-  const payload = {
-    format: FORMAT_VERSION,
-    exportedAt: new Date().toISOString(),
-    exportedBy: user.name,
-    counts: { users: users.length, assistance: assistance.length, tasks: tasks.length, workLogs: workLogs.length, auditLogs: auditLogs.length },
-
-data: {
-  users,
-  assistance,
-  tasks,
-  workLogs,
-  branding,
-  masterData,
-  counters,
-  auditLogs,
-},
-
-  };
-
-  const stamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, "").replace("T", "-");
-
-await logAudit({
-  userId: user.id,
-  action: "BACKUP",
-  entityType: "System",
-  entityId: "Backup Downloaded",
-  details: {
-    user: user.name,
-    users: users.length,
-    assistance: assistance.length,
-    tasks: tasks.length,
-  },
-});
-
-
-  return new NextResponse(JSON.stringify(payload, null, 2), {
+  const { run, contents } = await createStoredBackup("MANUAL", user);
+  return new NextResponse(new Uint8Array(contents), {
     headers: {
-      "Content-Type": "application/json",
-      "Content-Disposition": `attachment; filename="opstracker-backup-v2-${stamp}.opsbackup"`,
+      "Content-Type": "application/octet-stream",
+      "Content-Disposition": `attachment; filename="${run.filename}"`,
     },
   });
 }
@@ -242,7 +197,8 @@ await logAudit({
 /**
  * Restore. "merge" adds rows whose refNo/username is not already present and
  * leaves everything else alone; "replace" wipes the tables first.
- * Uploaded files under /public/uploads are NOT part of this — see the README.
+ * Package decoding happens before the existing JSON validation and database
+ * restore engine; legacy JSON files continue through the same path.
  */
 export async function POST(req: NextRequest) {
   const user = await currentUser();
@@ -251,20 +207,36 @@ export async function POST(req: NextRequest) {
 
   const form = await req.formData();
   const file = form.get("file");
+  const storedFilename = String(form.get("storedFilename") ?? "");
   const mode = String(form.get("mode") ?? "merge");
   const dryRun = String(form.get("dryRun") ?? "") === "true";
 
-  if (!(file instanceof File)) return NextResponse.json({ error: "No file received" }, { status: 400 });
-  if (file.size > 50 * 1024 * 1024) return NextResponse.json({ error: "That file is over 50 MB" }, { status: 400 });
+  if (!(file instanceof File) && !storedFilename) return NextResponse.json({ error: "No file received" }, { status: 400 });
+  if (file instanceof File && file.size > 500 * 1024 * 1024) return NextResponse.json({ error: "That file is over 500 MB" }, { status: 400 });
   if (!["merge", "replace"].includes(mode)) {
     return NextResponse.json({ error: "Mode must be merge or replace" }, { status: 400 });
   }
 
   let payload: any;
+  let packageContents: Buffer | null = null;
+  let includesUploads = false;
   try {
-    payload = JSON.parse(await file.text());
+    const rawContents = file instanceof File
+      ? Buffer.from(await file.arrayBuffer())
+      : (await readStoredBackup(storedFilename)).contents;
+    if (rawContents.length > 500 * 1024 * 1024) return NextResponse.json({ error: "That file is over 500 MB" }, { status: 400 });
+    const contents = normalizeBackupInput(rawContents);
+    if (contents.length > 500 * 1024 * 1024) return NextResponse.json({ error: "That file is over 500 MB" }, { status: 400 });
+    let databaseContents = contents;
+    if (isBackupPackage(contents)) {
+      packageContents = contents;
+      const parsedPackage = await parseBackupPackage(contents);
+      databaseContents = parsedPackage.databaseContents;
+      includesUploads = parsedPackage.includesUploads;
+    }
+    payload = JSON.parse(databaseContents.toString("utf8"));
   } catch {
-    return NextResponse.json({ error: "That file is not valid JSON" }, { status: 400 });
+    return NextResponse.json({ error: "That file is not a valid OpsTracker backup or package" }, { status: 400 });
   }
   if (!payload || !SUPPORTED_FORMATS.includes(payload.format) || !payload.data) {
     return NextResponse.json({ error: "Not an OpsTracker Backup file, or an unsupported version" }, { status: 400 });
@@ -336,6 +308,7 @@ if (dryRun) {
       masterData: em,
       auditLogs: el,
     },
+    includesUploads,
     mode,
   });
 }
@@ -352,7 +325,16 @@ if (dryRun) {
   };
 
   let result;
+  let uploadRestore: StagedUploadRestore | null = null;
+  if (includesUploads && packageContents) {
+    try {
+      uploadRestore = await stageBackupUploads(packageContents, getUploadsDirectory(), mode as "merge" | "replace");
+    } catch {
+      return NextResponse.json({ error: "Could not safely prepare the uploaded files for restore" }, { status: 500 });
+    }
+  }
   try {
+    await uploadRestore?.activate();
     result = await prisma.$transaction(async (tx) => {
     if (mode === "replace") {
       await tx.workLog.deleteMany();
@@ -529,11 +511,13 @@ for (const a of d.auditLogs ?? []) {
 
     }, { timeout: 120_000 });
   } catch (error) {
+    await uploadRestore?.rollback().catch(() => undefined);
     if (error instanceof BackupMergeConflict) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
     throw error;
   }
+  await uploadRestore?.commit().catch(() => undefined);
 
 await logAudit({
   userId: user.id,
@@ -546,6 +530,7 @@ await logAudit({
   details: {
     user: user.name,
     mode,
+      includesUploads,
     ...result,
   },
 });
