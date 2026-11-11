@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Modal from "./Modal";
+import ConfirmDialog from "./ConfirmDialog";
 import SearchableMasterField from "./SearchableMasterField";
 
 const nowHHMM = () => {
@@ -37,6 +38,7 @@ export default function RecordForm({ type, singular, master, record, canEditOrig
 const [people, setPeople] = useState<string[]>([]);
 const [errors, setErrors] = useState<Record<string, string>>({});
 const [saving, setSaving] = useState(false);
+const [pendingClearField, setPendingClearField] = useState<string | null>(null);
 
 
   const [form, setForm] = useState<any>(() => ({
@@ -69,6 +71,34 @@ const set = (k: string, v: any) =>
     [k]: v,
     ...(k === "status" && v === "OPEN" ? { endDate: "", timeEnded: "" } : {}),
   }));
+
+const handleCreateFormKeyDown = (event: React.KeyboardEvent<HTMLFormElement>) => {
+  if (record || event.key !== "Escape") return;
+
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return;
+  if (target.closest(".master-field-control") || target.disabled || target.readOnly) return;
+  if (!target.value) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  if (target instanceof HTMLInputElement && (target.type === "date" || target.type === "time")) {
+    set(target.name, "");
+    return;
+  }
+
+  if (target instanceof HTMLInputElement && target.type !== "text") return;
+
+  const confirmationFields = ["problem", "cause", "resolution", "remarks", "description"];
+  if (target instanceof HTMLTextAreaElement && confirmationFields.includes(target.name)) {
+    setPendingClearField(target.name);
+    return;
+  }
+
+  target.select();
+  document.execCommand("delete");
+};
 
 
 useEffect(() => {
@@ -188,10 +218,12 @@ useEffect(() => {
   const err = (k: string) => errors[k] && <span className="fielderr">{errors[k]}</span>;
 
   return (
+    <>
     <Modal
       title={`${record ? "Edit" : "New"} ${isAssistance ? "Technical Assistance" : "Other Task"}`}
       subtitle={record ? record.refNo : "Capture complete operational activity"}
       onClose={onClose}
+      closeOnEscape={Boolean(record)}
       width={760}
       footer={
         <>
@@ -202,7 +234,7 @@ useEffect(() => {
         </>
       }
     >
-      <form id="recordform" onSubmit={submit} className="form">
+      <form id="recordform" onSubmit={submit} onKeyDown={!record ? handleCreateFormKeyDown : undefined} className="form">
         {errors._ && <div className="err">{errors._}</div>}
 
         {record && !canEditOriginal ? (
@@ -223,12 +255,12 @@ useEffect(() => {
               {err("status")}
             </label>
             <label>End Date
-              <input type="date" value={form.endDate ?? ""} onChange={(e) => set("endDate", e.target.value)} />
+              <input type="date" name="endDate" value={form.endDate ?? ""} onChange={(e) => set("endDate", e.target.value)} />
               {err("endDate")}
             </label>
             <label>End Time
               <span className="time-control">
-                <input type="time" value={form.timeEnded ?? ""} onChange={(e) => set("timeEnded", e.target.value)} />
+                <input type="time" name="timeEnded" value={form.timeEnded ?? ""} onChange={(e) => set("timeEnded", e.target.value)} />
                 <button type="button" className="secondary time-now" onClick={() => setCurrentTime("timeEnded")}>Now</button>
               </span>
               {err("timeEnded")}
@@ -302,6 +334,7 @@ useEffect(() => {
 
             <label className="full">Problem
               <textarea
+                name="problem"
                 value={form.problem}
                 onChange={(e) => set("problem", e.target.value)}
                 readOnly={Boolean(record && !canEditOriginal)}
@@ -313,6 +346,7 @@ useEffect(() => {
 
             <label className="full">Cause
               <textarea
+                name="cause"
                 value={form.cause ?? ""}
                 onChange={(e) => set("cause", e.target.value)}
                 readOnly={Boolean(record && !canEditOriginal)}
@@ -325,6 +359,7 @@ useEffect(() => {
   Resolution
 
   <textarea
+    name="resolution"
     value={form.resolution ?? ""}
     onChange={(e) =>
       set("resolution", e.target.value)
@@ -352,6 +387,7 @@ useEffect(() => {
 
 <label className="full">Description
   <textarea
+    name="description"
     value={form.description}
     onChange={(e) => set("description", e.target.value)}
     placeholder="Describe the task performed…"
@@ -367,6 +403,7 @@ useEffect(() => {
   Remarks
 
   <textarea
+    name="remarks"
     value={form.remarks ?? ""}
     onChange={(e) =>
       set("remarks", e.target.value)
@@ -378,23 +415,23 @@ useEffect(() => {
 
         <div className="sectionlabel">Work timeline &amp; assignment</div>
         <label>Start Date
-          <input type="date" value={form.startDate} onChange={(e) => set("startDate", e.target.value)} required disabled={Boolean(record && !canEditOriginal)} />
+          <input type="date" name="startDate" value={form.startDate} onChange={(e) => set("startDate", e.target.value)} required disabled={Boolean(record && !canEditOriginal)} />
           {err("startDate")}
         </label>
         <label>Start Time
           <span className="time-control">
-            <input type="time" value={form.timeStarted} onChange={(e) => set("timeStarted", e.target.value)} required />
+            <input type="time" name="timeStarted" value={form.timeStarted} onChange={(e) => set("timeStarted", e.target.value)} required />
             <button type="button" className="secondary time-now" onClick={() => setCurrentTime("timeStarted")}>Now</button>
           </span>
           {err("timeStarted")}
         </label>
         <label>End Date
-          <input type="date" value={form.endDate ?? ""} onChange={(e) => set("endDate", e.target.value)} />
+          <input type="date" name="endDate" value={form.endDate ?? ""} onChange={(e) => set("endDate", e.target.value)} />
           {err("endDate")}
         </label>
         <label>End Time
           <span className="time-control">
-            <input type="time" value={form.timeEnded ?? ""} onChange={(e) => set("timeEnded", e.target.value)} />
+            <input type="time" name="timeEnded" value={form.timeEnded ?? ""} onChange={(e) => set("timeEnded", e.target.value)} />
             <button type="button" className="secondary time-now" onClick={() => setCurrentTime("timeEnded")}>Now</button>
           </span>
           {err("timeEnded")}
@@ -457,5 +494,18 @@ useEffect(() => {
         )}
       </form>
     </Modal>
+    {pendingClearField && (
+      <ConfirmDialog
+        title="Clear text?"
+        body="Are you sure you want to clear this text? This cannot be undone."
+        yesText="Clear text"
+        onCancel={() => setPendingClearField(null)}
+        onYes={() => {
+          set(pendingClearField, "");
+          setPendingClearField(null);
+        }}
+      />
+    )}
+    </>
   );
 }

@@ -1,4 +1,5 @@
 # 2026-11-11
+- In new Technical Assistance and Other Task forms, Escape clears the focused text, date or time field; clearing non-empty Problem, Cause, Resolution, Remarks or Description text requires the shared confirmation dialog. Escape still closes autocomplete suggestions without dismissing create dialogs, and Ctrl+Z / Cmd+Z retain native undo.
 - Combined the Administration master-data status, sort and CSV import controls into a compact responsive toolbar row; filtering, sort modes, import previews and behavior are unchanged.
 - Added Active, Retired and All filters to each Administration master-data card, with in-place restoration, retired labels and existing exact-value restore support. Retired values remain excluded from record-form options and normalized duplicate prevention is unchanged.
 

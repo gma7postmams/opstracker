@@ -1,15 +1,16 @@
 "use client";
 import { useEffect, ReactNode } from "react";
 
-export default function Modal({ title, subtitle, children, footer, onClose, width = 600 }: {
+export default function Modal({ title, subtitle, children, footer, onClose, width = 600, closeOnEscape = true }: {
   title: string; subtitle?: string; children: ReactNode; footer?: ReactNode;
-  onClose: () => void; width?: number;
+  onClose: () => void; width?: number; closeOnEscape?: boolean;
 }) {
   useEffect(() => {
+    if (!closeOnEscape) return;
     const h = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", h);
     return () => document.removeEventListener("keydown", h);
-  }, [onClose]);
+  }, [closeOnEscape, onClose]);
 
   return (
     <div className="modalbg" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
