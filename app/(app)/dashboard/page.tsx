@@ -786,21 +786,6 @@ export default function Dashboard() {
           <div className="empty">No owned records for the selected period.</div>
         ) : (
           <>
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
-              gap: "8px 12px",
-              marginBottom: "18px",
-              padding: "8px 10px",
-              borderRadius: "10px",
-              background: "color-mix(in srgb, var(--card) 88%, transparent)",
-              border: "1px solid var(--border)",
-              fontSize: "12px",
-            }}>
-              <div><span className="muted">Active Users</span><br /><strong>{workloadSummary.activeUsers}</strong></div>
-              <div><span className="muted">Technical Assistance Records</span><br /><strong>{workloadSummary.technicalAssistanceRecords}</strong></div>
-              <div><span className="muted">Other Tasks Records</span><br /><strong>{workloadSummary.otherTasksRecords}</strong></div>
-            </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))", gap: "20px" }}>
               {([
                 { key: "technicalAssistanceCount", title: "Technical Assistance", color: "#06aed4" },
