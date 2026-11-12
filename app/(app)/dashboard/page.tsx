@@ -775,7 +775,6 @@ export default function Dashboard() {
         <div className="panelhead">
           <div>
             <h3 id="dashboard-workload-title">Team Workload Distribution</h3>
-            <span className="muted">Owned records for the selected period</span>
           </div>
         </div>
         {workloadState === "loading" ? (
