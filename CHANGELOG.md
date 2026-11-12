@@ -1,5 +1,6 @@
 # 2026-11-12
-- Fixed Technical Assistance and Other Tasks pagination to request API pages and page sizes, and to show matching-result totals and status summaries instead of current-page counts.
+- Added smooth, reduced-motion-aware count transitions and a subtle pulse to the record-list summary cards when settled result counts change.
+- Fixed Technical Assistance and Other Tasks pagination to request API pages and page sizes. The Matching Records card, displayed range, and status summaries now describe the full filtered result set instead of mixing page and result counts.
 
 # 2026-11-11
 - Refined Backup Administration with a compact latest-backup summary and filename-level history metadata; schedules now use the fixed Asia/Manila timezone.
