@@ -819,10 +819,10 @@ export default function Dashboard() {
                       <span className="muted">Owned records</span>
                     </div>
                   </div>
-                  <div style={{ display: "grid", gap: "10px", maxHeight: "440px", overflowY: "auto", paddingRight: "4px" }}>
+                  <div style={{ display: "grid", gap: "8px" }}>
                     {sortedUsers.map((workloadUser, index) => {
                       const count = workloadUser[chart.key];
-                      return <div className="barrow" key={workloadUser.id} style={{ gridTemplateColumns: "42px minmax(0, 1fr) minmax(48px, 1.5fr) 44px" }}>
+                      return <div className="barrow" key={workloadUser.id} style={{ gridTemplateColumns: "36px minmax(80px, 0.9fr) minmax(96px, 2fr) 44px", columnGap: "8px", margin: 0 }}>
                         <span className="muted" style={{ textAlign: "left" }}>#{index + 1}</span>
                         <span style={{ overflowWrap: "anywhere" }}>{workloadUser.name}</span>
                         <div className="bar" aria-hidden="true"><i style={{ width: `${(count / maxCount) * 100}%`, background: chart.color }} /></div>

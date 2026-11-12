@@ -1,4 +1,5 @@
 # 2026-11-12
+- Refined Team Workload Distribution so user lists grow naturally without internal scrollbars, with tighter row spacing and more room for workload bars while keeping ranks and counts visible.
 - Added an administrator-only Team Workload Distribution panel after Backup Status and System Health. Its alphabetical Technical Assistance and Other Tasks charts count records by `ownerId` for active USER-role accounts, follow the dashboard Period/custom dates, and ignore the dashboard User filter; zero-count users are omitted and the display is not a performance ranking.
 - Added total capacity, free capacity and used percentage to System Health storage rows when filesystem statistics are available, retaining the availability fallback otherwise.
 - Added an administrator-only System Health panel beside Backup Status with dashboard API, database, scheduler metadata and storage availability indicators.
