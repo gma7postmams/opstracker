@@ -6,6 +6,8 @@ The dashboard summarizes Technical Assistance and Other Task records using these
 
 The dashboard presents status counts by record type, totals, assistance counts by category, activity trend buckets, open/close-pending attention records, and recent audit activity. Trend granularity changes with the selected period (day, week or month, with yearly buckets for All Records). Attention lists include non-closed records and are sorted by priority/date in the API.
 
+Administrators also see Team Workload Distribution after Backup Status and System Health. It shows alphabetical, non-ranked horizontal charts of owned-record counts for Technical Assistance and Other Tasks. Counts use `ownerId`, include all statuses, and apply the dashboard period and custom-date range without applying the dashboard User filter. Only active USER-role accounts with at least one owned record in the selected period appear; administrators, inactive accounts and zero-count users are excluded.
+
 ## Reports
 
 The Reports page has Today, Yesterday, This Week, This Month, This Year, All Records and Custom period choices. From and To fields appear only for Custom. All Records omits date filtering from report results, Excel exports and email reports. Activity type (`all`, `assistance`, `tasks`) and status filters remain available. Administrators can select a report scope (`mine` or `all`) and a user. Regular users are forced to `mine`.

@@ -1,4 +1,5 @@
 # 2026-11-12
+- Added an administrator-only Team Workload Distribution panel after Backup Status and System Health. Its alphabetical Technical Assistance and Other Tasks charts count records by `ownerId` for active USER-role accounts, follow the dashboard Period/custom dates, and ignore the dashboard User filter; zero-count users are omitted and the display is not a performance ranking.
 - Added total capacity, free capacity and used percentage to System Health storage rows when filesystem statistics are available, retaining the availability fallback otherwise.
 - Added an administrator-only System Health panel beside Backup Status with dashboard API, database, scheduler metadata and storage availability indicators.
 - Added an administrator-only Dashboard Backup Status panel showing the last successful backup, latest result, successful backup count, scheduled retention limit, next run and schedule enabled state using existing backup APIs.

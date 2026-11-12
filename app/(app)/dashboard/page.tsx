@@ -31,6 +31,13 @@ type DashboardUser = {
   surname: string;
 };
 
+type DashboardWorkloadUser = {
+  id: number;
+  name: string;
+  technicalAssistanceCount: number;
+  otherTasksCount: number;
+};
+
 type DashboardBackupRun = {
   createdAt: string;
   completedAt: string | null;
@@ -103,6 +110,8 @@ export default function Dashboard() {
   const [systemHealth, setSystemHealth] = useState<DashboardSystemHealth | null>(null);
   const [backupStatusLoaded, setBackupStatusLoaded] = useState(false);
   const [dashboardApiHealthy, setDashboardApiHealthy] = useState<boolean | null>(null);
+  const [workloadUsers, setWorkloadUsers] = useState<DashboardWorkloadUser[]>([]);
+  const [workloadState, setWorkloadState] = useState<"loading" | "loaded" | "error">("loading");
   const trendChartContainerRef = useRef<HTMLDivElement>(null);
   const [trendChartContainerWidth, setTrendChartContainerWidth] = useState(0);
   const [isCompactDashboard, setIsCompactDashboard] = useState(
@@ -303,6 +312,43 @@ export default function Dashboard() {
       });
     return () => controller.abort();
   }, [fromDate, isAdmin, period, realtimeRevision, selectedUserId, toDate]);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setWorkloadUsers([]);
+      setWorkloadState("loaded");
+      return;
+    }
+
+    const controller = new AbortController();
+    if (period === "custom" && (!fromDate || !toDate || fromDate > toDate)) {
+      setWorkloadUsers([]);
+      setWorkloadState("loaded");
+      return () => controller.abort();
+    }
+
+    setWorkloadState("loading");
+    const params = new URLSearchParams({ period });
+    if (period === "custom") {
+      params.set("from", fromDate);
+      params.set("to", toDate);
+    }
+
+    fetch(`/api/dashboard/workload?${params}`, { signal: controller.signal, cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Workload request failed");
+        return response.json() as Promise<{ users: DashboardWorkloadUser[] }>;
+      })
+      .then((result) => {
+        setWorkloadUsers(result.users);
+        setWorkloadState("loaded");
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setWorkloadState("error");
+      });
+
+    return () => controller.abort();
+  }, [fromDate, isAdmin, period, realtimeRevision, toDate]);
 
   useEffect(() => {
     const container = trendChartContainerRef.current;
@@ -716,6 +762,49 @@ export default function Dashboard() {
         )}
       </section>
       </div>}
+
+      {isAdmin && <section className="panel spaced dashboard-glass" aria-labelledby="dashboard-workload-title">
+        <div className="panelhead">
+          <div>
+            <h3 id="dashboard-workload-title">Team Workload Distribution</h3>
+            <span className="muted">Owned records for the selected period</span>
+          </div>
+        </div>
+        {workloadState === "loading" ? (
+          <div className="muted dashboard-load-state">Loading…</div>
+        ) : workloadState === "error" ? (
+          <div className="empty">Team workload data is unavailable. Try again.</div>
+        ) : workloadUsers.length === 0 ? (
+          <div className="empty">No owned records for the selected period.</div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))", gap: "20px" }}>
+            {([
+              { key: "technicalAssistanceCount", title: "Technical Assistance", color: "#06aed4" },
+              { key: "otherTasksCount", title: "Other Tasks", color: "#f79009" },
+            ] as const).map((chart) => {
+              const maxCount = Math.max(1, ...workloadUsers.map((workloadUser) => workloadUser[chart.key]));
+              return <div key={chart.key} aria-label={`${chart.title} owned records`}>
+                <div className="panelhead">
+                  <div>
+                    <h4 style={{ margin: 0 }}>{chart.title}</h4>
+                    <span className="muted">Owned records</span>
+                  </div>
+                </div>
+                <div style={{ display: "grid", gap: "10px", maxHeight: "320px", overflowY: "auto", paddingRight: "4px" }}>
+                  {workloadUsers.map((workloadUser) => {
+                    const count = workloadUser[chart.key];
+                    return <div className="barrow" key={workloadUser.id} style={{ gridTemplateColumns: "minmax(0, 1fr) minmax(48px, 1.5fr) 36px" }}>
+                      <span style={{ overflowWrap: "anywhere" }}>{workloadUser.name}</span>
+                      <div className="bar" aria-hidden="true"><i style={{ width: `${(count / maxCount) * 100}%`, background: chart.color }} /></div>
+                      <b style={{ textAlign: "right" }}>{count}</b>
+                    </div>;
+                  })}
+                </div>
+              </div>;
+            })}
+          </div>
+        )}
+      </section>}
 
   <section className={`panel spaced dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-5" : ""}`}>
 	  <div className="panelhead">
