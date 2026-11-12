@@ -214,7 +214,7 @@ export async function GET(request: Request) {
       : { ownerId: user.id }),
   };
 
-  const [aStatus, tStatus, aTotal, tTotal, cats, aAttention, tAttention, aTrend, tTrend, aOverdue, tOverdue, auditLogs,] = await Promise.all([
+  const [aStatus, tStatus, aTotal, tTotal, cats, activityTypeGroups, aAttention, tAttention, aTrend, tTrend, aOverdue, tOverdue, auditLogs,] = await Promise.all([
 
     prisma.assistance.groupBy({by: ["status"], _count: true, where: recordWhere,}),
     prisma.task.groupBy({by: ["status"], _count: true, where: recordWhere,}),
@@ -222,6 +222,7 @@ export async function GET(request: Request) {
     prisma.task.count({where: recordWhere,}), 
 
     prisma.assistance.groupBy({ by: ["category"], where: recordWhere, _count: true, orderBy: { _count: { category: "desc",},},}),
+    prisma.task.groupBy({ by: ["activityType"], where: recordWhere, _count: true, orderBy: { _count: { activityType: "desc" } } }).catch(() => null),
 
     prisma.assistance.findMany({
       where: { ...ownerWhere, status: { in: ["OPEN", "CLOSE_PENDING"] } },
@@ -360,6 +361,8 @@ return NextResponse.json({
   tasks: { total: tTotal, ...toMap(tStatus as any) },
   overdue: aOverdue + tOverdue,
   categories: cats.map((c: any) => ({ name: c.category, count: c._count })),
+  activityTypes: activityTypeGroups?.map((row) => ({ name: row.activityType, count: row._count })) ?? [],
+  activityTypesUnavailable: activityTypeGroups === null,
   trend,
   trendSubtitle,
   attention,

@@ -1,4 +1,5 @@
 # 2026-11-12
+- Added a dashboard Activity Types panel that groups Other Tasks by Activity Type, follows the Period/custom-date and role-aware user filters, and displays the filtered Other Tasks total.
 - Added team-wide record totals to the Technical Assistance and Other Tasks chart headers and removed the redundant “Owned records” subtitles.
 - Removed the ambiguous subtitle from Team Workload Distribution; the panel title and chart captions identify its team-wide breakdown.
 - Simplified Team Workload Distribution by removing the redundant Active Users and record-total summary metrics; the two charts and their existing counts, ranks and sorting are unchanged.

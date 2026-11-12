@@ -376,6 +376,7 @@ export default function Dashboard() {
   const closed = d ? d.assistance.CLOSED + d.tasks.CLOSED : 0;
   const total = open + pending + closed;
   const catMax = Math.max(1, ...(d?.categories ?? []).map((c: any) => c.count));
+  const activityTypeMax = Math.max(1, ...(d?.activityTypes ?? []).map((activityType: any) => activityType.count));
   const trendData = d?.trend ?? [];
   const showDailyLabels = period === "today" || period === "yesterday" || period === "thisWeek";
   const showHistoricalValueLabels = showDailyLabels || period === "thisMonth" || period === "custom";
@@ -696,15 +697,30 @@ export default function Dashboard() {
           )) : <div className="empty"><b>No assistance records</b>Log one to see the breakdown.</div>}
         </section>
 
-        <section className={`panel dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-5" : ""}`}>
-          <div className="panelhead"><h3>Quick actions</h3></div>
-          <div className="quick">
-            <Link href="/assistance">◉ Record technical assistance</Link>
-            <Link href="/tasks">☷ Record other task</Link>
-            <Link href="/reports">▤ View reports</Link>
-            {isAdmin && <Link href="/admin">⚙ Manage master data</Link>}
-          </div>
-        </section>
+        <div style={{ display: "grid", gap: "16px", alignContent: "start" }}>
+          <section className={`panel dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-5" : ""}`}>
+            <div className="panelhead"><div><h3>Activity Types ({d.tasks.total})</h3></div></div>
+            {d.activityTypesUnavailable ? (
+              <div className="empty">Activity types are unavailable. Try again.</div>
+            ) : d.activityTypes.length ? d.activityTypes.map((activityType: any) => (
+              <div className="barrow" key={activityType.name} style={{ gridTemplateColumns: "minmax(0, 120px) minmax(0, 1fr) max-content" }}>
+                <span style={{ overflowWrap: "anywhere" }}>{activityType.name}</span>
+                <div className="bar"><i style={{ width: `${(activityType.count / activityTypeMax) * 100}%`, background: "#f79009" }} /></div>
+                <b>{activityType.count}</b>
+              </div>
+            )) : <div className="empty">No activity types for the selected period.</div>}
+          </section>
+
+          <section className={`panel dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-5" : ""}`}>
+            <div className="panelhead"><h3>Quick actions</h3></div>
+            <div className="quick">
+              <Link href="/assistance">◉ Record technical assistance</Link>
+              <Link href="/tasks">☷ Record other task</Link>
+              <Link href="/reports">▤ View reports</Link>
+              {isAdmin && <Link href="/admin">⚙ Manage master data</Link>}
+            </div>
+          </section>
+        </div>
       </div>
 
       {isAdmin && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))", gap: "16px", marginBottom: "16px" }}>
