@@ -8,7 +8,7 @@ The principal pages are:
 
 | Route | Purpose |
 |---|---|
-| `/dashboard` | Operational counts, trend and attention lists |
+| `/dashboard` | Operational counts, trend and attention lists, with administrator-only backup status and system health |
 | `/assistance` | Technical Assistance records |
 | `/tasks` | Other Task records |
 | `/records/[type]/[id]` | Shared detail route for either record type |
@@ -27,7 +27,7 @@ Middleware protects the listed application page paths and restricts `/admin` to 
 3. `lib/records.ts` provides shared list, reference-number, permission partition and batch behavior over the Assistance and Task delegates.
 4. Prisma Client accesses PostgreSQL using `DATABASE_URL`; `prisma/schema.prisma` defines the persisted models and migrations live in `prisma/migrations/`.
 
-Record changes are also published through PostgreSQL `LISTEN/NOTIFY`. Database triggers on `assistance`, `tasks`, and `work_logs` emit generic invalidations after commits. An authenticated Node.js SSE route uses one reconnecting PostgreSQL listener per app process and fans invalidations out to connected clients. Dashboard metrics and the shared Technical Assistance / Other Tasks list re-fetch through their existing APIs; events contain no record data. SSE reconnects trigger an invalidation to recover changes missed while disconnected. Reports and report email workflows do not subscribe to this stream.
+Record changes are also published through PostgreSQL `LISTEN/NOTIFY`. Database triggers on `assistance`, `tasks`, and `work_logs` emit generic invalidations after commits. An authenticated Node.js SSE route uses one reconnecting PostgreSQL listener per app process and fans invalidations out to connected clients. Dashboard metrics and the shared Technical Assistance / Other Tasks list re-fetch through their existing APIs; events contain no record data. SSE reconnects trigger an invalidation to recover changes missed while disconnected. Administrators also see backup status on the dashboard, loaded from the existing administrator-only backup history and schedule APIs. The administrator-only dashboard system-health API checks PostgreSQL with Prisma and checks read/write access and filesystem capacity for the configured upload and backup directories. When filesystem statistics are available, it returns total bytes, free bytes and used percentage; otherwise it returns directory availability without capacity values. The response omits paths and internal errors. This is a point-in-time check and does not report scheduler process liveness. Reports and report email workflows do not subscribe to this stream.
 
 Important shared modules:
 

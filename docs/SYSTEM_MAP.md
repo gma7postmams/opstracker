@@ -44,6 +44,7 @@ UI Files:
 
 API Files:
 - `app/api/dashboard/route.ts`
+- `app/api/dashboard/system-health/route.ts` for administrator-only database and storage availability/capacity checks
 - `app/api/records/events/route.ts` for authenticated realtime invalidations
 
 Business Logic:
@@ -55,6 +56,7 @@ Database Tables:
 - `tasks`
 - `audit_logs`
 - `work_logs`
+- `BackupRun` and `BackupSchedule` for administrator dashboard backup and scheduler status
 
 Configuration Files:
 - No dashboard-specific configuration file.

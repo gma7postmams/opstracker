@@ -1,4 +1,7 @@
 # 2026-11-12
+- Added total capacity, free capacity and used percentage to System Health storage rows when filesystem statistics are available, retaining the availability fallback otherwise.
+- Added an administrator-only System Health panel beside Backup Status with dashboard API, database, scheduler metadata and storage availability indicators.
+- Added an administrator-only Dashboard Backup Status panel showing the last successful backup, latest result, successful backup count, scheduled retention limit, next run and schedule enabled state using existing backup APIs.
 - Reused the shared animated counter for Audit Logs summary cards; totals and action counts animate after settled filters and search, without animating table contents.
 - Reused the animated KPI counter on Reports for total, participation and status counts, animating only after the latest report request settles.
 - Added smooth, reduced-motion-aware count transitions and a subtle pulse to the record-list summary cards when settled result counts change.

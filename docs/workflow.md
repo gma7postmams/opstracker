@@ -22,6 +22,10 @@ The server allocates references such as `TA-2026-00001` and `OT-2026-00001` usin
 
 The Dashboard and Technical Assistance / Other Tasks lists receive live invalidation events when records or work logs change. They refresh through their existing APIs, preserving the current user, filters and list state; reconnecting clients refresh to catch changes missed while offline. Reports, report calculations, email previews and email sending are not part of this live-refresh behavior.
 
+Administrators also see a Backup Status panel above Recent Activity on the Dashboard. It shows the last successful backup, latest backup result, count of successful backups, scheduled-backup retention limit, next scheduled run and whether the schedule is enabled. It reads from the existing administrator-only backup history and schedule APIs; the panel does not change backup settings or execution.
+
+Beside Backup Status, administrators see System Health. Application is Healthy only after the dashboard API succeeds; Database is Healthy only after a Prisma query succeeds. Scheduler shows only its configured Enabled or Disabled state, and Last Scheduler Run uses persisted schedule metadata when available. For accessible upload and backup directories, System Health shows total capacity, free capacity and used percentage when filesystem statistics are supported; otherwise it shows Available. Missing or inaccessible directories show Unavailable. The widget does not expose paths, mount points, server details or internal errors, and does not report scheduler process liveness.
+
 ## Status lifecycle
 
 Allowed transitions for the single-record update endpoint:

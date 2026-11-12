@@ -31,6 +31,33 @@ type DashboardUser = {
   surname: string;
 };
 
+type DashboardBackupRun = {
+  createdAt: string;
+  completedAt: string | null;
+  status: "Success" | "Failed" | "Running";
+};
+
+type DashboardBackupSchedule = {
+  enabled: boolean;
+  retentionCount: number;
+  nextRunAt: string | null;
+  lastRunAt: string | null;
+  lastStatus: "RUNNING" | "SUCCESS" | "FAILED" | null;
+};
+
+type DashboardStorageStatus = {
+  available: boolean;
+  totalBytes: string | null;
+  freeBytes: string | null;
+  usedPercent: number | null;
+};
+
+type DashboardSystemHealth = {
+  database: boolean;
+  storage: DashboardStorageStatus;
+  backupStorage: DashboardStorageStatus;
+};
+
 function AnimatedCount({ value, prefersReducedMotion }: { value: number; prefersReducedMotion: boolean }) {
   const [displayValue, setDisplayValue] = useState(0);
 
@@ -71,6 +98,11 @@ export default function Dashboard() {
   const [toDate, setToDate] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
   const [users, setUsers] = useState<DashboardUser[]>([]);
+  const [backupHistory, setBackupHistory] = useState<DashboardBackupRun[] | null>(null);
+  const [backupSchedule, setBackupSchedule] = useState<DashboardBackupSchedule | null>(null);
+  const [systemHealth, setSystemHealth] = useState<DashboardSystemHealth | null>(null);
+  const [backupStatusLoaded, setBackupStatusLoaded] = useState(false);
+  const [dashboardApiHealthy, setDashboardApiHealthy] = useState<boolean | null>(null);
   const trendChartContainerRef = useRef<HTMLDivElement>(null);
   const [trendChartContainerWidth, setTrendChartContainerWidth] = useState(0);
   const [isCompactDashboard, setIsCompactDashboard] = useState(
@@ -165,6 +197,10 @@ export default function Dashboard() {
     if (!isAdmin) {
       setUsers([]);
       setSelectedUserId("");
+      setBackupHistory(null);
+      setBackupSchedule(null);
+      setSystemHealth(null);
+      setBackupStatusLoaded(false);
       return;
     }
 
@@ -178,6 +214,32 @@ export default function Dashboard() {
       .catch((err) => {
         if (!controller.signal.aborted) console.error("Dashboard user filter load failed:", err);
       });
+
+    return () => controller.abort();
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const controller = new AbortController();
+    setBackupStatusLoaded(false);
+    const fetchJson = async <T,>(url: string): Promise<T> => {
+      const response = await fetch(url, { signal: controller.signal, cache: "no-store" });
+      if (!response.ok) throw new Error(`Backup status API failed: ${response.status}`);
+      return response.json();
+    };
+
+    Promise.all([
+      fetchJson<DashboardBackupRun[]>("/api/backup/history").catch(() => null),
+      fetchJson<DashboardBackupSchedule>("/api/backup/schedule").catch(() => null),
+      fetchJson<DashboardSystemHealth>("/api/dashboard/system-health").catch(() => null),
+    ]).then(([history, schedule, health]) => {
+      if (controller.signal.aborted) return;
+      setBackupHistory(history);
+      setBackupSchedule(schedule);
+      setSystemHealth(health);
+      setBackupStatusLoaded(true);
+    });
 
     return () => controller.abort();
   }, [isAdmin]);
@@ -205,6 +267,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const controller = new AbortController();
+    setDashboardApiHealthy(null);
     if (period === "custom" && (!fromDate || !toDate || fromDate > toDate)) {
       setD(null);
       return () => controller.abort();
@@ -229,10 +292,14 @@ export default function Dashboard() {
         setAnimateDashboardEntrance(!hasRenderedDashboard.current);
         hasRenderedDashboard.current = true;
         setD(result);
+        setDashboardApiHealthy(true);
         setDashboardDataRevision((revision) => revision + 1);
       })
       .catch((err) => {
-        if (!controller.signal.aborted) console.error("Dashboard load failed:", err);
+        if (!controller.signal.aborted) {
+          setDashboardApiHealthy(false);
+          console.error("Dashboard load failed:", err);
+        }
       });
     return () => controller.abort();
   }, [fromDate, isAdmin, period, realtimeRevision, selectedUserId, toDate]);
@@ -314,6 +381,31 @@ export default function Dashboard() {
   const assistanceAreaPath = areaPath("assistanceY");
   const taskAreaPath = areaPath("taskY");
   const hasActiveFilters = period !== "today" || (isAdmin && selectedUserId !== "");
+  const successfulBackups = backupHistory?.filter((run) => run.status === "Success") ?? [];
+  const lastSuccessfulBackup = successfulBackups[0];
+  const latestBackup = backupHistory?.[0];
+  const formatBackupDate = (value: string | null | undefined) => value
+    ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value))
+    : "Never";
+  const formatStorageStatus = (status?: DashboardStorageStatus) => {
+    if (!status?.available) return "Unavailable";
+    if (status.totalBytes === null || status.freeBytes === null || status.usedPercent === null) return "Available";
+
+    const formatBytes = (value: string) => {
+      let size = Number(value);
+      if (!Number.isFinite(size) || size < 0) return null;
+      const units = ["B", "KB", "MB", "GB", "TB", "PB"];
+      let unit = 0;
+      while (size >= 1024 && unit < units.length - 1) {
+        size /= 1024;
+        unit += 1;
+      }
+      return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+    };
+    const total = formatBytes(status.totalBytes);
+    const free = formatBytes(status.freeBytes);
+    return total && free ? `${total} total · ${free} free · ${status.usedPercent}% used` : "Available";
+  };
 
   function clearFilters() {
     setPeriod("today");
@@ -560,6 +652,70 @@ export default function Dashboard() {
           </div>
         </section>
       </div>
+
+      {isAdmin && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))", gap: "16px", marginBottom: "16px" }}>
+      <section className="panel spaced dashboard-glass" aria-labelledby="dashboard-backup-status-title">
+        <div className="panelhead">
+          <div>
+            <h3 id="dashboard-backup-status-title">Backup Status</h3>
+          </div>
+        </div>
+        {!backupStatusLoaded ? <div className="muted">Loading backup status…</div> : (
+          <dl style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: "10px 20px", alignItems: "baseline", margin: 0 }}>
+            <dt className="muted">Last successful backup</dt>
+            <dd style={{ margin: 0, textAlign: "right" }}>
+              {backupHistory === null ? "Unavailable" : lastSuccessfulBackup ? formatBackupDate(lastSuccessfulBackup.completedAt ?? lastSuccessfulBackup.createdAt) : "None yet"}
+            </dd>
+            <dt className="muted">Latest backup result</dt>
+            <dd style={{ margin: 0, textAlign: "right" }}>
+              {backupHistory === null ? "Unavailable" : latestBackup ? `${latestBackup.status} · ${formatBackupDate(latestBackup.createdAt)}` : "No backups yet"}
+            </dd>
+            <dt className="muted">Available backup count</dt>
+            <dd style={{ margin: 0, textAlign: "right" }}>{backupHistory === null ? "Unavailable" : successfulBackups.length}</dd>
+            <dt className="muted">Retention limit</dt>
+            <dd style={{ margin: 0, textAlign: "right" }}>{backupSchedule ? `${backupSchedule.retentionCount} scheduled backups` : "Unavailable"}</dd>
+            <dt className="muted">Next scheduled backup</dt>
+            <dd style={{ margin: 0, textAlign: "right" }}>
+              {backupSchedule === null ? "Unavailable" : backupSchedule.enabled && backupSchedule.nextRunAt ? formatBackupDate(backupSchedule.nextRunAt) : "Not scheduled"}
+            </dd>
+            <dt className="muted">Schedule</dt>
+            <dd style={{ margin: 0, textAlign: "right" }}>
+              {backupSchedule === null ? "Unavailable" : backupSchedule.enabled ? "Enabled" : "Disabled"}
+            </dd>
+          </dl>
+        )}
+      </section>
+
+      <section className="panel spaced dashboard-glass" aria-labelledby="dashboard-system-health-title">
+        <div className="panelhead">
+          <div>
+            <h3 id="dashboard-system-health-title">System Health</h3>
+          </div>
+        </div>
+        {!backupStatusLoaded ? <div className="muted">Loading system health…</div> : (
+          <dl style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: "10px 20px", alignItems: "baseline", margin: 0 }}>
+            <dt className="muted">Application</dt>
+            <dd style={{ margin: 0, textAlign: "right" }}>{dashboardApiHealthy ? "Healthy" : "Unavailable"}</dd>
+            <dt className="muted">Database</dt>
+            <dd style={{ margin: 0, textAlign: "right" }}>{systemHealth?.database ? "Healthy" : "Unavailable"}</dd>
+            <dt className="muted">Scheduler</dt>
+            <dd style={{ margin: 0, textAlign: "right" }}>
+              {backupSchedule === null ? "Unavailable" : backupSchedule.enabled ? "Enabled" : "Disabled"}
+            </dd>
+            <dt className="muted">Last Scheduler Run</dt>
+            <dd style={{ margin: 0, textAlign: "right" }}>
+              {backupSchedule === null ? "Unavailable" : backupSchedule.lastRunAt
+                ? `${backupSchedule.lastStatus === "SUCCESS" ? "Success" : backupSchedule.lastStatus === "FAILED" ? "Failed" : backupSchedule.lastStatus === "RUNNING" ? "Started" : ""}${backupSchedule.lastStatus ? " · " : ""}${formatBackupDate(backupSchedule.lastRunAt)}`
+                : "Never"}
+            </dd>
+            <dt className="muted">Storage</dt>
+            <dd style={{ margin: 0, textAlign: "right" }}>{formatStorageStatus(systemHealth?.storage)}</dd>
+            <dt className="muted">Backup Storage</dt>
+            <dd style={{ margin: 0, textAlign: "right" }}>{formatStorageStatus(systemHealth?.backupStorage)}</dd>
+          </dl>
+        )}
+      </section>
+      </div>}
 
   <section className={`panel spaced dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-5" : ""}`}>
 	  <div className="panelhead">
