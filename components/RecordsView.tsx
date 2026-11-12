@@ -159,15 +159,22 @@ export default function RecordsView(props: Props) {
     if (!session?.user.id) return;
     setLoading(true);
 
-    const p = new URLSearchParams({ sort: sort.key, dir: sort.dir });
+    const p = new URLSearchParams({
+      sort: sort.key,
+      dir: sort.dir,
+      page: String(page),
+      perPage: String(pageSize),
+    });
 
     if (requestUserFilter) {p.set("userId", requestUserFilter);}
  
     Object.entries(activeFilters).forEach(([k, v]) => { if (v && v !== "all") p.set(k, v); });
     const res = await fetch(`/api/records/${type}?${p}`);
-    setData(await res.json());
+    const response = await res.json();
+    setData(response);
+    if (page > response.pages) setPage(response.pages);
     setLoading(false);
-  }, [type, activeFilters, sort, requestUserFilter, session]);
+  }, [type, activeFilters, sort, requestUserFilter, session, page, pageSize]);
 
   useRecordEvents(() => { void load(); });
 
@@ -212,13 +219,11 @@ export default function RecordsView(props: Props) {
   };
 
   const rows: any[] = data.rows ?? [];
-  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  const totalRecords = data.total ?? rows.length;
+  const pageCount = Math.max(1, data.pages ?? 1);
   const currentPage = Math.min(page, pageCount);
-  const visibleRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  const statusCounts = rows.reduce((counts: Record<string, number>, row) => {
-    counts[row.status] = (counts[row.status] ?? 0) + 1;
-    return counts;
-  }, {});
+  const visibleRows = rows;
+  const statusCounts: Record<string, number> = data.statusCounts ?? {};
   const allOn = visibleRows.length > 0 && visibleRows.every((r) => selected.has(r.id));
   const toggleAll = () =>
     setSelected((current) => {
@@ -411,7 +416,7 @@ export default function RecordsView(props: Props) {
       )}
 
       <div className="muted resultline">
-        {loading ? "Loading…" : `Showing ${rows.length ? (currentPage - 1) * pageSize + 1 : 0}–${Math.min(currentPage * pageSize, rows.length)} of ${rows.length} record${rows.length === 1 ? "" : "s"}`}
+        {loading ? "Loading…" : `Showing ${totalRecords ? (currentPage - 1) * pageSize + 1 : 0}–${Math.min(currentPage * pageSize, totalRecords)} of ${totalRecords} record${totalRecords === 1 ? "" : "s"}`}
       </div>
 
       <section className="panel table crm-table-wrap">
@@ -520,7 +525,7 @@ export default function RecordsView(props: Props) {
       </section>
 
       <footer className="crm-pagination" aria-label="Table pagination">
-        <span className="crm-pagination-total">{rows.length} total records</span>
+        <span className="crm-pagination-total">{totalRecords} total records</span>
         <label className="crm-page-size">Rows per page
           <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}>
             {[10, 25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}

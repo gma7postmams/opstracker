@@ -1,3 +1,6 @@
+# 2026-11-12
+- Fixed Technical Assistance and Other Tasks pagination to request API pages and page sizes, and to show matching-result totals and status summaries instead of current-page counts.
+
 # 2026-11-11
 - Refined Backup Administration with a compact latest-backup summary and filename-level history metadata; schedules now use the fixed Asia/Manila timezone.
 - Fixed the Docker scheduler worker startup by packaging its locked archive dependencies in the worker runtime, allowing scheduled backups to execute.

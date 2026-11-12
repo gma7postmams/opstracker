@@ -220,7 +220,7 @@ export async function listRecords(type: RecordType, query: ListQuery, user?: any
   const perPage = Math.min(query.perPage ?? 50, 200);
   const page = Math.max(query.page ?? 1, 1);
 
-  const [rows, total, unfiltered] = await Promise.all([
+  const [rows, total, unfiltered, groupedStatuses] = await Promise.all([
     d.findMany({
       where,
       orderBy: buildOrderBy(type, query.sort, query.dir),
@@ -230,9 +230,14 @@ export async function listRecords(type: RecordType, query: ListQuery, user?: any
     }),
     d.count({ where }),
     d.count({ where: unfilteredWhere }),
+    d.groupBy({ by: ["status"], where, _count: { _all: true } }),
   ]);
 
-  return { rows, total, unfiltered, page, perPage, pages: Math.ceil(total / perPage) || 1 };
+  const statusCounts = Object.fromEntries(
+    groupedStatuses.map((group: any) => [group.status, group._count._all])
+  );
+
+  return { rows, total, unfiltered, page, perPage, pages: Math.ceil(total / perPage) || 1, statusCounts };
 }
 
 export async function getRecord(type: RecordType, id: number) {
