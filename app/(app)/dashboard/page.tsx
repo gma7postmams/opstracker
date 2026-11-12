@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { priorityLabel } from "@/lib/recordTypes";
 import { useSession } from "next-auth/react";
-import { Activity, CheckCircle2, ClipboardList, CircleDot, Clock3, Wrench } from "lucide-react";
+import { Activity, BarChart3, CheckCircle2, ClipboardList, CircleDot, Clock3, Database, Wrench } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PERIOD_OPTIONS, type Period } from "@/lib/period";
 import { useRecordEvents } from "@/components/useRecordEvents";
@@ -581,7 +581,7 @@ export default function Dashboard() {
 
       <section className={`panel spaced dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-4" : ""}`}>
         <div className="panelhead">
-          <div><h3>Status distribution</h3>
+          <div><h3>Status Distribution</h3>
             <span className="muted">{total} record{total === 1 ? "" : "s"} across assistance and tasks</span></div>
         </div>
         <div className="splitbar">
@@ -600,7 +600,7 @@ export default function Dashboard() {
 
       <div className="grid">
         <section className={`panel dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-4" : ""}`}>
-          <div className="panelhead"><div><h3>Activity trend</h3>
+          <div className="panelhead"><div><h3>Activity Trend</h3>
             <span className="muted">{d.trendSubtitle}</span></div></div>
           <div ref={trendChartContainerRef} style={{ overflowX: "auto" }}>
             <svg
@@ -653,7 +653,7 @@ export default function Dashboard() {
         </section>
 
         <section className={`panel dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-5" : ""}`}>
-          <div className="panelhead"><div><h3>Needs attention</h3>
+          <div className="panelhead"><div><h3>Needs Attention</h3>
             <span className="muted">All open and close-pending records</span></div></div>
           {d.attention.length ? d.attention.map((r: any) => {
             const ownershipFlow = r.ownershipFlow.map((owner: string) =>
@@ -686,7 +686,7 @@ export default function Dashboard() {
 
       <div className="grid">
         <section className={`panel dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-5" : ""}`}>
-          <div className="panelhead"><div><h3>Assistance by category</h3>
+          <div className="panelhead"><div><h3>Assistance by Category</h3>
             <span className="muted">{d.assistance.total} record{d.assistance.total === 1 ? "" : "s"}</span></div></div>
           {d.categories.length ? d.categories.map((c: any, i: number) => (
             <div className="barrow" key={c.name}>
@@ -697,33 +697,40 @@ export default function Dashboard() {
           )) : <div className="empty"><b>No assistance records</b>Log one to see the breakdown.</div>}
         </section>
 
-        <div style={{ display: "grid", gap: "16px", alignContent: "start" }}>
-          <section className={`panel dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-5" : ""}`}>
-            <div className="panelhead"><div><h3>Activity Types ({d.tasks.total})</h3></div></div>
-            {d.activityTypesUnavailable ? (
-              <div className="empty">Activity types are unavailable. Try again.</div>
-            ) : d.activityTypes.length ? d.activityTypes.map((activityType: any) => (
-              <div className="barrow" key={activityType.name} style={{ gridTemplateColumns: "minmax(0, 120px) minmax(0, 1fr) max-content" }}>
-                <span style={{ overflowWrap: "anywhere" }}>{activityType.name}</span>
-                <div className="bar"><i style={{ width: `${(activityType.count / activityTypeMax) * 100}%`, background: "#f79009" }} /></div>
-                <b>{activityType.count}</b>
-              </div>
-            )) : <div className="empty">No activity types for the selected period.</div>}
-          </section>
-
-          <section className={`panel dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-5" : ""}`}>
-            <div className="panelhead"><h3>Quick actions</h3></div>
-            <div className="quick">
-              <Link href="/assistance">◉ Record technical assistance</Link>
-              <Link href="/tasks">☷ Record other task</Link>
-              <Link href="/reports">▤ View reports</Link>
-              {isAdmin && <Link href="/admin">⚙ Manage master data</Link>}
+        <section className={`panel dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-5" : ""}`}>
+          <div className="panelhead"><div><h3>Activities by Type</h3>
+            <span className="muted">{d.tasks.total} record{d.tasks.total === 1 ? "" : "s"}</span></div></div>
+          {d.activityTypesUnavailable ? (
+            <div className="empty">Activity types are unavailable. Try again.</div>
+          ) : d.activityTypes.length ? d.activityTypes.map((activityType: any, index: number) => (
+            <div className="barrow" key={activityType.name} style={{ gridTemplateColumns: "minmax(0, 120px) minmax(0, 1fr) max-content" }}>
+              <span style={{ overflowWrap: "anywhere" }}>{activityType.name}</span>
+              <div className="bar"><i style={{ width: `${(activityType.count / activityTypeMax) * 100}%`, background: PALETTE[index % PALETTE.length] }} /></div>
+              <b>{activityType.count}</b>
             </div>
-          </section>
-        </div>
+          )) : <div className="empty">No activity types for the selected period.</div>}
+        </section>
       </div>
 
-      {isAdmin && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))", gap: "16px", marginBottom: "16px" }}>
+      <section className={`panel dashboard-glass dashboard-quick-actions${animateDashboardEntrance ? " dashboard-enter dashboard-enter-5" : ""}`}>
+        <div className="panelhead"><h3>Quick Actions</h3></div>
+        <div className="quick-grid">
+          <Link className="quick-card" href="/assistance" aria-label="Record technical assistance">
+            <span className="quick-card-inner"><Wrench aria-hidden="true" size={16} /><span>Record Technical Assistance</span></span>
+          </Link>
+          <Link className="quick-card" href="/tasks" aria-label="Record other task">
+            <span className="quick-card-inner"><ClipboardList aria-hidden="true" size={16} /><span>Record Other Task</span></span>
+          </Link>
+          <Link className="quick-card" href="/reports" aria-label="View reports">
+            <span className="quick-card-inner"><BarChart3 aria-hidden="true" size={16} /><span>View Reports</span></span>
+          </Link>
+          {isAdmin && <Link className="quick-card" href="/admin" aria-label="Manage master data">
+            <span className="quick-card-inner"><Database aria-hidden="true" size={16} /><span>Manage Master Data</span></span>
+          </Link>}
+        </div>
+      </section>
+
+      {isAdmin && <div className="dashboard-admin-panels" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))", gap: "12px", marginBottom: "12px" }}>
       <section className="panel spaced dashboard-glass" aria-labelledby="dashboard-backup-status-title">
         <div className="panelhead">
           <div>
