@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Activity, CalendarDays, Clock3, Download, Eye, FilePlus2, Search, Trash2, X } from "lucide-react";
+import AnimatedCount from "@/components/AnimatedCount";
 import { PERIOD_OPTIONS, type Period } from "@/lib/period";
 import { AUDIT_ACTIONS, AUDIT_ACTIONS_BY_CATEGORY, AUDIT_CATEGORIES, getAuditCategory, type AuditCategory } from "@/lib/auditCategories";
 
@@ -127,15 +128,18 @@ export default function AuditPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedLog, setSelectedLog] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
 
 
 useEffect(() => {
   if (period === "custom" && (!fromDate || !toDate || fromDate > toDate)) {
     setLogs([]);
+    setLoading(false);
     return;
   }
 
   const controller = new AbortController();
+  setLoading(true);
   const params = new URLSearchParams({ period });
   if (period === "custom") {
     params.set("from", fromDate);
@@ -155,6 +159,9 @@ useEffect(() => {
     })
     .catch(() => {
       if (!controller.signal.aborted) setLogs([]);
+    })
+    .finally(() => {
+      if (!controller.signal.aborted) setLoading(false);
     });
 
   return () => controller.abort();
@@ -420,19 +427,19 @@ const deleteCount = filteredLogs.filter((log) =>
 <div className="audit-kpis" aria-label="Audit log summary">
   <div className="audit-kpi" style={{ "--kpi-accent": "#2563eb" } as React.CSSProperties}>
     <div className="audit-kpi-top"><span>Total Logs</span><span className="audit-kpi-icon"><Activity size={16} aria-hidden="true" /></span></div>
-    <strong>{filteredLogs.length}</strong>
+    <strong><AnimatedCount value={filteredLogs.length} loading={loading} /></strong>
   </div>
   <div className="audit-kpi" style={{ "--kpi-accent": "#0891b2" } as React.CSSProperties}>
     <div className="audit-kpi-top"><span>Today's Activities</span><span className="audit-kpi-icon"><CalendarDays size={16} aria-hidden="true" /></span></div>
-    <strong>{todayCount}</strong>
+    <strong><AnimatedCount value={todayCount} loading={loading} /></strong>
   </div>
   <div className="audit-kpi" style={{ "--kpi-accent": "#16a34a" } as React.CSSProperties}>
     <div className="audit-kpi-top"><span>Create Actions</span><span className="audit-kpi-icon"><FilePlus2 size={16} aria-hidden="true" /></span></div>
-    <strong>{createCount}</strong>
+    <strong><AnimatedCount value={createCount} loading={loading} /></strong>
   </div>
   <div className="audit-kpi" style={{ "--kpi-accent": "#dc2626" } as React.CSSProperties}>
     <div className="audit-kpi-top"><span>Delete Actions</span><span className="audit-kpi-icon"><Trash2 size={16} aria-hidden="true" /></span></div>
-    <strong>{deleteCount}</strong>
+    <strong><AnimatedCount value={deleteCount} loading={loading} /></strong>
   </div>
 </div>
 

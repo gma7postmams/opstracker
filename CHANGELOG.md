@@ -1,4 +1,6 @@
 # 2026-11-12
+- Reused the shared animated counter for Audit Logs summary cards; totals and action counts animate after settled filters and search, without animating table contents.
+- Reused the animated KPI counter on Reports for total, participation and status counts, animating only after the latest report request settles.
 - Added smooth, reduced-motion-aware count transitions and a subtle pulse to the record-list summary cards when settled result counts change.
 - Fixed Technical Assistance and Other Tasks pagination to request API pages and page sizes. The Matching Records card, displayed range, and status summaries now describe the full filtered result set instead of mixing page and result counts.
 

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import AnimatedCount from "@/components/AnimatedCount";
 import RecordForm from "./RecordForm";
 import BatchEditDialog from "./BatchEditDialog";
 import ImportDialog from "./ImportDialog";
@@ -91,79 +92,6 @@ function assistanceDuration(record: any, now: number) {
 
 function summaryMessage(workLogMessage?: string | null, legacyMessage?: string | null) {
   return workLogMessage?.trim() || legacyMessage?.trim() || "";
-}
-
-function AnimatedCount({ value, loading }: { value: number; loading: boolean }) {
-  const [displayValue, setDisplayValue] = useState(value);
-  const [changing, setChanging] = useState(false);
-  const lastValue = useRef<number | null>(null);
-  const displayedValue = useRef(value);
-  const frame = useRef<number | null>(null);
-  const pulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (loading) {
-      if (frame.current !== null) cancelAnimationFrame(frame.current);
-      if (pulseTimer.current !== null) clearTimeout(pulseTimer.current);
-      frame.current = null;
-      pulseTimer.current = null;
-      setChanging(false);
-      if (lastValue.current !== null) {
-        displayedValue.current = lastValue.current;
-        setDisplayValue(lastValue.current);
-      }
-      return;
-    }
-
-    if (lastValue.current === null) {
-      lastValue.current = value;
-      displayedValue.current = value;
-      setDisplayValue(value);
-      return;
-    }
-    if (value === lastValue.current) return;
-
-    lastValue.current = value;
-    if (frame.current !== null) cancelAnimationFrame(frame.current);
-    if (pulseTimer.current !== null) clearTimeout(pulseTimer.current);
-
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      displayedValue.current = value;
-      setDisplayValue(value);
-      setChanging(false);
-      return;
-    }
-
-    const startValue = displayedValue.current;
-    const startTime = performance.now();
-    const duration = 450;
-    setChanging(true);
-
-    const animate = (time: number) => {
-      const progress = Math.min((time - startTime) / duration, 1);
-      const eased = 1 - (1 - progress) ** 3;
-      const nextValue = Math.round(startValue + (value - startValue) * eased);
-      displayedValue.current = nextValue;
-      setDisplayValue(nextValue);
-
-      if (progress < 1) {
-        frame.current = requestAnimationFrame(animate);
-      } else {
-        frame.current = null;
-        setChanging(false);
-      }
-    };
-
-    frame.current = requestAnimationFrame(animate);
-    pulseTimer.current = setTimeout(() => setChanging(false), duration);
-  }, [value, loading]);
-
-  useEffect(() => () => {
-    if (frame.current !== null) cancelAnimationFrame(frame.current);
-    if (pulseTimer.current !== null) clearTimeout(pulseTimer.current);
-  }, []);
-
-  return <span className={`crm-kpi-number${changing ? " is-changing" : ""}`} aria-label={String(value)}>{displayValue}</span>;
 }
 
 export default function RecordsView(props: Props) {
@@ -657,10 +585,6 @@ export default function RecordsView(props: Props) {
         .crm-kpi-top { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 12px; font-weight: 650; }
         .crm-kpi-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 7px; color: var(--kpi-accent); background: color-mix(in srgb, var(--kpi-accent) 15%, var(--panel)); }
         .crm-kpi strong { display: block; margin-top: 7px; color: var(--text); font-size: 27px; line-height: 1; }
-        :global(.crm-kpi-number) { display: inline-block; font-variant-numeric: tabular-nums; }
-        :global(.crm-kpi-number.is-changing) { animation: crm-kpi-pulse 450ms ease-out; }
-        @keyframes crm-kpi-pulse { 35% { transform: scale(1.06); opacity: 0.82; } }
-        @media (prefers-reduced-motion: reduce) { :global(.crm-kpi-number.is-changing) { animation: none; } }
         .crm-kpi-total { --kpi-accent: #64748b; --kpi-tint: #f1f5f9; }
         .crm-kpi-open { --kpi-accent: #2563eb; --kpi-tint: #eff6ff; }
         .crm-kpi-pending { --kpi-accent: #d97706; --kpi-tint: #fffbeb; }

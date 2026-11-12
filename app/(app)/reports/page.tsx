@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useToast } from "@/components/Toast";
+import AnimatedCount from "@/components/AnimatedCount";
 import { useSession } from "next-auth/react";
 import { Activity, AlertCircle, Check, CheckCircle2, CircleDot, Clock3, LoaderCircle, Send, UsersRound } from "lucide-react";
 import { PERIOD_OPTIONS, type Period } from "@/lib/period";
@@ -158,14 +159,23 @@ export default function Reports() {
   }, [isAdmin]);
 
   const [d, setD] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const reportLoadId = useRef(0);
 
   const [users, setUsers] = useState<any[]>([]);
 
   const load = useCallback(async (q: typeof f) => {
-    const res = await fetch(`/api/reports?${new URLSearchParams(q)}`);
-    const out = await res.json();
-    if (!res.ok) { toast(out.error ?? "Could not build the report"); return; }
-    setD(out);
+    const loadId = ++reportLoadId.current;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/reports?${new URLSearchParams(q)}`);
+      const out = await res.json();
+      if (loadId !== reportLoadId.current) return;
+      if (!res.ok) { toast(out.error ?? "Could not build the report"); return; }
+      setD(out);
+    } finally {
+      if (loadId === reportLoadId.current) setLoading(false);
+    }
   }, [toast]);
 
   useEffect(() => {
@@ -509,23 +519,23 @@ const activeFilters =
           <div className="report-kpis">
             <div className="report-kpi" style={{ "--kpi-accent": "#64748b" } as React.CSSProperties}>
               <div className="report-kpi-top"><span>Total records</span><span className="report-kpi-icon"><Activity size={16} aria-hidden="true" /></span></div>
-              <strong>{totalRecords}</strong><small>{s.assistance} assistance · {s.tasks} other tasks</small>
+              <strong><AnimatedCount value={totalRecords} loading={loading} /></strong><small>{s.assistance} assistance · {s.tasks} other tasks</small>
             </div>
             <div className="report-kpi" style={{ "--kpi-accent": "#0f766e" } as React.CSSProperties}>
               <div className="report-kpi-top"><span>Participation Count</span><span className="report-kpi-icon"><UsersRound size={16} aria-hidden="true" /></span></div>
-              <strong>{d.contributionSummary.participationCount}</strong><small>Assigned to this user, excluding the accountable person</small>
+              <strong><AnimatedCount value={d.contributionSummary.participationCount} loading={loading} /></strong><small>Assigned to this user, excluding the accountable person</small>
             </div>
             <div className="report-kpi" style={{ "--kpi-accent": "#2563eb" } as React.CSSProperties}>
               <div className="report-kpi-top"><span>Open</span><span className="report-kpi-icon"><CircleDot size={16} aria-hidden="true" /></span></div>
-              <strong>{s.open}</strong><small>Awaiting resolution</small>
+              <strong><AnimatedCount value={s.open} loading={loading} /></strong><small>Awaiting resolution</small>
             </div>
             <div className="report-kpi" style={{ "--kpi-accent": "#d97706" } as React.CSSProperties}>
               <div className="report-kpi-top"><span>Close pending</span><span className="report-kpi-icon"><Clock3 size={16} aria-hidden="true" /></span></div>
-              <strong>{s.pending}</strong><small>Pending completion review</small>
+              <strong><AnimatedCount value={s.pending} loading={loading} /></strong><small>Pending completion review</small>
             </div>
             <div className="report-kpi" style={{ "--kpi-accent": "#16a34a" } as React.CSSProperties}>
               <div className="report-kpi-top"><span>Closed</span><span className="report-kpi-icon"><CheckCircle2 size={16} aria-hidden="true" /></span></div>
-              <strong>{s.closed}</strong><small>{s.avgPerDay} average completed per day</small>
+              <strong><AnimatedCount value={s.closed} loading={loading} /></strong><small>{s.avgPerDay} average completed per day</small>
             </div>
           </div>
 
