@@ -787,8 +787,8 @@ export default function Dashboard() {
           <>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))", gap: "20px" }}>
               {([
-                { key: "technicalAssistanceCount", title: "Technical Assistance", color: "#06aed4" },
-                { key: "otherTasksCount", title: "Other Tasks", color: "#f79009" },
+                { key: "technicalAssistanceCount", title: "Technical Assistance", total: workloadSummary.technicalAssistanceRecords, color: "#06aed4" },
+                { key: "otherTasksCount", title: "Other Tasks", total: workloadSummary.otherTasksRecords, color: "#f79009" },
               ] as const).map((chart) => {
                 const sortedUsers = [...workloadUsers].sort((left, right) => {
                   const countDifference = Number(right[chart.key]) - Number(left[chart.key]);
@@ -799,8 +799,7 @@ export default function Dashboard() {
                 return <div key={chart.key} aria-label={`${chart.title} owned records`}>
                   <div className="panelhead">
                     <div>
-                      <h4 style={{ margin: 0 }}>{chart.title}</h4>
-                      <span className="muted">Owned records</span>
+                      <h4 style={{ margin: 0 }}>{chart.title} ({chart.total})</h4>
                     </div>
                   </div>
                   <div style={{ display: "grid", gap: "8px" }}>

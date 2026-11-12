@@ -1,4 +1,5 @@
 # 2026-11-12
+- Added team-wide record totals to the Technical Assistance and Other Tasks chart headers and removed the redundant “Owned records” subtitles.
 - Removed the ambiguous subtitle from Team Workload Distribution; the panel title and chart captions identify its team-wide breakdown.
 - Simplified Team Workload Distribution by removing the redundant Active Users and record-total summary metrics; the two charts and their existing counts, ranks and sorting are unchanged.
 - Refined Team Workload Distribution so user lists grow naturally without internal scrollbars, with tighter row spacing and more room for workload bars while keeping ranks and counts visible.
