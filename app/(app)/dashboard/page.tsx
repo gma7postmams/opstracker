@@ -389,6 +389,14 @@ export default function Dashboard() {
   const compactLabelStride = isCompactDashboard
     ? Math.max(1, Math.ceil(trendData.length / Math.max(1, Math.floor((chartRight - chartLeft) / 36))))
     : 1;
+  const workloadSummary = workloadUsers.reduce(
+    (summary, user) => ({
+      activeUsers: summary.activeUsers + 1,
+      technicalAssistanceRecords: summary.technicalAssistanceRecords + user.technicalAssistanceCount,
+      otherTasksRecords: summary.otherTasksRecords + user.otherTasksCount,
+    }),
+    { activeUsers: 0, technicalAssistanceRecords: 0, otherTasksRecords: 0 }
+  );
   const chartTop = 20;
   const chartBottom = 166;
   const chartHeight = chartBottom - chartTop;
@@ -777,32 +785,55 @@ export default function Dashboard() {
         ) : workloadUsers.length === 0 ? (
           <div className="empty">No owned records for the selected period.</div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))", gap: "20px" }}>
-            {([
-              { key: "technicalAssistanceCount", title: "Technical Assistance", color: "#06aed4" },
-              { key: "otherTasksCount", title: "Other Tasks", color: "#f79009" },
-            ] as const).map((chart) => {
-              const maxCount = Math.max(1, ...workloadUsers.map((workloadUser) => workloadUser[chart.key]));
-              return <div key={chart.key} aria-label={`${chart.title} owned records`}>
-                <div className="panelhead">
-                  <div>
-                    <h4 style={{ margin: 0 }}>{chart.title}</h4>
-                    <span className="muted">Owned records</span>
+          <>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+              gap: "8px 12px",
+              marginBottom: "18px",
+              padding: "8px 10px",
+              borderRadius: "10px",
+              background: "color-mix(in srgb, var(--card) 88%, transparent)",
+              border: "1px solid var(--border)",
+              fontSize: "12px",
+            }}>
+              <div><span className="muted">Active Users</span><br /><strong>{workloadSummary.activeUsers}</strong></div>
+              <div><span className="muted">Technical Assistance Records</span><br /><strong>{workloadSummary.technicalAssistanceRecords}</strong></div>
+              <div><span className="muted">Other Tasks Records</span><br /><strong>{workloadSummary.otherTasksRecords}</strong></div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))", gap: "20px" }}>
+              {([
+                { key: "technicalAssistanceCount", title: "Technical Assistance", color: "#06aed4" },
+                { key: "otherTasksCount", title: "Other Tasks", color: "#f79009" },
+              ] as const).map((chart) => {
+                const sortedUsers = [...workloadUsers].sort((left, right) => {
+                  const countDifference = Number(right[chart.key]) - Number(left[chart.key]);
+                  if (countDifference !== 0) return countDifference;
+                  return left.name.localeCompare(right.name);
+                });
+                const maxCount = Math.max(1, ...sortedUsers.map((workloadUser) => workloadUser[chart.key]));
+                return <div key={chart.key} aria-label={`${chart.title} owned records`}>
+                  <div className="panelhead">
+                    <div>
+                      <h4 style={{ margin: 0 }}>{chart.title}</h4>
+                      <span className="muted">Owned records</span>
+                    </div>
                   </div>
-                </div>
-                <div style={{ display: "grid", gap: "10px", maxHeight: "320px", overflowY: "auto", paddingRight: "4px" }}>
-                  {workloadUsers.map((workloadUser) => {
-                    const count = workloadUser[chart.key];
-                    return <div className="barrow" key={workloadUser.id} style={{ gridTemplateColumns: "minmax(0, 1fr) minmax(48px, 1.5fr) 36px" }}>
-                      <span style={{ overflowWrap: "anywhere" }}>{workloadUser.name}</span>
-                      <div className="bar" aria-hidden="true"><i style={{ width: `${(count / maxCount) * 100}%`, background: chart.color }} /></div>
-                      <b style={{ textAlign: "right" }}>{count}</b>
-                    </div>;
-                  })}
-                </div>
-              </div>;
-            })}
-          </div>
+                  <div style={{ display: "grid", gap: "10px", maxHeight: "440px", overflowY: "auto", paddingRight: "4px" }}>
+                    {sortedUsers.map((workloadUser, index) => {
+                      const count = workloadUser[chart.key];
+                      return <div className="barrow" key={workloadUser.id} style={{ gridTemplateColumns: "42px minmax(0, 1fr) minmax(48px, 1.5fr) 44px" }}>
+                        <span className="muted" style={{ textAlign: "left" }}>#{index + 1}</span>
+                        <span style={{ overflowWrap: "anywhere" }}>{workloadUser.name}</span>
+                        <div className="bar" aria-hidden="true"><i style={{ width: `${(count / maxCount) * 100}%`, background: chart.color }} /></div>
+                        <b style={{ textAlign: "right" }}>{count}</b>
+                      </div>;
+                    })}
+                  </div>
+                </div>;
+              })}
+            </div>
+          </>
         )}
       </section>}
 
