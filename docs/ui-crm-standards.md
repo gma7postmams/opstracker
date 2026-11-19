@@ -94,6 +94,17 @@ Create a premium modern CRM dashboard experience similar to:
 
 while preserving the existing OpsTracker functionality and data behavior.
 
+## Auto-Refresh Standard
+
+Activity-based widgets must refresh automatically after a successful write action. Users should see their changes without manually reloading the page. Prefer a local query refresh or targeted data invalidation over a full page reload.
+
+Apply this standard to:
+- Recent Activity
+- Audit Logs
+- Backup History
+- Dashboard Operational Widgets
+- Similar activity and event feeds
+
 ## Email Activity Summary
 
 Email report Activity Summary uses exactly three compact KPI cards, ordered Technical Assistance, Other Tasks, and Total Records. Keep the cards approximately 160-180px wide, equal in width and height, compact, centered, and naturally spaced within the email width rather than stretching them across the row. Use white rounded cards with a subtle glossy appearance, a subtle shadow, and a colored left accent: cyan for Technical Assistance, amber for Other Tasks, and blue for Total Records. Place each icon to the left of its label and center the value below.

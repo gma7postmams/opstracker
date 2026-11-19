@@ -46,13 +46,12 @@ Email 2FA setup and login codes are sent to the user's profile email through the
 - Any authenticated user can upload an avatar. Logo and favicon uploads require an administrator. Uploads are limited to 2 MB and allowed image MIME types, with server-generated filenames.
 - `/api/users` GET is available to authenticated users and returns the user directory. Audit list/export routes return all logs to administrators and only the caller's logs to regular users.
 - The report user filter is administrator-only. Work-log APIs require a session.
-- `/api/dashboard/system-health` is administrator-only and returns database status and configured storage availability, with total/free capacity and used percentage when filesystem statistics are supported; check failures do not expose internal errors or paths.
+- `/api/dashboard/system-health` is administrator-only and returns database status and configured storage availability, with total/free capacity and used percentage when filesystem statistics are supported; check failures do not expose internal errors or paths. Dashboard Recent Activity returns all audit events to administrators and only events with `userId` matching the signed-in user to USER accounts.
 
 ## Authorization gaps in the current code
 
 The following endpoints do not enforce the protections implied by their page location or names; document these as current implementation behavior, not as intended policy:
 
 - `/api/users/filter` does not check authentication.
-- `/api/dashboard` returns the five newest audit events without applying the current user's audit-log scope, although its record metrics are scoped by owner.
 
 These are important access-control discrepancies. Do not rely on the UI or route naming as protection for these endpoints.

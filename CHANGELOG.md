@@ -1,3 +1,6 @@
+# 2026-11-19
+- Fixed dashboard Recent Activity so USER accounts see only their own audit events, while administrators continue to see all recent activity.
+
 # 2026-11-12
 - Added a dashboard Activity Types panel that groups Other Tasks by Activity Type, follows the Period/custom-date and role-aware user filters, and displays the filtered Other Tasks total.
 - Added team-wide record totals to the Technical Assistance and Other Tasks chart headers and removed the redundant “Owned records” subtitles.
