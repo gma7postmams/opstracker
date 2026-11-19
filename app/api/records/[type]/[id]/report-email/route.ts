@@ -6,6 +6,7 @@ import { getRecord, hasUserParticipated } from "@/lib/records";
 import { isRecordType } from "@/lib/recordTypes";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { getRecordReportFilename } from "@/lib/recordReport";
 
 const MAX_PDF_SIZE = 15 * 1024 * 1024;
 
@@ -89,7 +90,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ typ
     return NextResponse.json({ error: "The attachment is not a valid PDF." }, { status: 400 });
   }
 
-  const filename = `${type === "assistance" ? "TA" : "OT"}-${record.refNo.split("-").slice(1).join("-")}.pdf`;
+  const filename = getRecordReportFilename(type, record.refNo);
   const recordType = type === "assistance" ? "Technical Assistance" : "Other Task";
   const statusLabel = record.status === "CLOSE_PENDING" ? "CLOSE PENDING" : record.status;
   const statusColors = record.status === "CLOSED"

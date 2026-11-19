@@ -1,4 +1,6 @@
 # 2026-11-19
+- Renamed the individual record report Executive Summary group to Assignment Information and its Owner field to Record Owner; existing PDF download and email attachment filenames remain consistent through the shared filename helper.
+- Redesigned individual Technical Assistance and Other Task PDFs with a shared client-side jsPDF template, grouped executive summary, single-card incident/task details and work logs, signature-only work-log authors, three-column responsibility, configured branding/logo fallback, repeating page-numbered footers and descriptive sanitized filenames. The existing preview/download/email flow and uploaded PDF bytes are retained; aggregate report redesign is deferred.
 - Fixed dashboard Recent Activity so USER accounts see only their own audit events, while administrators continue to see all recent activity.
 
 # 2026-11-12

@@ -74,6 +74,7 @@ Purpose: Create, assign, track, and update Technical Assistance records.
 UI Files:
 - `app/(app)/assistance/page.tsx`
 - `app/(app)/records/[type]/[id]/page.tsx` for shared record details
+- `components/RecordReportModal.tsx` for the shared record PDF preview/download/email workflow
 - `components/RecordsView.tsx`
 - `components/RecordForm.tsx`
 - `components/WorkLogTimeline.tsx`
@@ -82,6 +83,7 @@ API Files:
 - `app/api/records/[type]/route.ts`
 - `app/api/records/events/route.ts` for authenticated realtime invalidations
 - `app/api/records/[type]/[id]/route.ts`
+- `app/api/records/[type]/[id]/report-email/route.ts` for shared record PDF email delivery
 - `app/api/records/[type]/batch/route.ts`
 - `app/api/records/[type]/[id]/work-logs/route.ts`
 
@@ -91,6 +93,8 @@ Business Logic:
 - `lib/validation.ts`
 - `lib/permissions.ts`
 - `lib/audit.ts`
+- `lib/recordReport.ts` for sanitized record-report filenames
+- `lib/recordReportPdf.ts` for shared client-side jsPDF layout and rendering
 
 Database Tables:
 - `assistance`
@@ -114,6 +118,7 @@ Purpose: Create, assign, track, and update Other Task records.
 UI Files:
 - `app/(app)/tasks/page.tsx`
 - `app/(app)/records/[type]/[id]/page.tsx` for shared record details
+- `components/RecordReportModal.tsx` for the shared record PDF preview/download/email workflow
 - `components/RecordsView.tsx`
 - `components/RecordForm.tsx`
 - `components/WorkLogTimeline.tsx`
@@ -122,6 +127,7 @@ API Files:
 - `app/api/records/[type]/route.ts`
 - `app/api/records/events/route.ts` for authenticated realtime invalidations
 - `app/api/records/[type]/[id]/route.ts`
+- `app/api/records/[type]/[id]/report-email/route.ts` for shared record PDF email delivery
 - `app/api/records/[type]/batch/route.ts`
 - `app/api/records/[type]/[id]/work-logs/route.ts`
 
@@ -131,6 +137,8 @@ Business Logic:
 - `lib/validation.ts`
 - `lib/permissions.ts`
 - `lib/audit.ts`
+- `lib/recordReport.ts` for sanitized record-report filenames
+- `lib/recordReportPdf.ts` for shared client-side jsPDF layout and rendering
 
 Database Tables:
 - `tasks`
