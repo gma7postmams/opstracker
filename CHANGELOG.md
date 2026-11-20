@@ -1,4 +1,5 @@
 # 2026-11-20
+- Added an IP Address column to Audit Logs with a missing-value fallback and responsive visual truncation; the full address remains available in View Details.
 - Enhanced audit logs with client IP, user agent and JSON old/new snapshots for changed fields; restricted the audit page and APIs to administrators and retained audit history after record deletion.
 - Updated Dashboard Activity Trend so historical zero-count periods, including years in All Records, have visible values and more prominent markers, while future periods show no data yet and trend lines extend to future buckets at the last known value without future markers or value labels. All This Year month labels and dashboard summaries remain unchanged.
 - Refined Technical Assistance and Other Tasks filters to remove Accountable Person and order the remaining filters consistently. User and Assigned To filtering, visibility, counts, and matching Current View exports are unchanged.

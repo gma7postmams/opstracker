@@ -250,6 +250,8 @@ const deleteCount = filteredLogs.filter((log) =>
         .audit-table-wrap :global(table) { min-width:760px; font-size:13px; }
         .audit-table-wrap :global(th) { top:0; z-index:2; padding:13px 16px; }
         .audit-table-wrap :global(td) { padding:15px 16px; vertical-align:middle; }
+        .audit-ip-value { display:block; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .audit-ip-column { white-space:nowrap; }
         .audit-row { cursor:pointer; transition:background-color .16s ease; }
         .audit-row:hover { background:var(--row-hover); }
         .audit-row:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
@@ -298,7 +300,7 @@ const deleteCount = filteredLogs.filter((log) =>
         .audit-dialog-metadata { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 18px; padding:14px 16px; border:1px solid var(--line); border-radius:7px; background:var(--panel); }
         .audit-dialog-raw-detail { margin:0; padding:14px 16px; border:1px solid var(--line); border-radius:7px; background:var(--panel); font-size:13px; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; }
         @media(max-width:560px) { .audit-dialog { padding:18px; } .audit-dialog-summary-grid,.audit-dialog-metadata { grid-template-columns:1fr; gap:13px; } }
-        @media(max-width:760px) { .audit-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+        @media(max-width:760px) { .audit-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .audit-ip-column { display:none; } }
         @media(max-width:480px) { .audit-kpi { padding:13px 12px 12px 15px; } .audit-kpi strong { font-size:24px; } }
       `}</style>
       <section className="panel">
@@ -447,9 +449,10 @@ const deleteCount = filteredLogs.filter((log) =>
   <div className="audit-table-wrap">
     <table className="table">
       <colgroup>
-        <col style={{ width: "20%" }} />
-        <col style={{ width: "46%" }} />
-        <col style={{ width: "24%" }} />
+        <col style={{ width: "18%" }} />
+        <col style={{ width: "36%" }} />
+        <col style={{ width: "22%" }} />
+        <col className="audit-ip-column" style={{ width: "14%" }} />
         <col style={{ width: "10%" }} />
       </colgroup>
       <thead>
@@ -457,6 +460,7 @@ const deleteCount = filteredLogs.filter((log) =>
           <th>Date &amp; Time</th>
           <th>Activity</th>
           <th>User</th>
+          <th className="audit-ip-column">IP Address</th>
           <th>Details</th>
         </tr>
       </thead>
@@ -509,6 +513,12 @@ const deleteCount = filteredLogs.filter((log) =>
                   <div className="audit-avatar">{initials}</div>
                   <div className="audit-user-name">{userName}</div>
                 </div>
+              </td>
+
+              <td className="audit-ip-column">
+                <span className="audit-ip-value" title={log.ipAddress || undefined}>
+                  {log.ipAddress || "-"}
+                </span>
               </td>
 
               <td>
