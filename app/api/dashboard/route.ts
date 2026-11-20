@@ -206,9 +206,13 @@ export async function GET(request: Request) {
     ...ownerWhere,
   };
 
-  const trendConfig = buildTrendConfig(period, new Date(), range);
+  const trendNow = new Date();
+  const trendToday = startOfUtcDay(trendNow);
+  const trendTomorrow = addUtcDays(trendToday, 1);
+  const trendConfig = buildTrendConfig(period, trendNow, range);
+  const trendEnd = trendConfig.end < trendTomorrow ? trendConfig.end : trendTomorrow;
   const trendWhere = {
-    startDate: { gte: trendConfig.start, lt: trendConfig.end },
+    startDate: { gte: trendConfig.start, lt: trendEnd },
     ...(user.role === "ADMIN"
       ? filterUserId === null ? {} : { ownerId: filterUserId }
       : { ownerId: user.id }),
@@ -320,14 +324,24 @@ prisma.auditLog.findMany({
   };
   const assistanceTrendCounts = getTrendCounts(aTrend);
   const taskTrendCounts = getTrendCounts(tTrend);
-  const trend = trendConfig.buckets.map((bucket) => ({
-    date: bucket.date,
-    label: bucket.label,
-    tooltip: bucket.tooltip,
-    assistanceCount: assistanceTrendCounts.get(bucket.key) ?? 0,
-    taskCount: taskTrendCounts.get(bucket.key) ?? 0,
-    highlighted: bucket.highlighted,
-  }));
+  const trend = trendConfig.buckets.map((bucket) => {
+    const bucketStart = trendConfig.granularity === "year"
+      ? `${bucket.key}-01-01`
+      : trendConfig.granularity === "month"
+        ? `${bucket.key}-01`
+        : bucket.key;
+    const isFuture = trendConfig.granularity === "year"
+      ? Number(bucket.key) > trendToday.getUTCFullYear()
+      : bucketStart > utcDateKey(trendToday);
+    return {
+      date: bucket.date,
+      label: bucket.label,
+      tooltip: bucket.tooltip,
+      assistanceCount: isFuture ? null : assistanceTrendCounts.get(bucket.key) ?? 0,
+      taskCount: isFuture ? null : taskTrendCounts.get(bucket.key) ?? 0,
+      highlighted: bucket.highlighted,
+    };
+  });
   const trendSubtitle = period === "today" || period === "yesterday" || period === "thisWeek"
     ? "Records logged, this week"
       : period === "thisMonth"

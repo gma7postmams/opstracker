@@ -379,9 +379,9 @@ export default function Dashboard() {
   const activityTypeMax = Math.max(1, ...(d?.activityTypes ?? []).map((activityType: any) => activityType.count));
   const trendData = d?.trend ?? [];
   const showDailyLabels = period === "today" || period === "yesterday" || period === "thisWeek";
-  const showHistoricalValueLabels = showDailyLabels || period === "thisMonth" || period === "custom";
+  const showHistoricalValueLabels = showDailyLabels || period === "thisMonth" || period === "thisYear" || period === "all" || period === "custom";
   const todayDate = new Date().toISOString().slice(0, 10);
-  const peak = Math.max(1, ...trendData.flatMap((point: any) => [point.assistanceCount, point.taskCount]));
+  const peak = Math.max(1, ...trendData.flatMap((point: any) => [point.assistanceCount, point.taskCount]).filter((count: number | null) => count !== null));
   const chartWidth = isCompactDashboard && trendChartContainerWidth > 0
     ? trendChartContainerWidth
     : Math.max(700, trendData.length * 56);
@@ -410,12 +410,14 @@ export default function Dashboard() {
     const valuesAreClose = Math.abs(assistanceVisual - taskVisual) * chartHeight < 22;
     const assistanceValueY = Math.max(14, Math.min(188, chartBottom - assistanceVisual * chartHeight + (valuesAreClose && assistanceVisual < taskVisual ? 17 : -8)));
     const taskValueY = Math.max(14, Math.min(188, chartBottom - taskVisual * chartHeight + (valuesAreClose && taskVisual <= assistanceVisual ? 17 : -8)));
+    const showValueLabels = (showHistoricalValueLabels ? point.date <= todayDate : point.highlighted)
+      && (!isCompactDashboard || index % compactLabelStride === 0 || point.highlighted || index === trendData.length - 1);
     return {
       ...point,
       x,
-      showValueLabels: (showHistoricalValueLabels ? point.date <= todayDate : point.highlighted)
-        && (!isCompactDashboard || index % compactLabelStride === 0 || point.highlighted || index === trendData.length - 1),
-      showAxisLabel: !isCompactDashboard || index % compactLabelStride === 0 || index === trendData.length - 1,
+      showAssistanceValueLabel: showValueLabels || (period === "thisYear" && point.date <= todayDate && point.assistanceCount === 0),
+      showTaskValueLabel: showValueLabels || (period === "thisYear" && point.date <= todayDate && point.taskCount === 0),
+      showAxisLabel: period === "thisYear" || !isCompactDashboard || index % compactLabelStride === 0 || index === trendData.length - 1,
       valueLabelX: trendData.length === 1 ? x : index === trendData.length - 1 ? x - 9 : x + 9,
       valueLabelAnchor: trendData.length === 1 ? "middle" : index === trendData.length - 1 ? "end" : "start",
       weekdayLabel: showDailyLabels
@@ -428,13 +430,22 @@ export default function Dashboard() {
       taskValueY,
     };
   });
-  const assistancePath = trendPoints.map((point: any, index: number) => `${index ? "L" : "M"}${point.x},${point.assistanceY}`).join(" ");
-  const taskPath = trendPoints.map((point: any, index: number) => `${index ? "L" : "M"}${point.x},${point.taskY}`).join(" ");
-  const areaPath = (valueKey: "assistanceY" | "taskY") => trendPoints.length
-    ? `${trendPoints.map((point: any, index: number) => `${index ? "L" : "M"}${point.x},${point[valueKey]}`).join(" ")} L${trendPoints[trendPoints.length - 1].x},${chartBottom} L${trendPoints[0].x},${chartBottom} Z`
+  const assistancePoints = trendPoints.filter((point: any) => point.assistanceCount !== null);
+  const taskPoints = trendPoints.filter((point: any) => point.taskCount !== null);
+  const linePath = (points: any[], valueKey: "assistanceY" | "taskY") => {
+    const lastPoint = points[points.length - 1];
+    const futurePoints = lastPoint
+      ? trendPoints.filter((point: any) => point.x > lastPoint.x).map((point: any) => ({ ...point, [valueKey]: lastPoint[valueKey] }))
+      : [];
+    return [...points, ...futurePoints].map((point, index) => `${index ? "L" : "M"}${point.x},${point[valueKey]}`).join(" ");
+  };
+  const assistancePath = linePath(assistancePoints, "assistanceY");
+  const taskPath = linePath(taskPoints, "taskY");
+  const areaPath = (points: any[], valueKey: "assistanceY" | "taskY") => points.length
+    ? `${points.map((point, index) => `${index ? "L" : "M"}${point.x},${point[valueKey]}`).join(" ")} L${points[points.length - 1].x},${chartBottom} L${points[0].x},${chartBottom} Z`
     : "";
-  const assistanceAreaPath = areaPath("assistanceY");
-  const taskAreaPath = areaPath("taskY");
+  const assistanceAreaPath = areaPath(assistancePoints, "assistanceY");
+  const taskAreaPath = areaPath(taskPoints, "taskY");
   const hasActiveFilters = period !== "today" || (isAdmin && selectedUserId !== "");
   const successfulBackups = backupHistory?.filter((run) => run.status === "Success") ?? [];
   const lastSuccessfulBackup = successfulBackups[0];
@@ -626,16 +637,18 @@ export default function Dashboard() {
               <g key={`trend-points-${dashboardDataRevision}`} className="dashboard-trend-points">
                 {trendPoints.map((point: any) => (
                 <g key={point.date}>
-                  <title>{`${point.tooltip}: Technical Assistance ${point.assistanceCount}, Other Tasks ${point.taskCount}`}</title>
-                  {point.highlighted && <>
-                    <circle className="trend-point-pulse" cx={point.x} cy={point.assistanceY} r="5" fill="none" stroke="var(--trend-highlight)" strokeWidth="2" />
-                    <circle className="trend-point-pulse" cx={point.x} cy={point.taskY} r="5" fill="none" stroke="var(--trend-highlight)" strokeWidth="2" />
+                  <title>{point.assistanceCount === null && point.taskCount === null
+                    ? "No data yet"
+                    : `${point.tooltip}: Technical Assistance ${point.assistanceCount ?? "No data yet"}, Other Tasks ${point.taskCount ?? "No data yet"}`}</title>
+                  {point.assistanceCount !== null && <>
+                    {point.highlighted && <circle className="trend-point-pulse" cx={point.x} cy={point.assistanceY} r="5" fill="none" stroke="var(--trend-highlight)" strokeWidth="2" />}
+                    <circle cx={point.x} cy={point.assistanceY} r={point.highlighted ? 5.5 : point.assistanceCount === 0 ? 5 : 3.5} fill={point.highlighted ? "var(--trend-highlight)" : "var(--panel)"} stroke="#06aed4" strokeWidth="2" />
+                    {point.showAssistanceValueLabel && <text className="trend-value trend-value-assistance" x={point.valueLabelX} y={point.assistanceValueY} textAnchor={point.valueLabelAnchor}>{point.assistanceCount}</text>}
                   </>}
-                  <circle cx={point.x} cy={point.assistanceY} r={point.highlighted ? 5.5 : 3.5} fill={point.highlighted ? "var(--trend-highlight)" : "var(--panel)"} stroke="#06aed4" strokeWidth="2" />
-                  <circle cx={point.x} cy={point.taskY} r={point.highlighted ? 5.5 : 3.5} fill={point.highlighted ? "var(--trend-highlight)" : "var(--panel)"} stroke="#f79009" strokeWidth="2" />
-                  {point.showValueLabels && <>
-                    <text className="trend-value trend-value-assistance" x={point.valueLabelX} y={point.assistanceValueY} textAnchor={point.valueLabelAnchor}>{point.assistanceCount}</text>
-                    <text className="trend-value trend-value-task" x={point.valueLabelX} y={point.taskValueY} textAnchor={point.valueLabelAnchor}>{point.taskCount}</text>
+                  {point.taskCount !== null && <>
+                    {point.highlighted && <circle className="trend-point-pulse" cx={point.x} cy={point.taskY} r="5" fill="none" stroke="var(--trend-highlight)" strokeWidth="2" />}
+                    <circle cx={point.x} cy={point.taskY} r={point.highlighted ? 5.5 : point.taskCount === 0 ? 4 : 3.5} fill={point.highlighted ? "var(--trend-highlight)" : "var(--panel)"} stroke="#f79009" strokeWidth="2" />
+                    {point.showTaskValueLabel && <text className="trend-value trend-value-task" x={point.valueLabelX} y={point.taskValueY} textAnchor={point.valueLabelAnchor}>{point.taskCount}</text>}
                   </>}
                   {point.showAxisLabel && (showDailyLabels ? <>
                     <text className={point.highlighted ? "trend-label-pulse" : undefined} x={point.x} y="196" textAnchor="middle" fill={point.highlighted ? "var(--trend-highlight)" : "var(--muted)"} fontSize="11" fontWeight={point.highlighted ? 600 : 500}>{point.weekdayLabel}</text>

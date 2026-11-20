@@ -1,4 +1,5 @@
 # 2026-11-20
+- Updated Dashboard Activity Trend so historical zero-count periods, including years in All Records, have visible values and more prominent markers, while future periods show no data yet and trend lines extend to future buckets at the last known value without future markers or value labels. All This Year month labels and dashboard summaries remain unchanged.
 - Refined Technical Assistance and Other Tasks filters to remove Accountable Person and order the remaining filters consistently. User and Assigned To filtering, visibility, counts, and matching Current View exports are unchanged.
 - Scoped Assigned To options on Technical Assistance and Other Task create/edit forms on the server: administrators see all active accounts, while USERs see only active USER accounts. The current assignment and existing permission rules are unchanged.
 - Enabled Technical Assistance deletion when work logs exist. Single and batch deletion cascade work logs, remove prior audit events for the record, and retain a DELETE audit event; the confirmation warns about the permanent removal.
