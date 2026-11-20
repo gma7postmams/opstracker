@@ -2,7 +2,7 @@ import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 
 /** Pages only administrators may open. The APIs enforce this again server-side. */
-const ADMIN_ONLY = ["/admin"];
+const ADMIN_ONLY = ["/admin", "/audit"];
 
 export default withAuth(
   function middleware(req) {
@@ -29,5 +29,6 @@ export const config = {
     "/reports/:path*",
     "/users/:path*",
     "/admin/:path*",
+    "/audit/:path*",
   ],
 };

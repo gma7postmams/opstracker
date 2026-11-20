@@ -3,6 +3,7 @@ import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import ExcelJS from "exceljs";
 import { AUDIT_CATEGORIES, getAuditCategory, type AuditCategory } from "@/lib/auditCategories";
+import { isAdmin } from "@/lib/permissions";
 
 export async function GET(req: NextRequest) {
   const user = await currentUser();
@@ -12,6 +13,9 @@ export async function GET(req: NextRequest) {
       { error: "Unauthorized" },
       { status: 401 }
     );
+  }
+  if (!isAdmin(user)) {
+    return NextResponse.json({ error: "Administrators only" }, { status: 403 });
   }
 
   const { searchParams } = new URL(req.url);
@@ -25,10 +29,6 @@ export async function GET(req: NextRequest) {
 
   const logs = await prisma.auditLog.findMany({
     where: {
-      ...(user.role !== "ADMIN"
-        ? { userId: user.id }
-        : {}),
-
       ...(action !== "ALL"
         ? { action }
         : {}),

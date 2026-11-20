@@ -99,6 +99,7 @@ if (changes.length > 0) {
     entityId: updated.refNo,
     userId: user.id,
     details: { name: user.name, changes },
+    request: req,
   });
 }
 
@@ -198,6 +199,7 @@ if (statusChanged) {
     entityId: updated.refNo,
     userId: user.id,
     details: { name: user.name, changes: statusChanges },
+    request: req,
   });
 }
 if (assignmentChanged) {
@@ -207,6 +209,7 @@ if (assignmentChanged) {
     entityId: updated.refNo,
     userId: user.id,
     details: { name: user.name, changes: assignmentChanges },
+    request: req,
   });
 }
 const updateChanges = changes.filter(({ field }) =>
@@ -220,6 +223,7 @@ if (updateChanges.length > 0) {
     entityId: updated.refNo,
     userId: user.id,
     details: { name: user.name, changes: updateChanges },
+    request: req,
   });
 }
 
@@ -227,7 +231,7 @@ return NextResponse.json(visibleRecord(type, updated));
 
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ type: string; id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ type: string; id: string }> }) {
   const p = await params;
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -239,7 +243,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   }
 
   await prisma.$transaction(async (tx) => {
-    await tx.auditLog.deleteMany({ where: { entityType: type, entityId: record.refNo } });
     if (type === "assistance") {
       await tx.assistance.delete({ where: { id: record.id } });
     } else {
@@ -260,6 +263,7 @@ await logAudit({
     assignedTo: record.assigned,
     recordType: type === "assistance" ? "Technical Assistance" : "Other Tasks",
   },
+  request: req,
 });
 
 return NextResponse.json({ ok: true });

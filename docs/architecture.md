@@ -18,7 +18,7 @@ The principal pages are:
 | `/audit` | Audit log search and export |
 | `/profile` | Current user's profile and email settings |
 
-Middleware protects the listed application page paths and restricts `/admin` to administrators. The shared application layout also checks the session for pages in its route group.
+Middleware protects the listed application page paths and restricts `/admin` and `/audit` to administrators. The shared application layout also checks the session for pages in its route group.
 
 ## Request and data flow
 
@@ -27,7 +27,7 @@ Middleware protects the listed application page paths and restricts `/admin` to 
 3. `lib/records.ts` provides shared list, reference-number, permission partition and batch behavior over the Assistance and Task delegates.
 4. Prisma Client accesses PostgreSQL using `DATABASE_URL`; `prisma/schema.prisma` defines the persisted models and migrations live in `prisma/migrations/`.
 
-Dashboard trend queries stop at the current UTC day. Later buckets are returned without counts, while the client preserves the chart horizon by extending each series at its last known value without future markers or value labels; historical empty buckets remain zero.
+Dashboard trend queries stop at the current UTC day. Later buckets are returned without counts, while the client preserves the chart horizon by extending each series at its last known value without future markers or value labels; historical empty buckets remain zero. Dashboard Recent Activity is administrator-only.
 
 Record changes are also published through PostgreSQL `LISTEN/NOTIFY`. Database triggers on `assistance`, `tasks`, and `work_logs` emit generic invalidations after commits. An authenticated Node.js SSE route uses one reconnecting PostgreSQL listener per app process and fans invalidations out to connected clients. Dashboard metrics and the shared Technical Assistance / Other Tasks list re-fetch through their existing APIs; events contain no record data. SSE reconnects trigger an invalidation to recover changes missed while disconnected. Administrators also see backup status on the dashboard, loaded from the existing administrator-only backup history and schedule APIs. The administrator-only dashboard system-health API checks PostgreSQL with Prisma and checks read/write access and filesystem capacity for the configured upload and backup directories. When filesystem statistics are available, it returns total bytes, free bytes and used percentage; otherwise it returns directory availability without capacity values. The response omits paths and internal errors. This is a point-in-time check and does not report scheduler process liveness. Reports and report email workflows do not subscribe to this stream.
 
@@ -39,7 +39,7 @@ Important shared modules:
 - `lib/validation.ts`: record, user, master-data and branding schemas.
 - `lib/recordTypes.ts`: client-safe record-type configuration and shared field definitions.
 - `lib/reports.ts`, `lib/reportExcel.ts`: report scoping, work-log summaries and workbook generation.
-- `lib/audit.ts`: audit event writing.
+- `lib/audit.ts`: audit event writing, request IP/user-agent extraction, and changed-value snapshots.
 - `lib/csv.ts`, `lib/xlsx.ts`: import parsing and value normalization.
 
 ## External and filesystem dependencies

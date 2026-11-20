@@ -4,7 +4,7 @@
 
 Sign-in uses a NextAuth credentials provider with username and password. Passwords are checked against bcrypt hashes; inactive accounts cannot authenticate. Accounts with Email 2FA enabled must also provide a valid one-time email code before NextAuth creates a session. The session strategy is JWT with a 12-hour maximum age. Successful and failed credential attempts and explicit logout are written to audit logs.
 
-The shared `(app)` layout redirects unauthenticated visitors to `/login`. Middleware also checks the protected application routes and restricts `/admin` pages to the `ADMIN` role. API routes require their own checks; middleware does not provide blanket API authorization.
+The shared `(app)` layout redirects unauthenticated visitors to `/login`. Middleware also checks the protected application routes and restricts `/admin` and `/audit` pages to the `ADMIN` role. API routes require their own checks; middleware does not provide blanket API authorization.
 
 ## Roles and record permissions
 
@@ -44,7 +44,7 @@ Email 2FA setup and login codes are sent to the user's profile email through the
 - `/api/branding` GET is intentionally public for sign-in rendering; writes require an administrator.
 - Authenticated users may add any of the five master-data kinds through the applicable record-form fields; retiring values requires an administrator. Record owners with content-edit permission may set or change Show / Group and the type-specific Category or Activity Type fields.
 - Any authenticated user can upload an avatar. Logo and favicon uploads require an administrator. Uploads are limited to 2 MB and allowed image MIME types, with server-generated filenames.
-- `/api/users` GET is available to authenticated users and returns the user directory. `/api/users/filter` requires authentication and returns active accounts for assignment and USER record-list filters: all roles for administrators, USER-role accounts only for USERs. Audit list/export routes return all logs to administrators and only the caller's logs to regular users.
+- `/api/users` GET is available to authenticated users and returns the user directory. `/api/users/filter` requires authentication and returns active accounts for assignment and USER record-list filters: all roles for administrators, USER-role accounts only for USERs. Audit list and export routes are administrator-only; ordinary users cannot read or modify audit entries through those APIs.
 - The report user filter is administrator-only. Work-log APIs require a session.
-- `/api/dashboard/system-health` is administrator-only and returns database status and configured storage availability, with total/free capacity and used percentage when filesystem statistics are supported; check failures do not expose internal errors or paths. Dashboard Recent Activity returns all audit events to administrators and only events with `userId` matching the signed-in user to USER accounts.
+- `/api/dashboard/system-health` is administrator-only and returns database status and configured storage availability, with total/free capacity and used percentage when filesystem statistics are supported; check failures do not expose internal errors or paths. Dashboard Recent Activity is returned and displayed only for administrators.
 - The shared record form uses `/api/users/filter` for Assigned To options; role-based filtering does not change record ownership or assignment API permissions.

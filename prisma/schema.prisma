@@ -196,7 +196,11 @@ model AuditLog {
 
   userId Int? @map("user_id")
 
-  details Json?
+  details   Json?
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+  oldValues Json?   @map("old_values")
+  newValues Json?   @map("new_values")
 
   createdAt DateTime @default(now()) @map("created_at")
 

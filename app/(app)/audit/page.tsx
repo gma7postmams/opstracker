@@ -607,6 +607,16 @@ const deleteCount = filteredLogs.filter((log) =>
         });
       })()
     : [];
+  const oldValues = selectedLog.oldValues && typeof selectedLog.oldValues === "object" && !Array.isArray(selectedLog.oldValues)
+    ? selectedLog.oldValues as Record<string, unknown>
+    : {};
+  const newValues = selectedLog.newValues && typeof selectedLog.newValues === "object" && !Array.isArray(selectedLog.newValues)
+    ? selectedLog.newValues as Record<string, unknown>
+    : {};
+  const storedChangeFields = [...new Set([...Object.keys(oldValues), ...Object.keys(newValues)])];
+  const displayedChangeRows = storedChangeFields.length
+    ? storedChangeFields.map((field) => ({ field, oldValue: oldValues[field], newValue: newValues[field] }))
+    : changeRows;
   const additionalMetadata = Object.fromEntries(
     Object.entries(detailObject).filter(([key]) =>
       !["actor", "user", "name", "username", "metadata", "meta", ...changeKeys, ...omittedMetadataKeys].includes(key)
@@ -707,12 +717,14 @@ const deleteCount = filteredLogs.filter((log) =>
             {recordSummaryEntries.map(({ label, value }) => <div key={label}><div className="audit-dialog-label">{label}</div><div className="audit-dialog-value">{displayValue(value)}</div></div>)}
             <div><div className="audit-dialog-label">User</div><div className="audit-dialog-value">{displayValue(userName)}</div></div>
             <div><div className="audit-dialog-label">Date &amp; Time</div><div className="audit-dialog-value audit-dialog-datetime"><Clock3 size={14} aria-hidden="true" />{timestamp}</div></div>
+            <div><div className="audit-dialog-label">IP Address</div><div className="audit-dialog-value">{displayValue(selectedLog.ipAddress)}</div></div>
+            <div><div className="audit-dialog-label">User Agent</div><div className="audit-dialog-value">{displayValue(selectedLog.userAgent)}</div></div>
           </div>
         </section>
 
-        {(changeRows.length > 0 || changedFieldNames.length > 0) && (
+        {(displayedChangeRows.length > 0 || changedFieldNames.length > 0) && (
           <section className="audit-dialog-section">
-            <h3>Changes</h3>
+            <h3>Changed Fields</h3>
             {changedFieldNames.length > 0 ? (
               <ul className="audit-dialog-change-list">
                 {changedFieldNames.map((field) => <li key={field}>{formatAuditFieldLabel(field)}</li>)}
@@ -721,10 +733,10 @@ const deleteCount = filteredLogs.filter((log) =>
               <div className="audit-dialog-table-wrap">
                 <table className="table audit-dialog-table">
                   <thead>
-                    <tr><th>Field</th><th>Previous</th><th>Updated</th></tr>
+                    <tr><th>Field</th><th>Old Value</th><th>New Value</th></tr>
                   </thead>
                   <tbody>
-                    {changeRows.map((change, index) => (
+                    {displayedChangeRows.map((change, index) => (
                       <tr key={`${String(change.field)}-${index}`}>
                         <td style={{ overflowWrap: "anywhere" }}>{formatAuditFieldLabel(String(change.field))}</td>
                         <td style={{ overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}>{displayChangeValue(change.oldValue)}</td>
@@ -739,7 +751,7 @@ const deleteCount = filteredLogs.filter((log) =>
         )}
         {hasMetadata && (
           <section className="audit-dialog-section">
-            <h3>Changes</h3>
+            <h3>Additional Details</h3>
             {metadataEntries.length > 0 ? (
               <div className="audit-dialog-metadata">
                 {metadataEntries.map(([key, value]) => (

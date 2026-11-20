@@ -12,7 +12,7 @@ PostgreSQL is the configured datasource. `prisma/schema.prisma` is the current s
 | `MasterData` | Typed location, shift, show/group, category and activity-type values. `(kind, value)` is unique; `active` marks retired values. |
 | `Counter` | Integer counters keyed by record type and year for reference-number allocation. |
 | `Branding` | Singleton-style row with title, tagline, logo URL and favicon URL. |
-| `AuditLog` | Action, entity type/id, optional actor ID, JSON details and timestamp. Indexed by timestamp and entity type. |
+| `AuditLog` | Action, entity type/id, optional actor ID, JSON details, client IP address, user agent, changed-field old/new JSON snapshots and timestamp. Indexed by timestamp and entity type. |
 | `EmailVerificationCode` | Bcrypt-hashed six-digit one-time code, user ID, expiry, used timestamp and creation timestamp. Indexed by user ID and linked to its user. |
 | `WorkLog` | Record timeline note with type, message, creator ID/name, creation timestamp and modification timestamp; linked to either Assistance or Task. |
 | `BackupRun` | Backup history metadata: unique filename, source, format version, byte size, status, error, upload inclusion, encryption flag, creation and completion timestamps. Backup contents are stored in the configured filesystem directory, not in PostgreSQL. |
@@ -24,10 +24,11 @@ Enums are `Status` (`OPEN`, `CLOSE_PENDING`, `CLOSED`), `Role` (`ADMIN`, `USER`)
 
 - Assistance and Task have nullable owner and lock-holder relations to User. Deleting a user sets those foreign keys to null; the operational record remains.
 - Work logs have optional relations to Assistance and Task. Both foreign keys use `Cascade`, so deleting either record also deletes its work logs.
-- Single and batch record deletion remove prior audit rows for the record type and reference number, then record a fresh DELETE audit event. Work-log deletion triggers the existing record-change notification; unrelated audit records and user rows are retained.
+- Single and batch record deletion retain prior audit rows and record a fresh DELETE audit event. Work-log deletion triggers the existing record-change notification; audit records remain independent of deleted records and users.
 - Work-log creator relations use `SetNull`; `createdByName` preserves the displayed author name.
 - Work-log edits update only `message`; `updatedAt` tracks modification time and is initialized from `createdAt` for existing entries.
 - Audit log `userId` is a scalar field, not a Prisma relation. Audit history remains independent of user deletion.
+- Audit IP addresses and user agents are nullable for historical and system-generated rows. Update snapshots contain only changed, non-secret fields; existing `details` JSON remains for compatibility.
 - Records keep master-data labels as text, not foreign keys. Retiring a master-data row therefore does not rewrite existing record values.
 
 ## Important data rules

@@ -3,7 +3,7 @@ import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { fullName } from "@/lib/format";
-import { logAudit } from "@/lib/audit";
+import { logAudit, makeAuditChanges } from "@/lib/audit";
 
 export async function GET() {
   const sessionUser = await currentUser();
@@ -48,13 +48,26 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
+  const previous = await prisma.user.findUnique({
+    where: { id: sessionUser.id },
+    select: {
+      firstName: true,
+      middleInitial: true,
+      surname: true,
+      email: true,
+      username: true,
+      avatarUrl: true,
+      smtpEnabled: true,
+      smtpEmail: true,
+      smtpRecipients: true,
+      email2faEnabled: true,
+    },
+  });
+  if (!previous) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   const body = await req.json();
   if (body.email !== undefined) {
-    const current = await prisma.user.findUnique({
-      where: { id: sessionUser.id },
-      select: { email: true, email2faEnabled: true },
-    });
-    if (current?.email2faEnabled && body.email.trim().toLowerCase() !== current.email.toLowerCase()) {
+    if (previous.email2faEnabled && body.email.trim().toLowerCase() !== previous.email.toLowerCase()) {
       return NextResponse.json({ error: "Disable Email 2FA before changing your email address." }, { status: 400 });
     }
   }
@@ -142,6 +155,7 @@ export async function PATCH(req: NextRequest) {
       email2faEnabled: true,
     },
   });
+  const changes = makeAuditChanges(previous, { ...previous, ...data }, changedFields);
 
   if (changedFields.length > 0) {
     await logAudit({
@@ -151,14 +165,16 @@ export async function PATCH(req: NextRequest) {
       entityId: `Updated ${updated.username}`,
       details: {
         user: fullName(updated),
-        changedFields,
+        changedFields: changes.map(({ field }) => field),
+        changes,
         passwordChanged: changedFields.includes("password"),
         smtpPasswordChanged:
           changedFields.includes("smtpPassword"),
       },
+      request: req,
     });
-  } 
-  
+
+  }
 
   return NextResponse.json(updated);
 }

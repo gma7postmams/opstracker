@@ -259,11 +259,9 @@ prisma.task.count({
   },
 }),
 
-prisma.auditLog.findMany({
-  where: user.role === "ADMIN" ? {} : { userId: user.id },
-  orderBy: { createdAt: "desc" },
-  take: 5,
-}),
+user.role === "ADMIN"
+  ? prisma.auditLog.findMany({ orderBy: { createdAt: "desc" }, take: 5 })
+  : Promise.resolve([]),
 
   ]);
 

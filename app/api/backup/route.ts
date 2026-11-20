@@ -104,6 +104,10 @@ const backupDataSchema = z.object({
     entityId: z.string().nullable(),
     userId: nullableIdValue,
     details: z.any().nullable().optional(),
+    ipAddress: z.string().nullable().optional(),
+    userAgent: z.string().nullable().optional(),
+    oldValues: z.any().nullable().optional(),
+    newValues: z.any().nullable().optional(),
     createdAt: dateValue,
   })),
   workLogs: z.array(z.object({
@@ -474,6 +478,8 @@ for (const a of d.auditLogs ?? []) {
     data: {
       ...a,
       details: a.details === null ? Prisma.DbNull : a.details as Prisma.InputJsonValue,
+      oldValues: a.oldValues == null ? Prisma.DbNull : a.oldValues as Prisma.InputJsonValue,
+      newValues: a.newValues == null ? Prisma.DbNull : a.newValues as Prisma.InputJsonValue,
       createdAt: new Date(a.createdAt),
     },
   });

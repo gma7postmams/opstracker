@@ -398,9 +398,6 @@ export async function batchDelete(type: RecordType, ids: number[], user: Session
           assignedTo: record.assigned,
         }));
     await prisma.$transaction(async (tx) => {
-      await tx.auditLog.deleteMany({
-        where: { entityType: type, entityId: { in: records.map((record) => record.refNo) } },
-      });
       if (type === "assistance") {
         await tx.assistance.deleteMany({ where: { id: { in: allowed } } });
       } else {

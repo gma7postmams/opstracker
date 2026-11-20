@@ -72,7 +72,7 @@ export default function Shell({ branding, user, children }: Props) {
         <nav className="nav">
 
           {NAV
-            .filter((n) => user.role === "ADMIN" || (n.href !== "/admin" && n.href !== "/users"))
+            .filter((n) => user.role === "ADMIN" || (n.href !== "/admin" && n.href !== "/users" && n.href !== "/audit"))
             .map((n) => (
 
             <Link key={n.href} href={n.href} onClick={() => setOpen(false)}

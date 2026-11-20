@@ -89,6 +89,7 @@ await logAudit({
     name: user.name,
     assigned: record.assigned,
   },
+  request: req,
 });
 
 

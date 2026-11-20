@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { isAdmin, canModifyUser } from "@/lib/permissions";
 import { userUpdateSchema, flatten } from "@/lib/validation";
 import { fullName } from "@/lib/format";
-import { logAudit } from "@/lib/audit";
+import { logAudit, makeAuditChanges } from "@/lib/audit";
 
 const PUBLIC = {
   id: true,
@@ -128,6 +128,7 @@ if (d.password) {
   }
 
   const updated = await prisma.user.update({ where: { id }, data, select: PUBLIC });
+const changes = makeAuditChanges(target, { ...target, ...data }, changedFields);
 
 if (changedFields.length > 0) {
   await logAudit({
@@ -140,11 +141,13 @@ if (changedFields.length > 0) {
       targetUser: fullName(updated),
       targetUsername: updated.username,
 
-      changedFields,
-      
+      changedFields: changes.map(({ field }) => field),
+      changes,
+
       passwordChanged: changedFields.includes("password"),
       smtpPasswordChanged: changedFields.includes("smtpPassword"),
     },
+    request: req,
   });
 }
 
@@ -164,6 +167,7 @@ if (target.role !== updated.role) {
         newValue: updated.role === "ADMIN" ? "Administrator" : "User",
       }],
     },
+    request: req,
   });
 }
 
@@ -179,13 +183,14 @@ if (target.active && !updated.active) {
       targetUsername: updated.username,
       changes: [{ field: "isActive", oldValue: "Active", newValue: "Inactive" }],
     },
+    request: req,
   });
 }
 
   return NextResponse.json({ ...updated, name: fullName(updated) });
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const p = await params;
   const actor = await currentUser();
   if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -232,6 +237,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
         },
       ],
     },
+    request: req,
   });
   return NextResponse.json({ ok: true });
 }

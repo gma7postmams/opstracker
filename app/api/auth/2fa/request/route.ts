@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
   const user = await prisma.user.findUnique({ where: { username } });
   if (!user || !user.active || !(await bcrypt.compare(password, user.passwordHash))) {
-    await logAudit({ action: "LOGIN_FAILED", entityType: "auth", entityId: "Invalid Username or Password", details: { username } });
+    await logAudit({ action: "LOGIN_FAILED", entityType: "auth", entityId: "Invalid Username or Password", details: { username }, request: req });
     return NextResponse.json({ error: "Incorrect username or password." }, { status: 401 });
   }
 

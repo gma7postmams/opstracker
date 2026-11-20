@@ -3,6 +3,7 @@ import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { fullName } from "@/lib/format";
 import { getCustomPeriodRange, getPeriodRange, PERIOD_OPTIONS, type Period } from "@/lib/period";
+import { isAdmin } from "@/lib/permissions";
 
 export async function GET(request: Request) {
   const user = await currentUser();
@@ -12,6 +13,9 @@ export async function GET(request: Request) {
       { error: "Unauthorized" },
       { status: 401 }
     );
+  }
+  if (!isAdmin(user)) {
+    return NextResponse.json({ error: "Administrators only" }, { status: 403 });
   }
 
   const searchParams = new URL(request.url).searchParams;
@@ -29,10 +33,7 @@ export async function GET(request: Request) {
   }
 
   const logs = await prisma.auditLog.findMany({
-    where:
-      user.role === "ADMIN"
-        ? range ? { createdAt: { gte: range.start, lt: range.end } } : {}
-        : { userId: user.id, ...(range ? { createdAt: { gte: range.start, lt: range.end } } : {}) },
+    where: range ? { createdAt: { gte: range.start, lt: range.end } } : {},
     orderBy: {
       createdAt: "desc",
     },

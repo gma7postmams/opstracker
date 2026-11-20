@@ -856,7 +856,7 @@ export default function Dashboard() {
         )}
       </section>}
 
-  <section className={`panel spaced dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-5" : ""}`}>
+  {isAdmin && <section className={`panel spaced dashboard-glass${animateDashboardEntrance ? " dashboard-enter dashboard-enter-5" : ""}`}>
 	  <div className="panelhead">
 	    <div>
 	      <h3>Recent Activity</h3>
@@ -885,7 +885,7 @@ export default function Dashboard() {
 	      Nothing has been logged yet.
 	    </div>
 	  )}
-	</section>
+  </section>}
 
       </> : (
         <div className="muted dashboard-load-state">
