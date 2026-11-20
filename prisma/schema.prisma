@@ -221,9 +221,9 @@ model EmailVerificationCode {
 model WorkLog {
   id            Int         @id @default(autoincrement())
   assistanceId  Int?        @map("assistance_id")
-  assistance    Assistance? @relation(fields: [assistanceId], references: [id], onDelete: Restrict)
+  assistance    Assistance? @relation(fields: [assistanceId], references: [id], onDelete: Cascade)
   taskId        Int?        @map("task_id")
-  task          Task?       @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  task          Task?       @relation(fields: [taskId], references: [id], onDelete: Cascade)
   type          WorkLogType
   message       String      @db.Text
   createdById   Int?        @map("created_by_id")

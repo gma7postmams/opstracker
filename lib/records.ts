@@ -355,7 +355,49 @@ export async function batchUpdate(
 export async function batchDelete(type: RecordType, ids: number[], user: SessionUser): Promise<BatchResult> {
   const { allowed, skippedRefs } = await partitionByPermission(type, ids, user);
   if (allowed.length) {
-    await delegateFor(type).deleteMany({ where: { id: { in: allowed } } });
+    const records = type === "assistance"
+      ? (await prisma.assistance.findMany({
+          where: { id: { in: allowed } },
+          select: { refNo: true, clientName: true, problem: true, assigned: true },
+        })).map((record) => ({
+          refNo: record.refNo,
+          subject: record.clientName,
+          description: record.problem,
+          assignedTo: record.assigned,
+        }))
+      : (await prisma.task.findMany({
+          where: { id: { in: allowed } },
+          select: { refNo: true, activityType: true, description: true, assigned: true },
+        })).map((record) => ({
+          refNo: record.refNo,
+          subject: record.activityType,
+          description: record.description,
+          assignedTo: record.assigned,
+        }));
+    await prisma.$transaction(async (tx) => {
+      await tx.auditLog.deleteMany({
+        where: { entityType: type, entityId: { in: records.map((record) => record.refNo) } },
+      });
+      if (type === "assistance") {
+        await tx.assistance.deleteMany({ where: { id: { in: allowed } } });
+      } else {
+        await tx.task.deleteMany({ where: { id: { in: allowed } } });
+      }
+    });
+    await Promise.all(records.map((record) => logAudit({
+        action: "DELETE",
+        entityType: type,
+        entityId: record.refNo,
+        userId: user.id,
+        details: {
+          name: user.name,
+          referenceNo: record.refNo,
+          subject: record.subject,
+          description: record.description,
+          assignedTo: record.assignedTo,
+          recordType: type === "assistance" ? "Technical Assistance" : "Other Tasks",
+        },
+      })));
   }
   return { applied: allowed.length, skipped: skippedRefs.length, skippedRefs };
 }

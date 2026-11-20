@@ -90,6 +90,18 @@ export default function RecordDetail() {
     router.push(type === "assistance" ? "/assistance" : "/tasks");
   }
 
+  async function requestDeleteConfirmation() {
+    const includeAllUserOwned = new URLSearchParams(window.location.search).get("userId") === "all";
+    const scope = includeAllUserOwned ? "?userId=all" : "";
+    const res = await fetch(`/api/records/${type}/${id}${scope}`);
+    if (!res.ok) {
+      toast("Could not load record history");
+      return;
+    }
+    setR(await res.json());
+    setConfirm(true);
+  }
+
   function closeActions(event: { currentTarget: HTMLButtonElement }) {
     event.currentTarget.closest("details")?.removeAttribute("open");
   }
@@ -355,7 +367,7 @@ if (!historyEvents.some((event: any) => event.title === "Reported")) {
         disabled={!r.canEdit}
         onClick={(event) => {
           closeActions(event);
-          setConfirm(true);
+          requestDeleteConfirmation();
         }}
       >
         Delete Record
@@ -398,7 +410,9 @@ if (!historyEvents.some((event: any) => event.title === "Reported")) {
         />
       )}
       {confirm && (
-        <ConfirmDialog title={`Delete ${r.refNo}?`} body="This cannot be undone."
+        <ConfirmDialog title={`Delete ${r.refNo}?`} body={r.workLogCount > 0
+          ? `This ${type === "tasks" ? "task" : "Technical Assistance record"} contains work log history. Deleting this record will permanently remove all associated work logs and history.`
+          : "This cannot be undone."}
           onCancel={() => setConfirm(false)} onYes={() => { setConfirm(false); remove(); }} />
       )}
 

@@ -1,3 +1,7 @@
+# 2026-11-20
+- Enabled Technical Assistance deletion when work logs exist. Single and batch deletion cascade work logs, remove prior audit events for the record, and retain a DELETE audit event; the confirmation warns about the permanent removal.
+- Enabled Task deletion when work logs exist. Confirmation warns that associated work logs and history will be permanently removed; Task deletion cascades work logs, removes prior audit events for the record and retains a DELETE audit event.
+
 # 2026-11-19
 - Renamed the individual record report Executive Summary group to Assignment Information and its Owner field to Record Owner; existing PDF download and email attachment filenames remain consistent through the shared filename helper.
 - Redesigned individual Technical Assistance and Other Task PDFs with a shared client-side jsPDF template, grouped executive summary, single-card incident/task details and work logs, signature-only work-log authors, three-column responsibility, configured branding/logo fallback, repeating page-numbered footers and descriptive sanitized filenames. The existing preview/download/email flow and uploaded PDF bytes are retained; aggregate report redesign is deferred.

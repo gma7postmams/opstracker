@@ -33,14 +33,20 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
   if (!canView(user, { ...record, hasParticipated }, req.nextUrl.searchParams.get("userId") === "all")) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  const activityHistory = await prisma.auditLog.findMany({
-    where: { entityType: type, entityId: record.refNo },
-    orderBy: { createdAt: "asc" },
-    select: { id: true, action: true, details: true, createdAt: true },
-  });
+  const [activityHistory, workLogCount] = await Promise.all([
+    prisma.auditLog.findMany({
+      where: { entityType: type, entityId: record.refNo },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, action: true, details: true, createdAt: true },
+    }),
+    prisma.workLog.count({
+      where: type === "assistance" ? { assistanceId: record.id } : { taskId: record.id },
+    }),
+  ]);
   return NextResponse.json({
     ...visibleRecord(type, record),
     activityHistory,
+    workLogCount,
     canEdit: canEdit(user, record),
     canEditOriginal: canEdit(user, record) && (isAdmin(user) || record.ownerId === user.id),
   });
@@ -232,16 +238,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: editBlockedReason(user, record) }, { status: 403 });
   }
 
-  const workLogCount = await prisma.workLog.count({
-    where: type === "assistance" ? { assistanceId: record.id } : { taskId: record.id },
+  await prisma.$transaction(async (tx) => {
+    await tx.auditLog.deleteMany({ where: { entityType: type, entityId: record.refNo } });
+    if (type === "assistance") {
+      await tx.assistance.delete({ where: { id: record.id } });
+    } else {
+      await tx.task.delete({ where: { id: record.id } });
+    }
   });
-  if (workLogCount > 0) {
-    return NextResponse.json({ error: "Records with work log history cannot be deleted" }, { status: 409 });
-  }
-
-await delegateFor(type).delete({
-  where: { id: record.id },
-});
 
 await logAudit({
   action: "DELETE",

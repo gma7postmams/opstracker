@@ -23,7 +23,8 @@ Enums are `Status` (`OPEN`, `CLOSE_PENDING`, `CLOSED`), `Role` (`ADMIN`, `USER`)
 ## Relationships and retention
 
 - Assistance and Task have nullable owner and lock-holder relations to User. Deleting a user sets those foreign keys to null; the operational record remains.
-- Work logs have optional relations to Assistance and Task. Their foreign keys use `Restrict`, so an attached work-log history prevents deletion of that record at the database level. The single-record delete handler also checks and reports this condition.
+- Work logs have optional relations to Assistance and Task. Both foreign keys use `Cascade`, so deleting either record also deletes its work logs.
+- Single and batch record deletion remove prior audit rows for the record type and reference number, then record a fresh DELETE audit event. Work-log deletion triggers the existing record-change notification; unrelated audit records and user rows are retained.
 - Work-log creator relations use `SetNull`; `createdByName` preserves the displayed author name.
 - Work-log edits update only `message`; `updatedAt` tracks modification time and is initialized from `createdAt` for existing entries.
 - Audit log `userId` is a scalar field, not a Prisma relation. Audit history remains independent of user deletion.
