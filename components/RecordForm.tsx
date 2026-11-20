@@ -102,7 +102,7 @@ const handleCreateFormKeyDown = (event: React.KeyboardEvent<HTMLFormElement>) =>
 
 
 useEffect(() => {
-  fetch("/api/users")
+  fetch("/api/users/filter")
     .then((r) => r.json())
     .then((u) => setPeople(u.map((x: any) => x.name)));
 

@@ -1,4 +1,5 @@
 # 2026-11-20
+- Scoped Assigned To options on Technical Assistance and Other Task create/edit forms on the server: administrators see all active accounts, while USERs see only active USER accounts. The current assignment and existing permission rules are unchanged.
 - Enabled Technical Assistance deletion when work logs exist. Single and batch deletion cascade work logs, remove prior audit events for the record, and retain a DELETE audit event; the confirmation warns about the permanent removal.
 - Enabled Task deletion when work logs exist. Confirmation warns that associated work logs and history will be permanently removed; Task deletion cascades work logs, removes prior audit events for the record and retains a DELETE audit event.
 
