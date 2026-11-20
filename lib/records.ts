@@ -18,7 +18,10 @@ export interface ListQuery {
   status?: string;
   location?: string;
   category?: string;
+  activityType?: string;
   shift?: string;
+  priority?: string;
+  assigned?: string;
   from?: string;
   to?: string;
   userId?: number | "all";
@@ -87,7 +90,10 @@ export function buildWhere(type: RecordType, query: ListQuery) {
   if (query.status && query.status !== "all") where.status = query.status;
   if (type === "assistance" && query.location && query.location !== "all") where.location = query.location;
   if (type === "assistance" && query.category && query.category !== "all") where.category = query.category;
+  if (type === "tasks" && query.activityType && query.activityType !== "all") where.activityType = query.activityType;
   if (query.shift && query.shift !== "all") where.shift = query.shift;
+  if (query.priority && query.priority !== "all") where.priority = query.priority;
+  if (query.assigned && query.assigned !== "all") where.assigned = query.assigned;
   if (query.from || query.to) {
     where.startDate = {};
     if (query.from) where.startDate.gte = new Date(query.from);
@@ -166,6 +172,23 @@ export function recordVisibilityWhere(user: SessionUser, includeAllUserOwned = f
   if (user.role === "ADMIN") return {};
   if (includeAllUserOwned) return { owner: { is: { role: "USER" as const } } };
   return recordParticipationWhere(user);
+}
+
+export async function listFilterOptions(type: RecordType, user: SessionUser, includeAllUserOwned = false) {
+  const d = delegateFor(type);
+  const where = recordVisibilityWhere(user, includeAllUserOwned);
+  const fields = ["assigned", ...(type === "tasks" ? ["activityType"] : [])];
+  const groups = await Promise.all(fields.map((field) => d.groupBy({
+    by: [field],
+    where,
+    orderBy: { [field]: "asc" },
+    _count: { _all: true },
+  })));
+
+  return Object.fromEntries(fields.map((field, index) => [
+    field,
+    groups[index].map((group: any) => group[field]).filter((value: unknown) => typeof value === "string" && value),
+  ]));
 }
 
 export function recordParticipationWhere(user: { id: number; name?: string }) {

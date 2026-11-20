@@ -19,7 +19,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
     status: search.get("status") ?? undefined,
     location: type === "assistance" ? search.get("location") ?? undefined : undefined,
     category: type === "assistance" ? search.get("category") ?? undefined : undefined,
+    activityType: type === "tasks" ? search.get("activityType") ?? undefined : undefined,
     shift: search.get("shift") ?? undefined,
+    priority: search.get("priority") ?? undefined,
+    assigned: search.get("assigned") ?? undefined,
     from: search.get("from") ?? undefined,
     to: search.get("to") ?? undefined,
     userId: selectedUserId === "all"

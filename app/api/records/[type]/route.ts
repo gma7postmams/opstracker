@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isRecordType, SortKey } from "@/lib/recordTypes";
-import { listRecords, nextRefNo, normalizeTimes, delegateFor } from "@/lib/records";
+import { listFilterOptions, listRecords, nextRefNo, normalizeTimes, delegateFor } from "@/lib/records";
 import { addReportWorkLogSummaries } from "@/lib/reports";
 import { schemaFor, flatten } from "@/lib/validation";
 import { isAdmin } from "@/lib/permissions";
@@ -15,38 +15,41 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
   if (!isRecordType(p.type)) return NextResponse.json({ error: "Unknown record type" }, { status: 404 });
 
   const s = req.nextUrl.searchParams;
+  const selectedUserId = s.get("userId");
+  const userId: number | "all" | undefined = selectedUserId === "all"
+    ? "all"
+    : selectedUserId
+      ? Number(selectedUserId)
+      : undefined;
 
-  const data = await listRecords(
-    p.type,
-    {
+  const query = {
       q: s.get("q") ?? undefined,
       status: s.get("status") ?? undefined,
       location: p.type === "assistance" ? s.get("location") ?? undefined : undefined,
       category: p.type === "assistance" ? s.get("category") ?? undefined : undefined,
+      activityType: p.type === "tasks" ? s.get("activityType") ?? undefined : undefined,
       shift: s.get("shift") ?? undefined,
+      priority: s.get("priority") ?? undefined,
+      assigned: s.get("assigned") ?? undefined,
       from: s.get("from") ?? undefined,
       to: s.get("to") ?? undefined,
-
-      userId:
-        s.get("userId") === "all"
-          ? "all"
-          : s.get("userId")
-            ? Number(s.get("userId"))
-            : undefined,      
+      userId,
 
       sort: (s.get("sort") as SortKey) ?? "date",
-      dir: s.get("dir") === "asc" ? "asc" : "desc",
+      dir: s.get("dir") === "asc" ? "asc" as const : "desc" as const,
       page: Number(s.get("page") ?? 1),
       perPage: Number(s.get("perPage") ?? 50),
-    },
-    user
-  );
+  };
+  const [data, filterOptions] = await Promise.all([
+    listRecords(p.type, query, user),
+    listFilterOptions(p.type, user, userId === "all"),
+  ]);
 
   const rows = await addReportWorkLogSummaries(data.rows, p.type);
   const visibleRows = p.type === "tasks"
     ? rows.map((row) => Object.fromEntries(Object.entries(row).filter(([key]) => key !== "location" && key !== "showGroup")))
     : rows;
-  return NextResponse.json({ ...data, rows: visibleRows });
+  return NextResponse.json({ ...data, rows: visibleRows, filterOptions });
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {

@@ -41,7 +41,11 @@ interface Props {
 }
 
 const STATUSES = ["OPEN", "CLOSE_PENDING", "CLOSED"];
-const emptyFilters = { q: "", status: "all", location: "all", category: "all", shift: "all", from: "", to: "" };
+const PRIORITIES = ["LOW", "NORMAL", "HIGH", "CRITICAL"];
+const emptyFilters = {
+  q: "", status: "all", location: "all", category: "all", activityType: "all",
+  shift: "all", priority: "all", assigned: "all", from: "", to: "",
+};
 
 function formatElapsedMinutes(startAt: Date, endAt: number) {
   if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt)) return "—";
@@ -150,10 +154,11 @@ export default function RecordsView(props: Props) {
   const activeCount = useMemo(
     () =>
       (Object.keys(emptyFilters) as (keyof typeof emptyFilters)[])
-        .filter((k) => k !== "from" && k !== "to" && filters[k] && filters[k] !== "all").length +
+        .filter((k) => k !== "from" && k !== "to" && k !== "q" && filters[k] && filters[k] !== "all").length +
+      (searchActive ? 1 : 0) +
       (period !== "today" ? 1 : 0) +
       (selectedUserFilter !== defaultUserFilter ? 1 : 0),
-    [filters, period, selectedUserFilter, defaultUserFilter]
+    [filters, searchActive, period, selectedUserFilter, defaultUserFilter]
   );
 
   const load = useCallback(async () => {
@@ -220,6 +225,7 @@ export default function RecordsView(props: Props) {
   };
 
   const rows: any[] = data.rows ?? [];
+  const filterOptions: Record<string, string[]> = data.filterOptions ?? {};
   const totalRecords = data.total ?? rows.length;
   const pageCount = Math.max(1, data.pages ?? 1);
   const currentPage = Math.min(page, pageCount);
@@ -341,10 +347,22 @@ export default function RecordsView(props: Props) {
           </select>
         </label>
 
+        <label className="flabel"><span className="crm-filter-label"><UserRound size={14} aria-hidden="true" /> ASSIGNED TO</span>
+          <select value={filters.assigned} onChange={(e) => setFilter("assigned", e.target.value)}>
+            <option value="all">All Assignees</option>
+            {(filterOptions.assigned ?? []).map((value) => <option key={value}>{value}</option>)}
+          </select>
+        </label>
         <label className="flabel"><span className="crm-filter-label"><CircleDot size={14} aria-hidden="true" /> STATUS</span>
           <select value={filters.status} onChange={(e) => setFilter("status", e.target.value)}>
             <option value="all">All Status</option>
             {STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
+          </select>
+        </label>
+        <label className="flabel"><span className="crm-filter-label"><ArrowDownWideNarrow size={14} aria-hidden="true" /> PRIORITY</span>
+          <select value={filters.priority} onChange={(e) => setFilter("priority", e.target.value)}>
+            <option value="all">All Priorities</option>
+            {PRIORITIES.map((value) => <option key={value} value={value}>{priorityLabel(value)}</option>)}
           </select>
         </label>
         {showLocation && (
@@ -363,7 +381,15 @@ export default function RecordsView(props: Props) {
             </select>
           </label>
         )}
-        <label className="flabel">SHIFT
+        {!showLocation && (
+          <label className="flabel"><span className="crm-filter-label"><Tag size={14} aria-hidden="true" /> ACTIVITY TYPE</span>
+            <select value={filters.activityType} onChange={(e) => setFilter("activityType", e.target.value)}>
+              <option value="all">All Activity Types</option>
+              {(filterOptions.activityType ?? []).map((value) => <option key={value}>{value}</option>)}
+            </select>
+          </label>
+        )}
+        <label className="flabel"><span className="crm-filter-label"><Clock3 size={14} aria-hidden="true" /> SHIFT</span>
           <select value={filters.shift} onChange={(e) => setFilter("shift", e.target.value)}>
             <option value="all">All Shifts</option>
             {(master.SHIFT ?? []).map((v) => <option key={v}>{v}</option>)}
