@@ -55,9 +55,52 @@ interface Row {
   avgPerDay: string; avgMinutes: number | null;
 }
 
-function ReportDetailContent({ details }: {
+function ReportDetailContent({ details, recordType }: {
   details: { header: string; sections: Array<{ label: string; value: string }> };
+  recordType?: "assistance" | "tasks";
 }) {
+  if (recordType) {
+    const assistance = recordType === "assistance";
+    const primaryLabels = assistance
+      ? ["Problem", "Resolution"]
+      : ["Activity Type", "Description"];
+    const primarySections = details.sections.filter((section) => primaryLabels.includes(section.label));
+    const supportingSections = details.sections.filter((section) => !primaryLabels.includes(section.label));
+    const displayLabel = (label: string) => {
+      if (assistance && label === "Problem") return "Issue";
+      if (assistance && label === "Resolution") return "Outcome";
+      if (!assistance && label === "Activity Type") return "Activity";
+      return label;
+    };
+
+    return (
+      <div className="report-detail-summary">
+        {assistance && details.header && (
+          <div className="report-detail-primary">
+            <span>Program</span>
+            <strong>{details.header}</strong>
+          </div>
+        )}
+        {primarySections.map((section) => (
+          <div className="report-detail-primary" key={section.label}>
+            <span>{displayLabel(section.label)}</span>
+            <strong>{section.value}</strong>
+          </div>
+        ))}
+        {supportingSections.length > 0 && (
+          <div className="report-detail-supporting">
+            {supportingSections.map((section) => (
+              <div className="report-detail-extra" key={section.label}>
+                <span>{section.label}</span>
+                <strong>{section.value}</strong>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <>
       {details.header && <strong>{details.header}</strong>}
@@ -65,6 +108,15 @@ function ReportDetailContent({ details }: {
         <div key={section.label}><b>{section.label}:</b> {section.value}</div>
       ))}
     </>
+  );
+}
+
+function ReportAssignment({ owner, assigned }: { owner: string; assigned: string }) {
+  return (
+    <div className="report-assignment">
+      <span><b>Owner:</b> {owner}</span>
+      <span><b>Assigned:</b> {assigned}</span>
+    </div>
   );
 }
 
@@ -86,8 +138,7 @@ function Tally({ title, note, rows, accent, days }: {
         {rows.length ? (
           <table>
             <thead><tr>
-		<th>Owner</th>
-		<th>Assigned</th>
+		<th>Assignment</th>
 		<th>Total</th>
 		<th className="statuscol">Completed</th>
 		<th className="statuscol">Open</th>
@@ -98,8 +149,7 @@ function Tally({ title, note, rows, accent, days }: {
             <tbody>
               {rows.map((r) => (
                 <tr key={`${r.owner}-${r.assigned}`}>
-                  <td><b>{r.owner}</b></td>
-                  <td><b>{r.assigned}</b></td>
+                  <td><ReportAssignment owner={r.owner} assigned={r.assigned} /></td>
                   <td><b>{r.total}</b></td>
 
 <td className="statuscol">
@@ -121,7 +171,7 @@ function Tally({ title, note, rows, accent, days }: {
               ))}
             </tbody>
             <tfoot><tr>
-		<td colSpan={2}><b>All records</b></td>
+		<td><b>All records</b></td>
 		<td><b>{sum.total}</b></td>
 
 		<td className="statuscol"><b>{sum.closed}</b></td>
@@ -149,6 +199,8 @@ export default function Reports() {
   const [f, setF] = useState(defaultFilters);
   const [dateRangePreset, setDateRangePreset] = useState<DateRangePreset>("today");
   const isReportRangeValid = dateRangePreset !== "custom" || Boolean(f.from && f.to && f.from <= f.to);
+  const [reportDetailsPage, setReportDetailsPage] = useState(1);
+  const [reportDetailsPageSize, setReportDetailsPageSize] = useState(10);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -182,6 +234,10 @@ export default function Reports() {
     if (dateRangePreset === "custom" && (!f.from || !f.to || f.from > f.to)) return;
     load(getReportFilters(f, dateRangePreset, scope));
   }, [load, f, dateRangePreset, scope]);
+
+  useEffect(() => {
+    setReportDetailsPage(1);
+  }, [f, dateRangePreset, scope]);
 
 
 const [emailResult, setEmailResult] = useState<{
@@ -362,6 +418,16 @@ const activeFilters =
 
   const s = d?.summary;
   const totalRecords = (s?.assistance ?? 0) + (s?.tasks ?? 0);
+  const reportRecords = d?.reportRecords ?? [];
+  const reportDetailsPageCount = Math.max(1, Math.ceil(reportRecords.length / reportDetailsPageSize));
+  const currentReportDetailsPage = Math.min(reportDetailsPage, reportDetailsPageCount);
+  const reportDetailsPageStart = (currentReportDetailsPage - 1) * reportDetailsPageSize;
+  const paginatedReportRecords = reportRecords.slice(
+    reportDetailsPageStart,
+    reportDetailsPageStart + reportDetailsPageSize,
+  );
+  const firstReportRecord = reportRecords.length ? reportDetailsPageStart + 1 : 0;
+  const lastReportRecord = Math.min(reportDetailsPageStart + reportDetailsPageSize, reportRecords.length);
 
   return (
     <div className="page report-page">
@@ -394,8 +460,29 @@ const activeFilters =
         .report-page .report-history .status.closed { color:#15803d; border-color:#bbf7d0; background:#f0fdf4; }
         .report-page .report-history tfoot td { background:var(--hint-bg); }
         .report-page .report-participation td:last-child,.report-page .report-participation th:last-child { text-align:right; }
-        .report-page .report-details-content { min-width:260px; white-space:normal; line-height:1.55; }
-        .report-page .report-details-content > strong { display:block; margin-bottom:3px; }
+        .report-page .report-assignment { display:grid; gap:5px; min-width:0; color:var(--text); font-size:12px; line-height:1.4; overflow-wrap:anywhere; }
+        .report-page .report-assignment b { color:var(--muted); font-size:10px; font-weight:700; }
+        .report-page .report-details-table-wrap { overflow-x:hidden; }
+        .report-page .report-details-table { min-width:0; table-layout:fixed; }
+        .report-page .report-details-table th:nth-child(1) { width:13%; }
+        .report-page .report-details-table th:nth-child(2) { width:15%; }
+        .report-page .report-details-table th:nth-child(3) { width:12%; }
+        .report-page .report-details-table th:nth-child(4) { width:19%; }
+        .report-page .report-details-table th:nth-child(5) { width:41%; }
+        .report-page .report-details-table td { overflow-wrap:anywhere; vertical-align:top; }
+        .report-page .report-details-table td:first-child { white-space:nowrap; }
+        .report-page .report-details-content { min-width:0; white-space:normal; line-height:1.4; }
+        .report-page .report-detail-summary { display:grid; gap:8px; }
+        .report-page .report-detail-primary { display:grid; gap:2px; }
+        .report-page .report-detail-primary > span,.report-page .report-detail-extra > span { color:var(--muted); font-size:9px; font-weight:750; letter-spacing:.06em; text-transform:uppercase; }
+        .report-page .report-detail-primary > strong,.report-page .report-detail-extra > strong { color:var(--text); font-size:12px; font-weight:550; line-height:1.4; overflow-wrap:anywhere; }
+        .report-page .report-detail-supporting { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px 12px; padding-top:7px; border-top:1px solid var(--border); }
+        .report-page .report-detail-extra { display:grid; align-content:start; gap:2px; min-width:0; }
+        .report-page .report-details-pagination { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-top:16px; padding-top:12px; border-top:1px solid var(--border); }
+        .report-page .report-details-pagination-controls { display:flex; align-items:center; gap:8px; }
+        .report-page .report-details-page-size { display:flex; align-items:center; gap:7px; color:var(--muted); font-size:13px; }
+        .report-page .report-details-page-size select { height:34px; padding:0 8px; border-radius:6px; }
+        .report-page .report-details-page-indicator { min-width:72px; color:var(--text); font-size:13px; font-weight:600; text-align:center; }
         .report-page .participation-detail summary { cursor:pointer; color:var(--accent); font-weight:650; }
         .report-page .participation-detail-list { margin:8px 0 0; padding:0; list-style:none; text-align:left; }
         .report-page .participation-detail-list li { padding:8px 0; border-top:1px solid var(--border); }
@@ -434,6 +521,16 @@ const activeFilters =
         @keyframes send-spin { to { transform:rotate(360deg); } }
         @media(prefers-reduced-motion:reduce) { .report-page .send-overlay,.report-page .send-dialog,.report-page .delivery-icon,.report-page .send-spinner { animation:none; } }
         @media(max-width:760px) { .report-page .report-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .report-page .report-actions { flex-direction:row; flex-wrap:wrap; width:100%; justify-content:flex-end; } }
+        @media(max-width:700px) {
+          .report-page .report-details-table,.report-page .report-details-table tbody { display:block; width:100%; }
+          .report-page .report-details-table thead { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+          .report-page .report-details-table tr { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); margin:10px; border:1px solid var(--border); border-radius:8px; background:var(--panel); }
+          .report-page .report-details-table td { display:grid; align-content:start; gap:4px; min-width:0; padding:10px; border-bottom:0; }
+          .report-page .report-details-table td::before { content:attr(data-label); color:var(--muted); font-size:9px; font-weight:750; letter-spacing:.05em; text-transform:uppercase; }
+          .report-page .report-details-table .report-assignment-cell,.report-page .report-details-table .report-detail-cell { grid-column:1 / -1; }
+          .report-page .report-details-pagination { align-items:flex-start; }
+          .report-page .report-details-pagination-controls { width:100%; justify-content:space-between; }
+        }
         @media(max-width:480px) { .report-page .report-kpi { padding:13px 12px 12px 15px; } .report-page .report-kpi strong { font-size:24px; } }
       `}</style>
       <div className="filters">
@@ -553,27 +650,70 @@ const activeFilters =
           )}
           <div className="panel spaced report-history">
             <div className="panelhead"><div><h3>Report Details</h3></div></div>
-            <div className="table">
-              {d.reportRecords.length ? (
-                <table>
-                  <thead><tr><th>Ref No</th><th>Activity</th><th>Status</th><th>Owner</th><th>Assigned</th><th>Details</th></tr></thead>
+            <div className="table report-details-table-wrap">
+              {reportRecords.length ? (
+                <table className="report-details-table">
+                  <thead><tr><th>Ref No</th><th>Activity</th><th>Status</th><th>Assignment</th><th>Details</th></tr></thead>
                   <tbody>
-                    {d.reportRecords.map((record: {
-                      refNo: string; recordType: string; status: string; owner: string; assigned: string;
+                    {paginatedReportRecords.map((record: {
+                      refNo: string; recordType: "Technical Assistance" | "Other Tasks"; status: string; owner: string; assigned: string;
                       details: { header: string; sections: Array<{ label: string; value: string }> };
                     }) => (
                       <tr key={`${record.recordType}-${record.refNo}`}>
-                        <td><b>{record.refNo}</b></td>
-                        <td>{record.recordType}</td>
-                        <td>{record.status}</td>
-                        <td>{record.owner}</td>
-                        <td>{record.assigned}</td>
-                        <td className="report-details-content"><ReportDetailContent details={record.details} /></td>
+                        <td data-label="Ref No"><b>{record.refNo}</b></td>
+                        <td data-label="Activity">{record.recordType}</td>
+                        <td data-label="Status">{record.status}</td>
+                        <td data-label="Assignment" className="report-assignment-cell"><ReportAssignment owner={record.owner} assigned={record.assigned} /></td>
+                        <td data-label="Details" className="report-details-content report-detail-cell">
+                          <ReportDetailContent
+                            details={record.details}
+                            recordType={record.recordType === "Technical Assistance" ? "assistance" : "tasks"}
+                          />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               ) : <div className="empty">No records in this range.</div>}
+            </div>
+            <div className="report-details-pagination" aria-label="Report Details pagination">
+              <span className="muted">
+                Showing {firstReportRecord}-{lastReportRecord} of {reportRecords.length} records
+              </span>
+              <div className="report-details-pagination-controls">
+                <label className="report-details-page-size">
+                  Rows
+                  <select
+                    aria-label="Report Details rows per page"
+                    value={reportDetailsPageSize}
+                    onChange={(event) => {
+                      setReportDetailsPageSize(Number(event.target.value));
+                      setReportDetailsPage(1);
+                    }}
+                  >
+                    {[10, 20, 50, 100].map((size) => (
+                      <option key={size} value={size}>{size}</option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  className="chip"
+                  onClick={() => setReportDetailsPage((page) => Math.max(1, page - 1))}
+                  disabled={currentReportDetailsPage === 1}
+                >
+                  Previous
+                </button>
+                <span className="report-details-page-indicator" aria-current="page">
+                  Page {currentReportDetailsPage} of {reportDetailsPageCount}
+                </span>
+                <button
+                  className="chip"
+                  onClick={() => setReportDetailsPage((page) => Math.min(reportDetailsPageCount, page + 1))}
+                  disabled={currentReportDetailsPage === reportDetailsPageCount}
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </div>
           <div className="panel spaced report-history report-participation">
