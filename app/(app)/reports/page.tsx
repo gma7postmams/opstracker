@@ -61,43 +61,38 @@ function ReportDetailContent({ details, recordType }: {
 }) {
   if (recordType) {
     const assistance = recordType === "assistance";
-    const primaryLabels = assistance
-      ? ["Problem", "Resolution"]
-      : ["Activity Type", "Description"];
-    const primarySections = details.sections.filter((section) => primaryLabels.includes(section.label));
-    const supportingSections = details.sections.filter((section) => !primaryLabels.includes(section.label));
-    const displayLabel = (label: string) => {
-      if (assistance && label === "Problem") return "Issue";
-      if (assistance && label === "Resolution") return "Outcome";
-      if (!assistance && label === "Activity Type") return "Activity";
-      return label;
-    };
+    const labelOrder = assistance
+      ? ["Problem", "Cause", "Investigation", "Resolution", "Remarks"]
+      : ["Activity Type", "Description", "Remarks"];
+    const sectionsByLabel = new Map(
+      details.sections.map((section) => [section.label, section]),
+    );
+    const orderedLabels = [
+      ...labelOrder,
+      ...details.sections
+        .map((section) => section.label)
+        .filter((label) => !labelOrder.includes(label)),
+    ];
 
     return (
-      <div className="report-detail-summary">
+      <dl className="report-detail-summary">
         {assistance && details.header && (
-          <div className="report-detail-primary">
-            <span>Program</span>
-            <strong>{details.header}</strong>
+          <div className="report-detail-section">
+            <dt>Program</dt>
+            <dd>{details.header}</dd>
           </div>
         )}
-        {primarySections.map((section) => (
-          <div className="report-detail-primary" key={section.label}>
-            <span>{displayLabel(section.label)}</span>
-            <strong>{section.value}</strong>
-          </div>
-        ))}
-        {supportingSections.length > 0 && (
-          <div className="report-detail-supporting">
-            {supportingSections.map((section) => (
-              <div className="report-detail-extra" key={section.label}>
-                <span>{section.label}</span>
-                <strong>{section.value}</strong>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+        {orderedLabels.map((label) => {
+          const section = sectionsByLabel.get(label);
+          if (!section) return null;
+          return (
+            <div className="report-detail-section" key={label}>
+              <dt>{label}</dt>
+              <dd>{section.value}</dd>
+            </div>
+          );
+        })}
+      </dl>
     );
   }
 
@@ -114,8 +109,8 @@ function ReportDetailContent({ details, recordType }: {
 function ReportAssignment({ owner, assigned }: { owner: string; assigned: string }) {
   return (
     <div className="report-assignment">
-      <span><b>Owner:</b> {owner}</span>
-      <span><b>Assigned:</b> {assigned}</span>
+      <div><b>Owner:</b><span>{owner}</span></div>
+      <div><b>Assigned:</b><span>{assigned}</span></div>
     </div>
   );
 }
@@ -460,24 +455,24 @@ const activeFilters =
         .report-page .report-history .status.closed { color:#15803d; border-color:#bbf7d0; background:#f0fdf4; }
         .report-page .report-history tfoot td { background:var(--hint-bg); }
         .report-page .report-participation td:last-child,.report-page .report-participation th:last-child { text-align:right; }
-        .report-page .report-assignment { display:grid; gap:5px; min-width:0; color:var(--text); font-size:12px; line-height:1.4; overflow-wrap:anywhere; }
-        .report-page .report-assignment b { color:var(--muted); font-size:10px; font-weight:700; }
+        .report-page .report-assignment { display:grid; gap:7px; min-width:0; color:var(--text); font-size:12px; line-height:1.45; overflow-wrap:anywhere; }
+        .report-page .report-assignment div { display:grid; gap:2px; }
+        .report-page .report-assignment b { color:var(--muted); font-size:9px; font-weight:750; letter-spacing:.055em; text-transform:none; }
+        .report-page .report-assignment span { color:var(--text); font-size:12px; font-weight:600; }
         .report-page .report-details-table-wrap { overflow-x:hidden; }
         .report-page .report-details-table { min-width:0; table-layout:fixed; }
-        .report-page .report-details-table th:nth-child(1) { width:13%; }
-        .report-page .report-details-table th:nth-child(2) { width:15%; }
-        .report-page .report-details-table th:nth-child(3) { width:12%; }
-        .report-page .report-details-table th:nth-child(4) { width:19%; }
-        .report-page .report-details-table th:nth-child(5) { width:41%; }
+        .report-page .report-details-table th:nth-child(1) { width:11%; }
+        .report-page .report-details-table th:nth-child(2) { width:13%; }
+        .report-page .report-details-table th:nth-child(3) { width:10%; }
+        .report-page .report-details-table th:nth-child(4) { width:18%; }
+        .report-page .report-details-table th:nth-child(5) { width:48%; }
         .report-page .report-details-table td { overflow-wrap:anywhere; vertical-align:top; }
         .report-page .report-details-table td:first-child { white-space:nowrap; }
         .report-page .report-details-content { min-width:0; white-space:normal; line-height:1.4; }
-        .report-page .report-detail-summary { display:grid; gap:8px; }
-        .report-page .report-detail-primary { display:grid; gap:2px; }
-        .report-page .report-detail-primary > span,.report-page .report-detail-extra > span { color:var(--muted); font-size:9px; font-weight:750; letter-spacing:.06em; text-transform:uppercase; }
-        .report-page .report-detail-primary > strong,.report-page .report-detail-extra > strong { color:var(--text); font-size:12px; font-weight:550; line-height:1.4; overflow-wrap:anywhere; }
-        .report-page .report-detail-supporting { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px 12px; padding-top:7px; border-top:1px solid var(--border); }
-        .report-page .report-detail-extra { display:grid; align-content:start; gap:2px; min-width:0; }
+        .report-page .report-detail-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px 14px; margin:0; }
+        .report-page .report-detail-section { display:grid; align-content:start; gap:3px; min-width:0; padding:7px 8px; border:1px solid color-mix(in srgb,var(--border) 78%,transparent); border-radius:7px; background:color-mix(in srgb,var(--hint-bg) 58%,var(--panel)); }
+        .report-page .report-detail-section dt { color:var(--muted); font-size:9px; font-weight:800; letter-spacing:.065em; line-height:1.25; text-transform:uppercase; }
+        .report-page .report-detail-section dd { margin:0; color:var(--text); font-size:12px; font-weight:560; line-height:1.48; overflow-wrap:anywhere; }
         .report-page .report-details-pagination { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-top:16px; padding-top:12px; border-top:1px solid var(--border); }
         .report-page .report-details-pagination-controls { display:flex; align-items:center; gap:8px; }
         .report-page .report-details-page-size { display:flex; align-items:center; gap:7px; color:var(--muted); font-size:13px; }

@@ -1,5 +1,5 @@
 # 2026-11-23
-- Improved Reports consumption with grouped, always-visible Report Details, consolidated Owner / Assigned columns and responsive rows. Report Details now supports 10, 20, 50 or 100 rows per page and shows the displayed range; report filters and Excel exports are unchanged.
+- Improved Reports consumption with structured, always-visible Report Details terminology and responsive rows. Technical Assistance preserves Program, Problem, Cause, Investigation, Resolution and Remarks; Other Tasks preserves Activity Type, Description and Remarks. Assignment consolidates Owner and Assigned with separate labels. Report Details pagination remains at 10, 20, 50 or 100 rows per page with the displayed range; report filters and Excel exports are unchanged.
 
 # 2026-11-20
 - Added an IP Address column to Audit Logs with a missing-value fallback and responsive visual truncation; the full address remains available in View Details.
