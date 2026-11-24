@@ -44,7 +44,7 @@ UI Files:
 
 API Files:
 - `app/api/dashboard/route.ts`
-- `app/api/dashboard/workload/route.ts` for administrator-only, period-filtered owned-record counts by active USER account
+- `app/api/dashboard/workload/route.ts` for administrator-only, period-filtered participation counts by active USER account
 - `app/api/dashboard/system-health/route.ts` for administrator-only CPU, RAM, database, storage and backup health metrics
 - `app/api/records/events/route.ts` for authenticated realtime invalidations
 

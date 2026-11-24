@@ -29,6 +29,7 @@ type DashboardUser = {
   firstName: string;
   middleInitial: string | null;
   surname: string;
+  role: "ADMIN" | "USER";
 };
 
 type DashboardWorkloadUser = {
@@ -36,6 +37,13 @@ type DashboardWorkloadUser = {
   name: string;
   technicalAssistanceCount: number;
   otherTasksCount: number;
+};
+
+type DashboardWorkloadSummary = {
+  technicalAssistanceParticipation: number;
+  otherTasksParticipation: number;
+  technicalAssistanceUnassigned: number;
+  otherTasksUnassigned: number;
 };
 
 type DashboardBackupSchedule = {
@@ -305,6 +313,12 @@ export default function Dashboard() {
   const [systemHealthLoaded, setSystemHealthLoaded] = useState(false);
   const [dashboardApiHealthy, setDashboardApiHealthy] = useState<boolean | null>(null);
   const [workloadUsers, setWorkloadUsers] = useState<DashboardWorkloadUser[]>([]);
+  const [workloadSummary, setWorkloadSummary] = useState<DashboardWorkloadSummary>({
+    technicalAssistanceParticipation: 0,
+    otherTasksParticipation: 0,
+    technicalAssistanceUnassigned: 0,
+    otherTasksUnassigned: 0,
+  });
   const [workloadState, setWorkloadState] = useState<"loading" | "loaded" | "error">("loading");
   const trendChartContainerRef = useRef<HTMLDivElement>(null);
   const [trendChartContainerWidth, setTrendChartContainerWidth] = useState(0);
@@ -412,7 +426,7 @@ export default function Dashboard() {
         if (!r.ok) throw new Error(`User filter API failed: ${r.status}`);
         return r.json();
       })
-      .then((result: DashboardUser[]) => setUsers(result))
+      .then((result: DashboardUser[]) => setUsers(result.filter((dashboardUser) => dashboardUser.role === "USER")))
       .catch((err) => {
         if (!controller.signal.aborted) console.error("Dashboard user filter load failed:", err);
       });
@@ -507,6 +521,12 @@ export default function Dashboard() {
   useEffect(() => {
     if (!isAdmin) {
       setWorkloadUsers([]);
+      setWorkloadSummary({
+        technicalAssistanceParticipation: 0,
+        otherTasksParticipation: 0,
+        technicalAssistanceUnassigned: 0,
+        otherTasksUnassigned: 0,
+      });
       setWorkloadState("loaded");
       return;
     }
@@ -514,6 +534,12 @@ export default function Dashboard() {
     const controller = new AbortController();
     if (period === "custom" && (!fromDate || !toDate || fromDate > toDate)) {
       setWorkloadUsers([]);
+      setWorkloadSummary({
+        technicalAssistanceParticipation: 0,
+        otherTasksParticipation: 0,
+        technicalAssistanceUnassigned: 0,
+        otherTasksUnassigned: 0,
+      });
       setWorkloadState("loaded");
       return () => controller.abort();
     }
@@ -524,14 +550,16 @@ export default function Dashboard() {
       params.set("from", fromDate);
       params.set("to", toDate);
     }
+    if (selectedUserId) params.set("userId", selectedUserId);
 
     fetch(`/api/dashboard/workload?${params}`, { signal: controller.signal, cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("Workload request failed");
-        return response.json() as Promise<{ users: DashboardWorkloadUser[] }>;
+        return response.json() as Promise<{ users: DashboardWorkloadUser[]; summary: DashboardWorkloadSummary }>;
       })
       .then((result) => {
         setWorkloadUsers(result.users);
+        setWorkloadSummary(result.summary);
         setWorkloadState("loaded");
       })
       .catch(() => {
@@ -539,7 +567,7 @@ export default function Dashboard() {
       });
 
     return () => controller.abort();
-  }, [fromDate, isAdmin, period, realtimeRevision, toDate]);
+  }, [fromDate, isAdmin, period, realtimeRevision, selectedUserId, toDate]);
 
   useEffect(() => {
     const container = trendChartContainerRef.current;
@@ -581,14 +609,6 @@ export default function Dashboard() {
   const compactLabelStride = isCompactDashboard
     ? Math.max(1, Math.ceil(trendData.length / Math.max(1, Math.floor((chartRight - chartLeft) / 36))))
     : 1;
-  const workloadSummary = workloadUsers.reduce(
-    (summary, user) => ({
-      activeUsers: summary.activeUsers + 1,
-      technicalAssistanceRecords: summary.technicalAssistanceRecords + user.technicalAssistanceCount,
-      otherTasksRecords: summary.otherTasksRecords + user.otherTasksCount,
-    }),
-    { activeUsers: 0, technicalAssistanceRecords: 0, otherTasksRecords: 0 }
-  );
   const chartTop = 20;
   const chartBottom = 166;
   const chartHeight = chartBottom - chartTop;
@@ -1090,48 +1110,120 @@ export default function Dashboard() {
         <div className="panelhead">
           <div>
             <h3 id="dashboard-workload-title">Team Workload Distribution</h3>
+            <span className="muted" style={{ fontSize: "12px" }}>
+              Counts are participation events: each active standard user counts once per record they own, are assigned to, or contributed a work log to. A record can count for multiple users. Unassigned counts cover the full selected period, regardless of the User filter.
+            </span>
           </div>
         </div>
         {workloadState === "loading" ? (
           <div className="muted dashboard-load-state">Loading…</div>
         ) : workloadState === "error" ? (
           <div className="empty">Team workload data is unavailable. Try again.</div>
-        ) : workloadUsers.length === 0 ? (
-          <div className="empty">No owned records for the selected period.</div>
         ) : (
-          <>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))", gap: "20px" }}>
-              {([
-                { key: "technicalAssistanceCount", title: "Technical Assistance", total: workloadSummary.technicalAssistanceRecords, color: "#06aed4" },
-                { key: "otherTasksCount", title: "Other Tasks", total: workloadSummary.otherTasksRecords, color: "#f79009" },
-              ] as const).map((chart) => {
-                const sortedUsers = [...workloadUsers].sort((left, right) => {
-                  const countDifference = Number(right[chart.key]) - Number(left[chart.key]);
-                  if (countDifference !== 0) return countDifference;
-                  return left.name.localeCompare(right.name);
-                });
-                const maxCount = Math.max(1, ...sortedUsers.map((workloadUser) => workloadUser[chart.key]));
-                return <div key={chart.key} aria-label={`${chart.title} owned records`}>
-                  <div className="panelhead">
-                    <div>
-                      <h4 style={{ margin: 0 }}>{chart.title} ({chart.total})</h4>
-                    </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))", gap: "16px" }}>
+            {([
+              {
+                key: "technicalAssistanceCount",
+                title: "Technical Assistance Distribution",
+                total: workloadSummary.technicalAssistanceParticipation,
+                unassigned: workloadSummary.technicalAssistanceUnassigned,
+                color: "#06aed4",
+              },
+              {
+                key: "otherTasksCount",
+                title: "Other Tasks Distribution",
+                total: workloadSummary.otherTasksParticipation,
+                unassigned: workloadSummary.otherTasksUnassigned,
+                color: "#f79009",
+              },
+            ] as const).map((chart) => {
+              const sortedUsers = [...workloadUsers].sort((left, right) => {
+                const countDifference = right[chart.key] - left[chart.key];
+                if (countDifference !== 0) return countDifference;
+                return left.name.localeCompare(right.name);
+              });
+              const contributorCount = sortedUsers.filter((workloadUser) => workloadUser[chart.key] > 0).length;
+              const averageParticipation = contributorCount ? Math.round(chart.total / contributorCount) : 0;
+              return <section
+                key={chart.key}
+                aria-label={chart.title}
+                style={{ minWidth: 0, padding: "18px", border: "1px solid var(--dashboard-glass-border)", borderRadius: "12px", background: "var(--dashboard-glass)" }}
+              >
+                <div className="panelhead">
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: "16px" }}>{chart.title}</h4>
                   </div>
-                  <div style={{ display: "grid", gap: "8px" }}>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: "10px", marginBottom: "18px" }}>
+                  {[
+                    { label: "Total Participation", value: chart.total },
+                    { label: "Contributors", value: contributorCount },
+                    { label: "Average Participation per Contributor", value: averageParticipation },
+                    { label: "Unassigned / No standard-user participation", value: chart.unassigned },
+                  ].map((metric) => (
+                    <div key={metric.label} style={{
+                      display: "grid",
+                      alignContent: "start",
+                      gap: "8px",
+                      minWidth: 0,
+                      minHeight: "98px",
+                      padding: "13px 12px",
+                      border: "1px solid var(--line2)",
+                      borderRadius: "10px",
+                      background: "var(--panel)",
+                    }}>
+                      <span className="muted" style={{ fontSize: "11px" }}>{metric.label}</span>
+                      <strong style={{ fontSize: "24px", lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>{metric.value.toLocaleString()}</strong>
+                    </div>
+                  ))}
+                </div>
+                {sortedUsers.length ? (
+                  <div aria-label={`${chart.title} contributors`} style={{ display: "grid", gap: "9px" }}>
                     {sortedUsers.map((workloadUser, index) => {
                       const count = workloadUser[chart.key];
-                      return <div className="barrow" key={workloadUser.id} style={{ gridTemplateColumns: "36px minmax(80px, 0.9fr) minmax(96px, 2fr) 44px", columnGap: "8px", margin: 0 }}>
-                        <span className="muted" style={{ textAlign: "left" }}>#{index + 1}</span>
-                        <span style={{ overflowWrap: "anywhere" }}>{workloadUser.name}</span>
-                        <div className="bar" aria-hidden="true"><i style={{ width: `${(count / maxCount) * 100}%`, background: chart.color }} /></div>
-                        <b style={{ textAlign: "right" }}>{count}</b>
+                      const contributionPercent = chart.total > 0 ? (count / chart.total) * 100 : 0;
+                      const percentage = contributionPercent.toFixed(1);
+                      const rankBadge = count === 0 ? null
+                        : index === 0 ? "🥇 Top 1"
+                          : index === 1 ? "🥈 Top 2"
+                            : index === 2 ? "🥉 Top 3" : null;
+                      const isTopContributor = rankBadge !== null;
+                      return <div key={workloadUser.id} style={{
+                        display: "grid",
+                        gap: "8px",
+                        minWidth: 0,
+                        padding: "10px 12px",
+                        border: `1px solid ${isTopContributor ? `${chart.color}66` : "var(--line2)"}`,
+                        borderRadius: "10px",
+                        background: "var(--panel)",
+                        boxShadow: isTopContributor ? `inset 3px 0 0 ${chart.color}` : undefined,
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
+                          <strong style={{ minWidth: 0, overflowWrap: "anywhere", fontSize: "13px" }}>{workloadUser.name}</strong>
+                          {rankBadge && <span aria-label={`Top contributor, rank ${index + 1}`} style={{
+                            flexShrink: 0,
+                            padding: "3px 7px",
+                            borderRadius: "999px",
+                            color: chart.color,
+                            background: `${chart.color}18`,
+                            fontSize: "10px",
+                            fontWeight: 700,
+                          }}>{rankBadge}</span>}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                          <div className="bar" aria-hidden="true" style={{ flex: 1 }}><i style={{ width: `${contributionPercent}%`, background: chart.color }} /></div>
+                          <span className="muted" style={{ flexShrink: 0, textAlign: "right", fontSize: "12px", fontVariantNumeric: "tabular-nums" }}>
+                            <strong style={{ color: "var(--text)" }}>{count.toLocaleString()} Participation</strong>
+                            <span style={{ display: "block" }}>{percentage}%</span>
+                          </span>
+                        </div>
                       </div>;
                     })}
                   </div>
-                </div>;
-              })}
-            </div>
-          </>
+                ) : <div className="empty">No active standard users match this filter.</div>}
+              </section>;
+            })}
+          </div>
         )}
       </section>}
 

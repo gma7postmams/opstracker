@@ -1,4 +1,6 @@
 # 2026-11-24
+- Updated Dashboard Team Workload Distribution to count active standard-user participation through ownership, assignment and work logs, apply the selected user filter, include zero-count users, and report unassigned records. Separate Technical Assistance and Other Tasks KPI cards show participation totals, contributors, averages and period-wide unassigned counts; contributor percentages and top-three badges remain.
+- Split Dashboard Team Workload Distribution into separate Technical Assistance and Other Tasks KPI cards with contributor counts and percentage-scaled bars, and gold, silver and bronze top-three badges.
 - Redesigned the administrator Dashboard System Health overview with large CPU, RAM and Storage radial gauges, icon-led service status cards and a compact Backup Health card grid. Resource thresholds and health data remain unchanged.
 
 # 2026-11-23

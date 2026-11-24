@@ -129,13 +129,47 @@ export function buildReportParticipationRows(
 
 export const WORK_LOG_TYPE_ORDER = ["INVESTIGATION", "RESOLUTION", "REMARK"] as const;
 
-const reportParticipationWhere = (user: Pick<SessionUser, "id" | "name">) => ({
+export const reportParticipationWhere = (user: Pick<SessionUser, "id" | "name">) => ({
   OR: [
     { ownerId: user.id },
     { assigned: user.name },
     { workLogs: { some: { createdById: user.id } } },
   ],
 });
+
+export type ReportParticipationUser = Pick<SessionUser, "id" | "name">;
+
+export function createReportParticipationResolver(users: ReportParticipationUser[]) {
+  const userIdsByName = new Map<string, number[]>();
+  const eligibleUserIds = new Set(users.map((user) => user.id));
+
+  for (const user of users) {
+    const matches = userIdsByName.get(user.name) ?? [];
+    matches.push(user.id);
+    userIdsByName.set(user.name, matches);
+  }
+
+  return (record: {
+    ownerId: number | null;
+    assigned: string;
+    workLogs?: Array<{ createdById: number | null }>;
+  }) => {
+    const participantIds = new Set<number>();
+    if (record.ownerId != null && eligibleUserIds.has(record.ownerId)) {
+      participantIds.add(record.ownerId);
+    }
+    for (const userId of userIdsByName.get(record.assigned) ?? []) {
+      participantIds.add(userId);
+    }
+    for (const workLog of record.workLogs ?? []) {
+      if (workLog.createdById != null && eligibleUserIds.has(workLog.createdById)) {
+        participantIds.add(workLog.createdById);
+      }
+    }
+
+    return [...participantIds];
+  };
+}
 
 export const reportOwnerSelect = {
   firstName: true,
