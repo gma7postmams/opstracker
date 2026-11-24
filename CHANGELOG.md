@@ -1,4 +1,8 @@
+# 2026-11-24
+- Redesigned the administrator Dashboard System Health overview with large CPU, RAM and Storage radial gauges, icon-led service status cards and a compact Backup Health card grid. Resource thresholds and health data remain unchanged.
+
 # 2026-11-23
+- Enhanced the administrator Dashboard System Health overview with CPU and RAM usage, RAM used/total, threshold-based health indicators, backup status, last successful backup and a count of successful backup files actually present. Duplicate Backup Storage metrics are hidden when the upload and backup paths report the same filesystem device; scheduler status, last run, retention and next-run details remain available.
 - Improved Reports consumption with structured, always-visible Report Details terminology and responsive rows. Technical Assistance preserves Program, Problem, Cause, Investigation, Resolution and Remarks; Other Tasks preserves Activity Type, Description and Remarks. Assignment consolidates Owner and Assigned with separate labels. Report Details pagination remains at 10, 20, 50 or 100 rows per page with the displayed range; report filters and Excel exports are unchanged.
 
 # 2026-11-20

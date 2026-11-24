@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { priorityLabel } from "@/lib/recordTypes";
 import { useSession } from "next-auth/react";
-import { Activity, BarChart3, CheckCircle2, ClipboardList, CircleDot, Clock3, Database, Wrench } from "lucide-react";
+import { Activity, Archive, BarChart3, CheckCircle2, ClipboardList, Clock3, Cpu, CircleDot, Database, HardDrive, MemoryStick, Server, Wrench } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PERIOD_OPTIONS, type Period } from "@/lib/period";
 import { useRecordEvents } from "@/components/useRecordEvents";
@@ -38,12 +38,6 @@ type DashboardWorkloadUser = {
   otherTasksCount: number;
 };
 
-type DashboardBackupRun = {
-  createdAt: string;
-  completedAt: string | null;
-  status: "Success" | "Failed" | "Running";
-};
-
 type DashboardBackupSchedule = {
   enabled: boolean;
   retentionCount: number;
@@ -61,9 +55,210 @@ type DashboardStorageStatus = {
 
 type DashboardSystemHealth = {
   database: boolean;
+  cpuUsagePercent: number | null;
+  memory: {
+    usedBytes: string;
+    totalBytes: string;
+    usedPercent: number | null;
+  };
   storage: DashboardStorageStatus;
-  backupStorage: DashboardStorageStatus;
+  backupStorage: DashboardStorageStatus | null;
+  backupHealth: {
+    lastSuccessfulAt: string | null;
+    status: "SUCCESS" | "FAILED" | "RUNNING" | null;
+    availableCount: number | null;
+  };
 };
+
+type HealthLevel = "healthy" | "warning" | "critical" | "unknown";
+
+function healthColor(level: HealthLevel) {
+  return level === "healthy" ? "var(--closed)"
+    : level === "warning" ? "var(--pending)"
+      : level === "critical" ? "var(--open)" : "var(--muted)";
+}
+
+function HealthIndicator({ level, label }: { level: HealthLevel; label: string }) {
+  const colors: Record<HealthLevel, { foreground: string; background: string }> = {
+    healthy: { foreground: "var(--closed)", background: "var(--badge-closed-bg)" },
+    warning: { foreground: "var(--pending)", background: "var(--badge-pending-bg)" },
+    critical: { foreground: "var(--open)", background: "var(--badge-open-bg)" },
+    unknown: { foreground: "var(--muted)", background: "var(--barbg)" },
+  };
+  const color = colors[level];
+
+  return <span style={{
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    borderRadius: "999px",
+    padding: "3px 9px",
+    color: color.foreground,
+    background: color.background,
+    fontSize: "12px",
+    fontWeight: 700,
+    whiteSpace: "nowrap",
+  }}>
+    <span aria-hidden="true" style={{ width: "7px", height: "7px", borderRadius: "50%", background: color.foreground }} />
+    {label}
+  </span>;
+}
+
+function ResourceGauge({
+  label,
+  icon,
+  value,
+  level,
+  currentValue,
+  totalValue,
+  detail,
+}: {
+  label: string;
+  icon: LucideIcon;
+  value: number | null | undefined;
+  level: HealthLevel;
+  currentValue: string;
+  totalValue: string;
+  detail?: string;
+}) {
+  const hasValue = value !== null && value !== undefined && Number.isFinite(value);
+  const percent = hasValue ? `${value.toFixed(1)}%` : "--";
+  const progress = hasValue ? Math.max(0, Math.min(value, 100)) : 0;
+  const color = healthColor(level);
+  const statusLabel = level === "healthy" ? "Healthy"
+    : level === "warning" ? "Warning"
+      : level === "critical" ? "Critical" : "Unavailable";
+  const Icon = icon;
+
+  return <div style={{
+    display: "grid",
+    justifyItems: "center",
+    alignContent: "start",
+    gap: "16px",
+    minWidth: 0,
+    padding: "20px 14px",
+    border: "1px solid var(--line2)",
+    borderRadius: "12px",
+    background: "var(--panel)",
+    textAlign: "center",
+  }}>
+    <div style={{ display: "flex", alignItems: "center", gap: "9px", color: "var(--text)" }}>
+      <Icon aria-hidden="true" size={19} color={color} strokeWidth={2.2} />
+      <strong style={{ fontSize: "14px" }}>{label}</strong>
+    </div>
+    <div
+      role="img"
+      aria-label={`${label}: ${hasValue ? percent : "Unavailable"}`}
+      style={{
+        width: "160px",
+        height: "160px",
+        borderRadius: "50%",
+        display: "grid",
+        placeItems: "center",
+        background: `conic-gradient(from -90deg, ${color} ${progress}%, var(--barbg) ${progress}%)`,
+        filter: level === "unknown" ? "saturate(.6)" : undefined,
+      }}
+    >
+      <div aria-hidden="true" style={{
+        width: "130px",
+        height: "130px",
+        borderRadius: "50%",
+        display: "grid",
+        placeItems: "center",
+        background: "var(--panel)",
+        color: hasValue ? "var(--text)" : "var(--muted)",
+        fontSize: "24px",
+        fontWeight: 800,
+        fontVariantNumeric: "tabular-nums",
+      }}>
+        {percent}
+      </div>
+    </div>
+    <div style={{ display: "grid", justifyItems: "center", gap: "4px", minWidth: 0 }}>
+      <strong style={{ color: "var(--text)", fontSize: "14px", lineHeight: 1.4, fontVariantNumeric: "tabular-nums" }}>{currentValue}</strong>
+      <span className="muted" style={{ fontSize: "12px", lineHeight: 1.4 }}>{totalValue}</span>
+      {detail && <span className="muted" style={{ fontSize: "11px", lineHeight: 1.4 }}>{detail}</span>}
+      <HealthIndicator level={level} label={statusLabel} />
+    </div>
+  </div>;
+}
+
+function ServiceStatusCard({
+  icon,
+  label,
+  level,
+  status,
+  detail,
+  detailLevel,
+}: {
+  icon: LucideIcon;
+  label: string;
+  level: HealthLevel;
+  status: string;
+  detail?: string;
+  detailLevel?: HealthLevel;
+}) {
+  const Icon = icon;
+  const color = healthColor(level);
+
+  return <div style={{
+    display: "grid",
+    alignContent: "start",
+    gap: "14px",
+    minWidth: 0,
+    minHeight: "118px",
+    padding: "16px",
+    border: "1px solid var(--line2)",
+    borderRadius: "11px",
+    background: "var(--panel)",
+  }}>
+    <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
+      <span aria-hidden="true" style={{
+        width: "42px",
+        height: "42px",
+        flex: "none",
+        display: "grid",
+        placeItems: "center",
+        borderRadius: "11px",
+        color,
+        background: level === "healthy" ? "var(--badge-closed-bg)"
+          : level === "warning" ? "var(--badge-pending-bg)"
+            : level === "critical" ? "var(--badge-open-bg)" : "var(--barbg)",
+      }}>
+        <Icon size={20} strokeWidth={2} />
+      </span>
+      <div style={{ display: "grid", gap: "4px", minWidth: 0 }}>
+        <span className="muted" style={{ fontSize: "11px" }}>{label}</span>
+        <strong style={{ color, fontSize: "14px", lineHeight: 1.3, overflowWrap: "anywhere" }}>{status}</strong>
+      </div>
+    </div>
+    {detail && <span style={{
+      color: healthColor(detailLevel ?? "unknown"),
+      fontSize: "11px",
+      lineHeight: 1.4,
+    }}>{detail}</span>}
+  </div>;
+}
+
+function usageHealth(value: number | null | undefined, warningThreshold: number): HealthLevel {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "unknown";
+  if (value > 90) return "critical";
+  if (value > warningThreshold) return "warning";
+  return "healthy";
+}
+
+function formatBytes(value: string) {
+  const bytes = Number(value);
+  if (!Number.isFinite(bytes) || bytes < 0) return null;
+  const units = ["B", "KB", "MB", "GB", "TB", "PB"];
+  let size = bytes;
+  let unit = 0;
+  while (size >= 1024 && unit < units.length - 1) {
+    size /= 1024;
+    unit += 1;
+  }
+  return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+}
 
 function AnimatedCount({ value, prefersReducedMotion }: { value: number; prefersReducedMotion: boolean }) {
   const [displayValue, setDisplayValue] = useState(0);
@@ -105,10 +300,9 @@ export default function Dashboard() {
   const [toDate, setToDate] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
   const [users, setUsers] = useState<DashboardUser[]>([]);
-  const [backupHistory, setBackupHistory] = useState<DashboardBackupRun[] | null>(null);
   const [backupSchedule, setBackupSchedule] = useState<DashboardBackupSchedule | null>(null);
   const [systemHealth, setSystemHealth] = useState<DashboardSystemHealth | null>(null);
-  const [backupStatusLoaded, setBackupStatusLoaded] = useState(false);
+  const [systemHealthLoaded, setSystemHealthLoaded] = useState(false);
   const [dashboardApiHealthy, setDashboardApiHealthy] = useState<boolean | null>(null);
   const [workloadUsers, setWorkloadUsers] = useState<DashboardWorkloadUser[]>([]);
   const [workloadState, setWorkloadState] = useState<"loading" | "loaded" | "error">("loading");
@@ -206,10 +400,9 @@ export default function Dashboard() {
     if (!isAdmin) {
       setUsers([]);
       setSelectedUserId("");
-      setBackupHistory(null);
       setBackupSchedule(null);
       setSystemHealth(null);
-      setBackupStatusLoaded(false);
+      setSystemHealthLoaded(false);
       return;
     }
 
@@ -231,23 +424,21 @@ export default function Dashboard() {
     if (!isAdmin) return;
 
     const controller = new AbortController();
-    setBackupStatusLoaded(false);
+    setSystemHealthLoaded(false);
     const fetchJson = async <T,>(url: string): Promise<T> => {
       const response = await fetch(url, { signal: controller.signal, cache: "no-store" });
-      if (!response.ok) throw new Error(`Backup status API failed: ${response.status}`);
+      if (!response.ok) throw new Error(`Dashboard health API failed: ${response.status}`);
       return response.json();
     };
 
     Promise.all([
-      fetchJson<DashboardBackupRun[]>("/api/backup/history").catch(() => null),
       fetchJson<DashboardBackupSchedule>("/api/backup/schedule").catch(() => null),
       fetchJson<DashboardSystemHealth>("/api/dashboard/system-health").catch(() => null),
-    ]).then(([history, schedule, health]) => {
+    ]).then(([schedule, health]) => {
       if (controller.signal.aborted) return;
-      setBackupHistory(history);
       setBackupSchedule(schedule);
       setSystemHealth(health);
-      setBackupStatusLoaded(true);
+      setSystemHealthLoaded(true);
     });
 
     return () => controller.abort();
@@ -447,9 +638,6 @@ export default function Dashboard() {
   const assistanceAreaPath = areaPath(assistancePoints, "assistanceY");
   const taskAreaPath = areaPath(taskPoints, "taskY");
   const hasActiveFilters = period !== "today" || (isAdmin && selectedUserId !== "");
-  const successfulBackups = backupHistory?.filter((run) => run.status === "Success") ?? [];
-  const lastSuccessfulBackup = successfulBackups[0];
-  const latestBackup = backupHistory?.[0];
   const formatBackupDate = (value: string | null | undefined) => value
     ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value))
     : "Never";
@@ -457,21 +645,17 @@ export default function Dashboard() {
     if (!status?.available) return "Unavailable";
     if (status.totalBytes === null || status.freeBytes === null || status.usedPercent === null) return "Available";
 
-    const formatBytes = (value: string) => {
-      let size = Number(value);
-      if (!Number.isFinite(size) || size < 0) return null;
-      const units = ["B", "KB", "MB", "GB", "TB", "PB"];
-      let unit = 0;
-      while (size >= 1024 && unit < units.length - 1) {
-        size /= 1024;
-        unit += 1;
-      }
-      return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
-    };
     const total = formatBytes(status.totalBytes);
     const free = formatBytes(status.freeBytes);
-    return total && free ? `${total} total · ${free} free · ${status.usedPercent}% used` : "Available";
+    return total && free ? `${total} total · ${free} free` : "Available";
   };
+  const storageTotalBytes = systemHealth?.storage.totalBytes;
+  const storageFreeBytes = systemHealth?.storage.freeBytes;
+  const storageTotal = storageTotalBytes === null || storageTotalBytes === undefined ? null : Number(storageTotalBytes);
+  const storageFree = storageFreeBytes === null || storageFreeBytes === undefined ? null : Number(storageFreeBytes);
+  const storageUsed = storageTotal !== null && storageFree !== null && Number.isFinite(storageTotal) && Number.isFinite(storageFree)
+    ? formatBytes(String(Math.max(0, storageTotal - storageFree)))
+    : null;
 
   function clearFilters() {
     setPeriod("today");
@@ -743,69 +927,164 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {isAdmin && <div className="dashboard-admin-panels" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))", gap: "12px", marginBottom: "12px" }}>
-      <section className="panel spaced dashboard-glass" aria-labelledby="dashboard-backup-status-title">
-        <div className="panelhead">
-          <div>
-            <h3 id="dashboard-backup-status-title">Backup Status</h3>
-          </div>
-        </div>
-        {!backupStatusLoaded ? <div className="muted">Loading backup status…</div> : (
-          <dl style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: "10px 20px", alignItems: "baseline", margin: 0 }}>
-            <dt className="muted">Last successful backup</dt>
-            <dd style={{ margin: 0, textAlign: "right" }}>
-              {backupHistory === null ? "Unavailable" : lastSuccessfulBackup ? formatBackupDate(lastSuccessfulBackup.completedAt ?? lastSuccessfulBackup.createdAt) : "None yet"}
-            </dd>
-            <dt className="muted">Latest backup result</dt>
-            <dd style={{ margin: 0, textAlign: "right" }}>
-              {backupHistory === null ? "Unavailable" : latestBackup ? `${latestBackup.status} · ${formatBackupDate(latestBackup.createdAt)}` : "No backups yet"}
-            </dd>
-            <dt className="muted">Available backup count</dt>
-            <dd style={{ margin: 0, textAlign: "right" }}>{backupHistory === null ? "Unavailable" : successfulBackups.length}</dd>
-            <dt className="muted">Retention limit</dt>
-            <dd style={{ margin: 0, textAlign: "right" }}>{backupSchedule ? `${backupSchedule.retentionCount} scheduled backups` : "Unavailable"}</dd>
-            <dt className="muted">Next scheduled backup</dt>
-            <dd style={{ margin: 0, textAlign: "right" }}>
-              {backupSchedule === null ? "Unavailable" : backupSchedule.enabled && backupSchedule.nextRunAt ? formatBackupDate(backupSchedule.nextRunAt) : "Not scheduled"}
-            </dd>
-            <dt className="muted">Schedule</dt>
-            <dd style={{ margin: 0, textAlign: "right" }}>
-              {backupSchedule === null ? "Unavailable" : backupSchedule.enabled ? "Enabled" : "Disabled"}
-            </dd>
-          </dl>
-        )}
-      </section>
-
-      <section className="panel spaced dashboard-glass" aria-labelledby="dashboard-system-health-title">
+      {isAdmin && <section className="panel spaced dashboard-glass" aria-labelledby="dashboard-system-health-title" style={{ marginBottom: "12px" }}>
         <div className="panelhead">
           <div>
             <h3 id="dashboard-system-health-title">System Health</h3>
+            <span className="muted">Service, resource and backup overview</span>
           </div>
         </div>
-        {!backupStatusLoaded ? <div className="muted">Loading system health…</div> : (
-          <dl style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: "10px 20px", alignItems: "baseline", margin: 0 }}>
-            <dt className="muted">Application</dt>
-            <dd style={{ margin: 0, textAlign: "right" }}>{dashboardApiHealthy ? "Healthy" : "Unavailable"}</dd>
-            <dt className="muted">Database</dt>
-            <dd style={{ margin: 0, textAlign: "right" }}>{systemHealth?.database ? "Healthy" : "Unavailable"}</dd>
-            <dt className="muted">Scheduler</dt>
-            <dd style={{ margin: 0, textAlign: "right" }}>
-              {backupSchedule === null ? "Unavailable" : backupSchedule.enabled ? "Enabled" : "Disabled"}
-            </dd>
-            <dt className="muted">Last Scheduler Run</dt>
-            <dd style={{ margin: 0, textAlign: "right" }}>
-              {backupSchedule === null ? "Unavailable" : backupSchedule.lastRunAt
-                ? `${backupSchedule.lastStatus === "SUCCESS" ? "Success" : backupSchedule.lastStatus === "FAILED" ? "Failed" : backupSchedule.lastStatus === "RUNNING" ? "Started" : ""}${backupSchedule.lastStatus ? " · " : ""}${formatBackupDate(backupSchedule.lastRunAt)}`
-                : "Never"}
-            </dd>
-            <dt className="muted">Storage</dt>
-            <dd style={{ margin: 0, textAlign: "right" }}>{formatStorageStatus(systemHealth?.storage)}</dd>
-            <dt className="muted">Backup Storage</dt>
-            <dd style={{ margin: 0, textAlign: "right" }}>{formatStorageStatus(systemHealth?.backupStorage)}</dd>
-          </dl>
+        {!systemHealthLoaded ? <div className="muted">Loading system health…</div> : (
+          <div style={{ display: "grid", gap: "16px" }}>
+            <section aria-labelledby="dashboard-health-resources-title" style={{ minWidth: 0, padding: "20px", border: "1px solid var(--dashboard-glass-border)", borderRadius: "12px", background: "var(--dashboard-glass)" }}>
+              <h4 id="dashboard-health-resources-title" style={{ margin: "0 0 18px", fontSize: "15px" }}>Resource Utilization</h4>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 255px), 1fr))", gap: "14px" }}>
+                <ResourceGauge
+                  label="CPU"
+                  icon={Cpu}
+                  value={systemHealth?.cpuUsagePercent}
+                  level={usageHealth(systemHealth?.cpuUsagePercent, 70)}
+                  currentValue={systemHealth?.cpuUsagePercent === null || systemHealth?.cpuUsagePercent === undefined ? "Unavailable" : `${systemHealth.cpuUsagePercent.toFixed(1)}% used`}
+                  totalValue="100% capacity"
+                />
+                <ResourceGauge
+                  label="RAM"
+                  icon={MemoryStick}
+                  value={systemHealth?.memory.usedPercent}
+                  level={usageHealth(systemHealth?.memory.usedPercent, 80)}
+                  currentValue={systemHealth ? `${formatBytes(systemHealth.memory.usedBytes) ?? "Unavailable"} used` : "Unavailable"}
+                  totalValue={systemHealth ? `${formatBytes(systemHealth.memory.totalBytes) ?? "Unavailable"} total` : "Unavailable"}
+                />
+                <ResourceGauge
+                  label="Storage"
+                  icon={HardDrive}
+                  value={systemHealth?.storage.usedPercent}
+                  level={!systemHealth ? "unknown" : !systemHealth.storage.available ? "critical" : usageHealth(systemHealth.storage.usedPercent, 80)}
+                  currentValue={storageUsed ? `${storageUsed} used` : systemHealth?.storage.available ? "Usage unavailable" : "Unavailable"}
+                  totalValue={systemHealth?.storage.available && systemHealth.storage.totalBytes !== null
+                    ? `${formatBytes(systemHealth.storage.totalBytes) ?? "Unavailable"} total`
+                    : systemHealth?.storage.available ? "Total capacity unavailable" : "Unavailable"}
+                  detail={systemHealth?.storage.available && systemHealth.storage.freeBytes !== null
+                    ? `${formatBytes(systemHealth.storage.freeBytes) ?? "Unavailable"} free`
+                    : undefined}
+                />
+              </div>
+              {systemHealth?.backupStorage && <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "10px",
+                flexWrap: "wrap",
+                marginTop: "14px",
+                padding: "10px 12px",
+                border: "1px solid var(--line2)",
+                borderRadius: "9px",
+                background: "var(--panel)",
+              }}>
+                <span className="muted" style={{ fontSize: "11px" }}>Backup Storage · {formatStorageStatus(systemHealth.backupStorage)}</span>
+                <HealthIndicator
+                  level={!systemHealth.backupStorage.available ? "critical" : usageHealth(systemHealth.backupStorage.usedPercent, 80)}
+                  label={systemHealth.backupStorage.usedPercent === null
+                    ? systemHealth.backupStorage.available ? "Available" : "Unavailable"
+                    : `${systemHealth.backupStorage.usedPercent}% used`}
+                />
+              </div>}
+            </section>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))", gap: "16px" }}>
+              <section aria-labelledby="dashboard-health-services-title" style={{ minWidth: 0, padding: "18px", border: "1px solid var(--dashboard-glass-border)", borderRadius: "12px", background: "var(--dashboard-glass)" }}>
+                <h4 id="dashboard-health-services-title" style={{ margin: "0 0 14px", fontSize: "15px" }}>Service Status</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 195px), 1fr))", gap: "12px" }}>
+                  {([
+                    {
+                      icon: Server,
+                      label: "Application",
+                      level: dashboardApiHealthy === null ? "unknown" : dashboardApiHealthy ? "healthy" : "critical",
+                      status: dashboardApiHealthy === null ? "Checking" : dashboardApiHealthy ? "Healthy" : "Unavailable",
+                    },
+                    {
+                      icon: Database,
+                      label: "Database",
+                      level: systemHealth ? systemHealth.database ? "healthy" : "critical" : "unknown",
+                      status: systemHealth ? systemHealth.database ? "Healthy" : "Unavailable" : "Unavailable",
+                    },
+                    {
+                      icon: Clock3,
+                      label: "Scheduler",
+                      level: backupSchedule === null ? "unknown" : backupSchedule.enabled ? "healthy" : "warning",
+                      status: backupSchedule === null ? "Unavailable" : backupSchedule.enabled ? "Enabled" : "Disabled",
+                      detail: backupSchedule === null
+                        ? undefined
+                        : `Last run: ${backupSchedule.lastRunAt
+                          ? `${backupSchedule.lastStatus === "SUCCESS" ? "Success" : backupSchedule.lastStatus === "FAILED" ? "Failed" : backupSchedule.lastStatus === "RUNNING" ? "Started" : "Unknown"} · ${formatBackupDate(backupSchedule.lastRunAt)}`
+                          : "Never"}`,
+                      detailLevel: backupSchedule?.lastStatus === "SUCCESS" ? "healthy"
+                        : backupSchedule?.lastStatus === "FAILED" ? "critical"
+                          : backupSchedule ? "warning" : "unknown",
+                    },
+                    {
+                      icon: Archive,
+                      label: "Backup",
+                      level: !systemHealth ? "unknown" : systemHealth.backupHealth.status === "SUCCESS" ? "healthy"
+                        : systemHealth.backupHealth.status === "FAILED" ? "critical" : "warning",
+                      status: !systemHealth ? "Unavailable" : systemHealth.backupHealth.status === "SUCCESS" ? "Success"
+                        : systemHealth.backupHealth.status === "FAILED" ? "Failed"
+                          : systemHealth.backupHealth.status === "RUNNING" ? "Running" : "No backups yet",
+                    },
+                  ] as const).map((service) => (
+                    <ServiceStatusCard key={service.label} {...service} />
+                  ))}
+                </div>
+              </section>
+
+              <section aria-labelledby="dashboard-health-backups-title" style={{ minWidth: 0, padding: "18px", border: "1px solid var(--dashboard-glass-border)", borderRadius: "12px", background: "var(--dashboard-glass)" }}>
+                <h4 id="dashboard-health-backups-title" style={{ margin: "0 0 14px", fontSize: "15px" }}>Backup Health</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "12px" }}>
+                {([
+                  {
+                    label: "Last Successful Backup",
+                    value: systemHealth ? formatBackupDate(systemHealth.backupHealth.lastSuccessfulAt) : "Unavailable",
+                  },
+                  {
+                    label: "Available Backup Count",
+                    value: systemHealth?.backupHealth.availableCount === null || systemHealth?.backupHealth.availableCount === undefined
+                      ? "Unavailable" : String(systemHealth.backupHealth.availableCount),
+                    level: systemHealth?.backupHealth.availableCount === null || systemHealth?.backupHealth.availableCount === undefined
+                      ? "unknown" : systemHealth.backupHealth.availableCount > 0 ? "healthy" : "warning",
+                  },
+                  {
+                    label: "Next Scheduled Backup",
+                    value: backupSchedule === null ? "Unavailable"
+                      : backupSchedule.enabled && backupSchedule.nextRunAt ? formatBackupDate(backupSchedule.nextRunAt) : "Not scheduled",
+                  },
+                  {
+                    label: "Retention Limit",
+                    value: backupSchedule ? `${backupSchedule.retentionCount} backups` : "Unavailable",
+                  },
+                ] as const).map((metric) => (
+                  <div key={metric.label} style={{
+                    display: "grid",
+                    alignContent: "start",
+                    gap: "12px",
+                    minWidth: 0,
+                    minHeight: "100px",
+                    padding: "15px",
+                    border: "1px solid var(--line2)",
+                    borderRadius: "11px",
+                    background: "var(--panel)",
+                  }}>
+                    <span className="muted" style={{ fontSize: "11px" }}>{metric.label}</span>
+                    {"level" in metric
+                      ? <HealthIndicator level={metric.level} label={metric.value} />
+                      : <strong style={{ fontSize: "14px", lineHeight: 1.4, overflowWrap: "anywhere", fontVariantNumeric: "tabular-nums" }}>{metric.value}</strong>}
+                  </div>
+                ))}
+              </div>
+              </section>
+            </div>
+          </div>
         )}
-      </section>
-      </div>}
+      </section>}
 
       {isAdmin && <section className="panel spaced dashboard-glass" aria-labelledby="dashboard-workload-title">
         <div className="panelhead">
