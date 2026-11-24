@@ -1111,7 +1111,7 @@ export default function Dashboard() {
           <div>
             <h3 id="dashboard-workload-title">Team Workload Distribution</h3>
             <span className="muted" style={{ fontSize: "12px" }}>
-              Counts are participation events: each active standard user counts once per record they own, are assigned to, or contributed a work log to. A record can count for multiple users. Unassigned counts cover the full selected period, regardless of the User filter.
+              Each selected-period activity is credited once to an active standard user who owns it, is assigned to it, or contributed a work log. One activity can be credited to multiple team members. The User filter applies to this leaderboard.
             </span>
           </div>
         </div>
@@ -1126,14 +1126,12 @@ export default function Dashboard() {
                 key: "technicalAssistanceCount",
                 title: "Technical Assistance Distribution",
                 total: workloadSummary.technicalAssistanceParticipation,
-                unassigned: workloadSummary.technicalAssistanceUnassigned,
                 color: "#06aed4",
               },
               {
                 key: "otherTasksCount",
                 title: "Other Tasks Distribution",
                 total: workloadSummary.otherTasksParticipation,
-                unassigned: workloadSummary.otherTasksUnassigned,
                 color: "#f79009",
               },
             ] as const).map((chart) => {
@@ -1143,7 +1141,9 @@ export default function Dashboard() {
                 return left.name.localeCompare(right.name);
               });
               const contributorCount = sortedUsers.filter((workloadUser) => workloadUser[chart.key] > 0).length;
-              const averageParticipation = contributorCount ? Math.round(chart.total / contributorCount) : 0;
+              const topContributor = sortedUsers.find((workloadUser) => workloadUser[chart.key] > 0) ?? null;
+              const topContributorCount = topContributor?.[chart.key] ?? 0;
+              const topContributorPercentage = chart.total > 0 ? ((topContributorCount / chart.total) * 100).toFixed(1) : "0.0";
               return <section
                 key={chart.key}
                 aria-label={chart.title}
@@ -1154,31 +1154,49 @@ export default function Dashboard() {
                     <h4 style={{ margin: 0, fontSize: "16px" }}>{chart.title}</h4>
                   </div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: "10px", marginBottom: "18px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "10px", marginBottom: "18px" }}>
                   {[
-                    { label: "Total Participation", value: chart.total },
-                    { label: "Contributors", value: contributorCount },
-                    { label: "Average Participation per Contributor", value: averageParticipation },
-                    { label: "Unassigned / No standard-user participation", value: chart.unassigned },
+                    { label: "Total Records", value: chart.total.toLocaleString() },
+                    { label: "Team Members", value: contributorCount.toLocaleString() },
                   ].map((metric) => (
                     <div key={metric.label} style={{
                       display: "grid",
                       alignContent: "start",
-                      gap: "8px",
+                      gap: "6px",
                       minWidth: 0,
-                      minHeight: "98px",
-                      padding: "13px 12px",
+                      minHeight: "88px",
+                      padding: "12px",
                       border: "1px solid var(--line2)",
                       borderRadius: "10px",
                       background: "var(--panel)",
                     }}>
                       <span className="muted" style={{ fontSize: "11px" }}>{metric.label}</span>
-                      <strong style={{ fontSize: "24px", lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>{metric.value.toLocaleString()}</strong>
+                      <strong style={{ fontSize: "24px", lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>{metric.value}</strong>
                     </div>
                   ))}
+                  <div style={{
+                    display: "grid",
+                    alignContent: "start",
+                    gap: "6px",
+                    minWidth: 0,
+                    minHeight: "88px",
+                    padding: "12px",
+                    gridColumn: "1 / -1",
+                    border: "1px solid var(--line2)",
+                    borderRadius: "10px",
+                    background: "var(--panel)",
+                  }}>
+                    <span className="muted" style={{ fontSize: "11px" }}>Top Contributor</span>
+                    <strong style={{ minWidth: 0, overflowWrap: "anywhere", fontSize: "14px", lineHeight: 1.3 }}>
+                      {topContributor?.name ?? "No activity"}
+                    </strong>
+                    {topContributor && <span className="muted" style={{ fontSize: "12px", fontVariantNumeric: "tabular-nums" }}>
+                      {topContributorCount.toLocaleString()} Activities ({topContributorPercentage}%)
+                    </span>}
+                  </div>
                 </div>
                 {sortedUsers.length ? (
-                  <div aria-label={`${chart.title} contributors`} style={{ display: "grid", gap: "9px" }}>
+                  <ol aria-label={`${chart.title} contributors`} style={{ display: "grid", gap: 0, margin: 0, padding: 0, listStyle: "none", borderTop: "1px solid var(--line2)" }}>
                     {sortedUsers.map((workloadUser, index) => {
                       const count = workloadUser[chart.key];
                       const contributionPercent = chart.total > 0 ? (count / chart.total) * 100 : 0;
@@ -1187,39 +1205,37 @@ export default function Dashboard() {
                         : index === 0 ? "🥇 Top 1"
                           : index === 1 ? "🥈 Top 2"
                             : index === 2 ? "🥉 Top 3" : null;
-                      const isTopContributor = rankBadge !== null;
-                      return <div key={workloadUser.id} style={{
+                      return <li key={workloadUser.id} style={{
                         display: "grid",
-                        gap: "8px",
+                        gap: "7px",
                         minWidth: 0,
-                        padding: "10px 12px",
-                        border: `1px solid ${isTopContributor ? `${chart.color}66` : "var(--line2)"}`,
-                        borderRadius: "10px",
-                        background: "var(--panel)",
-                        boxShadow: isTopContributor ? `inset 3px 0 0 ${chart.color}` : undefined,
+                        padding: "12px 4px",
+                        borderBottom: "1px solid var(--line2)",
                       }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
-                          <strong style={{ minWidth: 0, overflowWrap: "anywhere", fontSize: "13px" }}>{workloadUser.name}</strong>
-                          {rankBadge && <span aria-label={`Top contributor, rank ${index + 1}`} style={{
-                            flexShrink: 0,
-                            padding: "3px 7px",
-                            borderRadius: "999px",
-                            color: chart.color,
-                            background: `${chart.color}18`,
-                            fontSize: "10px",
-                            fontWeight: 700,
-                          }}>{rankBadge}</span>}
+                          <span style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                            {rankBadge && <span aria-label={`Top contributor, rank ${index + 1}`} style={{
+                              flexShrink: 0,
+                              padding: "3px 7px",
+                              borderRadius: "999px",
+                              color: chart.color,
+                              background: `${chart.color}18`,
+                              fontSize: "10px",
+                              fontWeight: 700,
+                            }}>{rankBadge}</span>}
+                            <strong style={{ minWidth: 0, overflowWrap: "anywhere", fontSize: "14px" }}>{workloadUser.name}</strong>
+                          </span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
                           <div className="bar" aria-hidden="true" style={{ flex: 1 }}><i style={{ width: `${contributionPercent}%`, background: chart.color }} /></div>
                           <span className="muted" style={{ flexShrink: 0, textAlign: "right", fontSize: "12px", fontVariantNumeric: "tabular-nums" }}>
-                            <strong style={{ color: "var(--text)" }}>{count.toLocaleString()} Participation</strong>
+                            <strong style={{ color: "var(--text)" }}>{count.toLocaleString()} Activities</strong>
                             <span style={{ display: "block" }}>{percentage}%</span>
                           </span>
                         </div>
-                      </div>;
+                      </li>;
                     })}
-                  </div>
+                  </ol>
                 ) : <div className="empty">No active standard users match this filter.</div>}
               </section>;
             })}
